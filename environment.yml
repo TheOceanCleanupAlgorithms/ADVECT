@@ -1,11 +1,16 @@
 name: ADVECTOR
 channels:
+  - conda-forge
   - defaults
 dependencies:
-  - python=3
-  - pandas
-  - xarray
   - ipython
-  - matplotlib
+  - python=3
+  - xarray
   - scipy
-prefix: /home/toc/miniconda3/envs/ADVECTOR
+  - pandas
+  - matplotlib
+  - pip
+  - python-dotenv
+  - pip:
+      - motuclient
+prefix: /opt/miniconda3/envs/ADVECTOR

@@ -1,7 +1,10 @@
 import pandas as pd
 from datetime import timedelta as td
 import os
-dates = pd.date_range('2000-01-01', '2000-12-31', freq='1D')
+from dotenv import load_dotenv
+load_dotenv()
+
+dates = pd.date_range('2000-01-01', '2000-1-31', freq='1D')
 
 for date in dates:
     filename = f"uv_{date.strftime('%Y-%m-%d')}.nc"
@@ -14,6 +17,6 @@ for date in dates:
     --depth-min 0.493 --depth-max 5727.918 \
     --variable uo --variable vo \
     --out-dir ./ --out-name cmems/{filename} \
-    --user dklink --pwd '#mcASJwDGB.B9jt'"""
+    --user {os.getenv('copernicus_uname')} --pwd '{os.getenv('copernicus_pwd')}'"""
 
     os.system(cmd)
