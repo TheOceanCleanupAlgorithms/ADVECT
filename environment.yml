@@ -7,4 +7,5 @@ dependencies:
   - xarray
   - ipython
   - matplotlib
+  - scipy
 prefix: /home/toc/miniconda3/envs/ADVECTOR
