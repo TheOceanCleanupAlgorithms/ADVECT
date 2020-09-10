@@ -1,0 +1,10 @@
+name: ADVECTOR
+channels:
+  - defaults
+dependencies:
+  - python=3
+  - pandas
+  - xarray
+  - ipython
+  - matplotlib
+prefix: /home/toc/miniconda3/envs/ADVECTOR
