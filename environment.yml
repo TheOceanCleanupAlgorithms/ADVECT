@@ -5,15 +5,13 @@ channels:
 dependencies:
   - ipython
   - python=3
+  - xarray
+  - scipy
   - pandas
   - matplotlib
   - pip
   - python-dotenv
   - tqdm
-  - cartopy
-  - dask
-  - xarray
-  - numpy
   - pip:
       - motuclient
 prefix: /opt/miniconda3/envs/ADVECTOR
