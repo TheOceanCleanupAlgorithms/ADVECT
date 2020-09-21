@@ -3,15 +3,11 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - ipython
-  - python=3
-  - xarray
-  - scipy
   - pandas
-  - matplotlib
-  - pip
   - python-dotenv
   - tqdm
+  - pip
+  - cartopy
   - pip:
       - motuclient
 prefix: /opt/miniconda3/envs/ADVECTOR
