@@ -6,8 +6,11 @@ dependencies:
   - pandas
   - python-dotenv
   - tqdm
+  - ipython
   - pip
-  - cartopy
+  - zarr
+  - aiohttp
+  - requests
   - pip:
       - motuclient
 prefix: /opt/miniconda3/envs/ADVECTOR
