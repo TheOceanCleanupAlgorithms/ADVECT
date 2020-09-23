@@ -20,9 +20,11 @@ for date in pd.date_range(YR_START, YR_END, freq='D', closed='left'):
         subprocess.run(['wget', '--retry-connrefused', '--waitretry=1', '--read-timeout=20', '--timeout=15', '-t 0',
                         '-q', '--show-progress', '-O', OUT_DIR + filename, url])
 
-
 # occasionally you'll get incompletely downloaded files.  Run this command to see if there are any files less than 20 MB
 # find . -name "*.nc" -type 'f' -size -20M
 # then run this command to remove them
 # find . -name "*.nc" -type 'f' -size -20M -delete
 # once removed, run this script again and it will re-download the deleted files
+
+# you need to download the grid file yourself, it requires an EarthData login.  Just go here:
+# https://ecco.jpl.nasa.gov/drive/files/Version4/Release4/nctiles_grid/ECCO-GRID.nc
