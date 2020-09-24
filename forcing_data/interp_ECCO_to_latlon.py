@@ -30,10 +30,8 @@ for ECCO_varname, local_varname in variables.items():
         ds = xr.open_dataset(file)
 
         if ECCO_varname == 'WVELMASS':  # interpolate vertical grid to Z from Zl; change vertical indexer name
-            ds[ECCO_varname] = ds[ECCO_varname].assign_coords(k_l=ECCO_grid.Zl)
-            ds[ECCO_varname] = ds[ECCO_varname].interp(k_l=ECCO_grid.Z.values)
-            ds[ECCO_varname] = ds[ECCO_varname].assign_coords(k_l=ECCO_grid.k.values)
-            ds[ECCO_varname] = ds[ECCO_varname].rename({'k_l': 'k'})
+            ds[ECCO_varname] = ds[ECCO_varname].swap_dims({'k_l': 'Zl'}).interp(Zl=ECCO_grid.Z.values).\
+                rename({'Zl': 'Z', 'k_l': 'k'}).swap_dims({'Z': 'k'}).assign_coords({'k': ECCO_grid.k.values})
         interp_levels = []
         for lev in ds.k:
             new_grid_lon, new_grid_lat, var_interp =\
