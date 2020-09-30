@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 # load some data
-U = xr.open_mfdataset(sorted(glob.glob('forcing_data/ECCO_interp/U_2015*.nc')))
-V = xr.open_mfdataset(sorted(glob.glob('forcing_data/ECCO_interp/V_2015*.nc')))
-W = xr.open_mfdataset(sorted(glob.glob('forcing_data/ECCO_interp/W_2015*.nc')))
+U = xr.open_mfdataset(sorted(glob.glob('./ECCO_interp/U_2015*.nc')))
+V = xr.open_mfdataset(sorted(glob.glob('./ECCO_interp/V_2015*.nc')))
+W = xr.open_mfdataset(sorted(glob.glob('./ECCO_interp/W_2015*.nc')))
 
 currents = xr.merge((U, V, W))
 
