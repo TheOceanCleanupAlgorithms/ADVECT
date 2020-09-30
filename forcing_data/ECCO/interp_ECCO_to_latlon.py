@@ -16,16 +16,16 @@ new_grid_max_lat = 90-new_grid_delta_lat/2
 new_grid_min_lon = -180+new_grid_delta_lon/2
 new_grid_max_lon = 180-new_grid_delta_lon/2
 
-ECCO_grid = xr.open_dataset('./ECCO/ECCO-GRID.nc')
+ECCO_grid = xr.open_dataset('ECCO_native/ECCO-GRID.nc')
 
-variables = {'EVEL': 'U',  # ECCO varname: [local varname, vertical grid name]
+variables = {'EVEL': 'U',  # ECCO_native varname: [local varname, vertical grid name]
              'NVEL': 'V',
              'WVELMASS': 'W'}
 
 
 for ECCO_varname, local_varname in variables.items():
     print(f'Interpolating all {ECCO_varname} files...')
-    files = sorted(glob.glob(f'./ECCO/{ECCO_varname}*.nc'))
+    files = sorted(glob.glob(f'ECCO/ECCO_native/{ECCO_varname}*.nc'))
     for file in tqdm(files):
         ds = xr.open_dataset(file)
 

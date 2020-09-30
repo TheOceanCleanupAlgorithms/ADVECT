@@ -11,6 +11,7 @@ dependencies:
   - zarr
   - aiohttp
   - requests
+  - pyopencl
   - pip:
       - motuclient
       - ecco_v4_py

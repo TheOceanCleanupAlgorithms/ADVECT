@@ -1,7 +1,7 @@
-forcing_data/cmems
-forcing_data/cmems_deep
-forcing_data/ECCO
-forcing_data/ECCO_interp
+forcing_data/cmems/cmems_NP
+forcing_data/cmems/cmems_deep
+forcing_data/ECCO/ECCO_native
+forcing_data/ECCO/ECCO_interp
 .DS_Store
 .idea
 .env

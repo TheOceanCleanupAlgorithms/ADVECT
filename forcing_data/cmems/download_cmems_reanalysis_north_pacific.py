@@ -1,6 +1,6 @@
-"""script to download a prescribed range of high-res 3d cmems current data for the north pacific (0-70 lat, 100-280 lon)
-A nice way to use this is to run `python download_cmems_reanalysis_north_pacific.py > cmems/log.txt` in a terminal.
-  for some reason, while most all the output goes to cmems/log.txt (which can be watched live with tail -f cmems/log.txt),
+"""script to download a prescribed range of high-res 3d cmems_NP current data for the north pacific (0-70 lat, 100-280 lon)
+A nice way to use this is to run `python download_cmems_reanalysis_north_pacific.py > cmems_NP/log.txt` in a terminal.
+  for some reason, while most all the output goes to cmems_NP/log.txt (which can be watched live with tail -f cmems_NP/log.txt),
   the tqdm progress bar stays in stdout, separating the progress bar from all the logging.
 """
 
@@ -29,7 +29,7 @@ for date in tqdm(dates):
     --date-min "{date}" --date-max "{date+td(days=1)}" \
     --depth-min {depth_min} --depth-max {depth_max} \
     --variable uo --variable vo \
-    --out-dir ./ --out-name cmems/{filename} \
+    --out-dir ./ --out-name cmems_NP/{filename} \
     --user {os.getenv('copernicus_uname')} --pwd '{os.getenv('copernicus_pwd')}'"""
 
     os.system(cmd)

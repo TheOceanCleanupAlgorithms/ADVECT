@@ -5,7 +5,7 @@ import os
 YR_START = '2015'  # inclusive
 YR_END = '2016'  # not inclusive
 VARNAMES = ['NVEL', 'EVEL', 'WVELMASS']
-OUT_DIR = f'ECCO/'
+OUT_DIR = f'ECCO_native/'
 if not os.path.exists(OUT_DIR):
     os.mkdir(OUT_DIR)
 

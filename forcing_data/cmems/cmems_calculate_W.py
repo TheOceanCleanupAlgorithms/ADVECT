@@ -1,5 +1,5 @@
 """
-script to calculate vertical ocean current velocity fields from the cmems U/V
+script to calculate vertical ocean current velocity fields from the cmems_NP U/V
 """
 
 import xarray as xr
@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import convolve
 import numpy as np
 
-ds = xr.open_mfdataset('cmems/*.nc').sel(depth=0, method='nearest').load()
+ds = xr.open_mfdataset('cmems_NP/*.nc').sel(depth=0, method='nearest').load()
 U = ds['uo']
 V = ds['vo']
 
