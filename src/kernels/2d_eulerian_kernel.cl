@@ -1,3 +1,5 @@
+unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len);\
+
 __kernel void advect(
     __global float* field_x,    // lon, Deg E (-180 to 180)
     const unsigned int x_len,
@@ -25,38 +27,10 @@ __kernel void advect(
     float t = t0[p_id];
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
 
-        // find index of nearest x
-        unsigned int x_idx = 0;
-        float min_distance = -1;
-        for (unsigned int i=0; i<x_len; i++) {
-            float distance = fabs((float)(field_x[i] - x));
-            if ((distance < min_distance) || (min_distance == -1)) {
-               min_distance = distance;
-               x_idx = i;
-            }
-        }
-
-        // find index of nearest y
-        unsigned int y_idx = 0;
-        min_distance = -1;
-        for (unsigned int i=0; i<y_len; i++) {
-            float distance = fabs((float)(field_y[i] - y));
-            if ((distance < min_distance) || (min_distance == -1)) {
-               min_distance = distance;
-               y_idx = i;
-            }
-        }
-
-        // find index of nearest t
-        unsigned int t_idx = 0;
-        min_distance = -1;
-        for (unsigned int i=0; i<t_len; i++) {
-            float distance = fabs((float)(field_t[i] - t));
-            if ((distance < min_distance) || (min_distance == -1)) {
-               min_distance = distance;
-               t_idx = i;
-            }
-        }
+        // find nearest neighbors in grid
+        unsigned int x_idx = find_nearest_neighbor_idx(x, field_x, x_len);
+        unsigned int y_idx = find_nearest_neighbor_idx(y, field_y, y_len);
+        unsigned int t_idx = find_nearest_neighbor_idx(t, field_t, t_len);
 
         // find U and V nearest to particle position
         float u = field_U[(t_idx*x_len + x_idx)*y_len + y_idx];
@@ -96,4 +70,18 @@ __kernel void advect(
             Y_out[p_id*out_timesteps + out_idx] = y;
         }
     }
+}
+
+unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len) {
+    // find index of nearest neighbor to value in arr
+    unsigned int neighbor_idx = 0;
+    float min_distance = -1;
+    for (unsigned int i=0; i<arr_len; i++) {
+        float distance = fabs((float)(arr[i] - value));
+        if ((distance < min_distance) || (min_distance == -1)) {
+           min_distance = distance;
+           neighbor_idx = i;
+        }
+    }
+    return neighbor_idx;
 }
