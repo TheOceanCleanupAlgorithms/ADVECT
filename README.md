@@ -1,6 +1,15 @@
 # ADVECTOR
-One-stop-shop for all your plastic advection needs.  The goal here is to create a 3d plastic advection model which supports all the needs of the various TOC teams.  Research, for global or regional studies, Eng, for doing forecasting/analysis of the GPGP capture systems, [insert more use cases here].  Let's get rolling, without reinventing the wheel.
+The emerging interest in vertical dynamics and a constant trend towards increased spatial and temporal resolution necessitates a fully distributed, computationally efficient solution to the problem of modeling marine litter transport at sea.  As such, this software aims to be not just computationally efficient, but fully distributed as well, in order to take full advantage of massively parallel hardware architectures such as GPUs and CPU clusters.  The OpenCL paradigm accomplishes both of these goals.
 
+## Features and Timeline
+### V0: Sea Surface Advection
+Version 0 aims to be a functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global dispersion studies, it will use a 2D, second-order advection scheme, and will support surface dynamics such as Stokes drift, windage, and parameterized eddy diffusion. 
+### V1: 3D Advection (Buoyancy Driven)
+Version 1 will consider depth, and will require vertical current as an input.  It will use a 3D second-order advection scheme and will support buoyancy-driven vertical movement.
+### V2: Elaborate Vertical Transport Mechanisms
+Version 2 will add new vertical transport mechanisms, and will support trilinear field interpolation for the advection algorithm.
+### V3: Boundary Processes (Coasts/Bathymetry)
+Version 3 will expand the consideration of coastal processes beyond simple beaching, will consider processes at the seafloor, and may add support for new advection kernels.
 ## Setup
 You can set up your conda environment with `conda env create -f environment.yml`. Get miniconda [here](https://docs.conda.io/en/latest/miniconda.html).
 
