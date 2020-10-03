@@ -1,12 +1,12 @@
-unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len);\
+unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len, const float spacing);
 
 __kernel void advect(
-    __global float* field_x,    // lon, Deg E (-180 to 180)
-    const unsigned int x_len,
-    __global float* field_y,    // lat, Deg N (-90 to 90)
-    const unsigned int y_len,
-    __global float* field_t,    // time, unix timestamp
-    const unsigned int t_len,
+    __global float* field_x,    // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int x_len,   // <= UINT_MAX
+    __global float* field_y,    // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int y_len,   // <= UINT_MAX
+    __global float* field_t,    // time, unix timestamp, uniform spacing
+    const unsigned int t_len,   // <= UINT_MAX
     __global float* field_U,    // m / s
     __global float* field_V,    // m / s
     __global float* x0,         // lon, Deg E (-180 to 180)
@@ -21,6 +21,11 @@ __kernel void advect(
     int p_id = get_global_id(0);  // id of particle
     const unsigned int out_timesteps = ntimesteps / save_every;
 
+    // calculate spacing of grids
+    const float x_spacing = field_x[1]-field_x[0];
+    const float y_spacing = field_y[1]-field_y[0];
+    const float t_spacing = field_t[1]-field_t[0];
+
     // loop timesteps
     float x = x0[p_id];
     float y = y0[p_id];
@@ -28,9 +33,9 @@ __kernel void advect(
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
 
         // find nearest neighbors in grid
-        unsigned int x_idx = find_nearest_neighbor_idx(x, field_x, x_len);
-        unsigned int y_idx = find_nearest_neighbor_idx(y, field_y, y_len);
-        unsigned int t_idx = find_nearest_neighbor_idx(t, field_t, t_len);
+        unsigned int x_idx = find_nearest_neighbor_idx(x, field_x, x_len, x_spacing);
+        unsigned int y_idx = find_nearest_neighbor_idx(y, field_y, y_len, y_spacing);
+        unsigned int t_idx = find_nearest_neighbor_idx(t, field_t, t_len, t_spacing);
 
         // find U and V nearest to particle position
         float u = field_U[(t_idx*x_len + x_idx)*y_len + y_idx];
@@ -72,16 +77,9 @@ __kernel void advect(
     }
 }
 
-unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len) {
-    // find index of nearest neighbor to value in arr
-    unsigned int neighbor_idx = 0;
-    float min_distance = -1;
-    for (unsigned int i=0; i<arr_len; i++) {
-        float distance = fabs((float)(arr[i] - value));
-        if ((distance < min_distance) || (min_distance == -1)) {
-           min_distance = distance;
-           neighbor_idx = i;
-        }
-    }
-    return neighbor_idx;
+unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len, const float spacing) {
+    // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
+    // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
+    // inside a kernel so we must perform the check in the host code.
+    return (unsigned int) clamp(round((value - arr[0])/spacing), (float) (0.0), (float) (arr_len-1));
 }
