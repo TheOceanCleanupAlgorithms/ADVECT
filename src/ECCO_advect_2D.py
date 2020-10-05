@@ -7,7 +7,7 @@ import xarray as xr
 import pandas as pd
 from datetime import timedelta
 from opencl_driver_2D import openCL_advect
-from plot_advection import plot_advection, plot_ocean_advection
+from plot_advection import plot_ocean_advection
 from dask.diagnostics import ProgressBar
 
 

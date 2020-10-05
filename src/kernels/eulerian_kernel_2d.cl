@@ -1,13 +1,13 @@
-unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len, const float spacing);
+unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing);
 
 __kernel void advect(
-    __global float* field_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int x_len,   // <= UINT_MAX
-    __global float* field_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int y_len,   // <= UINT_MAX
-    __global float* field_t,    // time, unix timestamp, uniform spacing
-    const unsigned int t_len,   // <= UINT_MAX
-    __global float* field_U,    // m / s
+    __global double* field_x,    // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int x_len,   // <= UINT_MAX + 1
+    __global double* field_y,    // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int y_len,   // <= UINT_MAX + 1
+    __global double* field_t,     // time, seconds since epoch, uniform spacing
+    const unsigned int t_len,   // <= UINT_MAX + 1
+    __global float* field_U,    // m / s, 32 bit to save space
     __global float* field_V,    // m / s
     __global float* x0,         // lon, Deg E (-180 to 180)
     __global float* y0,         // lat, Deg N (-90 to 90)
@@ -22,14 +22,14 @@ __kernel void advect(
     const unsigned int out_timesteps = ntimesteps / save_every;
 
     // calculate spacing of grids
-    const float x_spacing = field_x[1]-field_x[0];
-    const float y_spacing = field_y[1]-field_y[0];
-    const float t_spacing = field_t[1]-field_t[0];
+    const double x_spacing = field_x[1]-field_x[0];
+    const double y_spacing = field_y[1]-field_y[0];
+    const double t_spacing = field_t[1]-field_t[0];
 
     // loop timesteps
-    float x = x0[p_id];
-    float y = y0[p_id];
-    float t = t0[p_id];
+    double x = x0[p_id];
+    double y = y0[p_id];
+    double t = t0[p_id];
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
 
         // find nearest neighbors in grid
@@ -77,9 +77,9 @@ __kernel void advect(
     }
 }
 
-unsigned int find_nearest_neighbor_idx(float value, __global float* arr, const unsigned int arr_len, const float spacing) {
+unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing) {
     // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
     // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
     // inside a kernel so we must perform the check in the host code.
-    return (unsigned int) clamp(round((value - arr[0])/spacing), (float) (0.0), (float) (arr_len-1));
+    return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
 }
