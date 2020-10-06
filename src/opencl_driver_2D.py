@@ -30,7 +30,7 @@ def openCL_advect(field: xr.Dataset,
     field = field.transpose('time', 'lon', 'lat')  # make sure the underlying numpy arrays are in the correct shape
     field['time'] = (field.time - np.datetime64('1970-01-01')) / np.timedelta64(1,
                                                                                 's')  # convert field's time axis to unix timestamp
-    num_timesteps = len(advect_time)
+    num_timesteps = len(advect_time) - 1  # because initial position is given!
     t0 = advect_time[0].timestamp()  # unix timestamp
     dt = (advect_time[1] - advect_time[0]).total_seconds()
     num_particles = len(p0)
@@ -120,10 +120,15 @@ def openCL_advect(field: xr.Dataset,
     cl.enqueue_copy(queue, h_Y_out, d_Y_out)
     buf_time += time.time() - tic
 
-    # reshape results and store in numpy array
-    P = np.zeros([num_particles, out_timesteps, 2])
-    P[:, :, 0] = h_X_out.reshape([num_particles, out_timesteps])
-    P[:, :, 1] = h_Y_out.reshape([num_particles, out_timesteps])
+    # store results in Dataset
+    lon = np.concatenate([p0.lon.values[:, np.newaxis],
+                          h_X_out.reshape([num_particles, out_timesteps])], axis=1)
+    lat = np.concatenate([p0.lat.values[:, np.newaxis],
+                          h_Y_out.reshape([num_particles, out_timesteps])], axis=1)
+    P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
+                              'lat': (['p_id', 'time'], lat)},
+                   coords={'p_id': np.arange(num_particles),
+                           'time': advect_time[::save_every]})
 
     if verbose:
         print(f'memory operations took {buf_time: .3f} seconds')
