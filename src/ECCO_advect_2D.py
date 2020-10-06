@@ -39,12 +39,11 @@ def test_ECCO():
 
     print('Performing advection calculation...')
     P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time,
-                                             save_every=save_every, platform_and_device=[0, 2],  # change this to None for interactive device selection
+                                             save_every=save_every, platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
-    P = np.concatenate([p0.values[:, np.newaxis], P], axis=1)
 
-    return P, time[::save_every]
+    return P
 
 
-trajectories, time = test_ECCO()
-plot_ocean_advection(trajectories, time)
+P = test_ECCO()
+plot_ocean_advection(P)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
-import pandas as pd
+import xarray as xr
 
 
 def plot_advection(P, time, field, streamfunc=True, ax=None):
@@ -26,18 +26,18 @@ def plot_advection(P, time, field, streamfunc=True, ax=None):
         plt.pause(.01)
 
 
-def plot_ocean_advection(P, time: pd.DatetimeIndex):
+def plot_ocean_advection(P: xr.Dataset):
     # plot le advection
     proj = ccrs.PlateCarree()
     fig = plt.figure(figsize=[14, 8])
     ax = plt.axes(projection=proj)
     ax.coastlines()
 
-    dot, = ax.plot(P[:, 0, 0], P[:, 0, 1], '.')  # , transform=ccrs.Geodetic())
+    dot, = ax.plot(P.isel(time=0).lon, P.isel(time=0).lat, '.')  # , transform=ccrs.Geodetic())
 
-    for i in range(len(time)):
-        dot.set_xdata(P[:, i, 0])
-        dot.set_ydata(P[:, i, 1])
-        ax.set_title(time[i])
+    for i in range(len(P.time)):
+        dot.set_xdata(P.isel(time=i).lon)
+        dot.set_ydata(P.isel(time=i).lat)
+        ax.set_title(P.time.values[i])
         ax.set_ylim(-90, 90)
         plt.pause(.01)
