@@ -3,9 +3,10 @@ import numpy as np
 import time
 import xarray as xr
 import pandas as pd
+import math
 
 from typing import Tuple
-from kernels.eulerian_kernel_check_host_args_2d import check_args
+from kernels.eulerian_kernel_2d_check_host_args import check_args
 
 
 def openCL_advect(field: xr.Dataset,
@@ -15,7 +16,7 @@ def openCL_advect(field: xr.Dataset,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
-    advect particles on device using OpenCL.  Assumes device memory is big enough to handle it.
+    advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param field: xarray Dataset storing vector field/axes.
                     Dimensions: {'time', 'lon', 'lat'}
                     Variables: {'U', 'V'}
@@ -28,8 +29,14 @@ def openCL_advect(field: xr.Dataset,
                                                    time it took to transfer memory to/from device,
                                                    time it took to execute kernel on device)
     """
+    context, queue, program = setup_opencl_objects(platform_and_device, kernel_file='kernels/eulerian_kernel_2d.cl')
 
-    # calculate constants associated with advection
+    # get the minimum RAM available on the specified compute devices.
+    available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
+
+    advect_time_chunks, out_time_chunks, field_chunks = \
+        chunk_advection(available_RAM, field, p0, advect_time, save_every)
+
     num_particles = len(p0)
     num_timesteps = len(advect_time) - 1  # because initial position is given!
     t0 = advect_time[0].timestamp()  # unix timestamp
@@ -37,8 +44,7 @@ def openCL_advect(field: xr.Dataset,
     out_timesteps = num_timesteps // save_every
 
     # perform the basic steps of the advection calculation, leaving details up to subfunctions
-    context, queue, program = setup_opencl_objects(platform_and_device, kernel_file='kernels/eulerian_kernel_2d.cl')
-    host_bufs, device_bufs, write_time = create_buffers(context, field, p0, num_particles, out_timesteps, t0, verbose)
+    host_bufs, device_bufs, write_time = create_buffers(context, field, p0, out_timesteps, t0, verbose)
     kernel_timer = execute_kernel(program, queue, host_bufs, device_bufs, num_particles, dt, num_timesteps, save_every)
     read_time, kernel_time = read_buffers_back_from_kernel(queue, host_bufs, device_bufs, kernel_timer)
 
@@ -51,6 +57,51 @@ def openCL_advect(field: xr.Dataset,
         print(f'kernel execution took  {kernel_time: .3f} seconds')
 
     return P, buf_time, kernel_time
+
+
+def chunk_advection(device_bytes, field, p0, advect_time, save_every):
+    out_time = advect_time[::save_every]
+    # each element of out_time marks a time at which the driver will return particle position
+
+    # estimate total size of memory we need to eventually run through the device
+    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(field, len(p0), len(out_time)-1)
+    available_bytes_for_field = device_bytes - (output_bytes + p0_bytes)
+    num_chunks = math.ceil(field_bytes / available_bytes_for_field)  # minimum chunking to potentially fit RAM
+
+    # it's hard to pre-compute the exact number of chunks necessary that will fit into RAM.  we start with a good guess,
+    # but if any of the chunks we create don't fit into RAM, just increment the number of chunks and try again.
+    while True:
+        # now we split up the advection OUTPUT into chunks.  All else will be based on this splitting.
+        assert len(out_time) >= num_chunks, 'Cannot split computation, output frequency is too low!'
+        # the above situation arises when the span of time between particle save points corresponds to a chunk of field
+        # which is too large to fit onto the compute device.
+
+        chunk_len = math.ceil(len(out_time) / num_chunks)
+        out_time_chunks = [out_time[i*chunk_len: (i+1)*chunk_len + 1] for i in range(num_chunks)]
+        advect_time_chunks = [advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
+                              for out_time_chunk in out_time_chunks]
+        # subsequent time chunks have overlapping endpoints.  This is because the final reported value
+        # from a computation will be fed to the next computation as the start point, at the same time.
+
+        field_chunks = [field.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
+                        for out_time_chunk in out_time_chunks]
+
+        if all(device_bytes-sum(estimate_memory_bytes(field_chunk, len(p0), len(out_time_chunk)-1)) > 0
+               for field_chunk, out_time_chunk in zip(field_chunks, out_time_chunks)):
+            break
+        num_chunks += 1
+
+    return advect_time_chunks, out_time_chunks, field_chunks
+
+
+def estimate_memory_bytes(field, num_particles, out_timesteps):
+    """This estimates total memory needed for the buffers.
+    There's a bit more needed for the scalar arguments, but this is tiny"""
+    field_bytes = (2 * 4 * np.prod(field.U.shape) +  # two 32-bit fields
+                   8 * (len(field.lon) + len(field.lat) + len(field.time)))  # the 3 64-bit coordinate arrays
+    output_bytes = 2 * 4 * num_particles * out_timesteps   # two 32-bit variables for each particle for each timestep
+    p0_bytes = 2 * 4 * num_particles  # two 32-bit variables for each particle
+    return field_bytes, output_bytes, p0_bytes
 
 
 def setup_opencl_objects(platform_and_device, kernel_file):
@@ -71,12 +122,15 @@ def setup_opencl_objects(platform_and_device, kernel_file):
 
 def create_buffers(context, field, p0, out_timesteps, t0, verbose):
     """here we create host and device buffers, and return them as dictionaries"""
-    host_bufs = create_host_buffers(field, p0, out_timesteps, t0, verbose)
+    host_bufs = create_host_buffers(field, p0, out_timesteps, t0)
+    if verbose:  # print size of buffers
+        for buf_name, buf_value in host_bufs.items():
+            print(f'{buf_name}: {buf_value.nbytes / 1e6} MB')
     device_bufs, write_time = create_device_buffers(context, host_bufs)
     return host_bufs, device_bufs, write_time
 
 
-def create_host_buffers(field, p0, out_timesteps, t0, verbose):
+def create_host_buffers(field, p0, out_timesteps, t0):
     # initialize host vectors.  These are the host-side arguments for the kernel.
     field = field.transpose('time', 'lon', 'lat')  # make sure the underlying numpy arrays are in the correct shape
     h_field_x = field.lon.values.astype(np.float64)
@@ -93,10 +147,6 @@ def create_host_buffers(field, p0, out_timesteps, t0, verbose):
                  'h_field_U': h_field_U, 'h_field_V': h_field_V,
                  'h_x0': h_x0, 'h_y0': h_y0, 'h_t0': h_t0,
                  'h_X_out': h_X_out, 'h_Y_out': h_Y_out}
-    if verbose:
-        # print size of buffers
-        for buf_name, buf_value in host_bufs.items():
-            print(f'{buf_name}: {buf_value.nbytes / 1e6} MB')
     return host_bufs
 
 
@@ -109,8 +159,8 @@ def create_device_buffers(context, host_bufs):
                          host_bufs['h_field_U'], host_bufs['h_field_V'],
                          host_bufs['h_x0'], host_bufs['h_y0'], host_bufs['h_t0']))
     # Create the output arrays in device memory
-    d_X_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, h_X_out.nbytes)
-    d_Y_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, h_Y_out.nbytes)
+    d_X_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, host_bufs['h_X_out'].nbytes)
+    d_Y_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, host_bufs['h_Y_out'].nbytes)
     device_bufs = {'d_field_x': d_field_x, 'd_field_y': d_field_y, 'd_field_t': d_field_t,
                    'd_field_U': d_field_U, 'd_field_V': d_field_V,
                    'd_x0': d_x0, 'd_y0': d_y0, 'd_t0': d_t0,

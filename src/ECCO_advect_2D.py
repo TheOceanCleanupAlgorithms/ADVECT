@@ -34,12 +34,12 @@ def test_ECCO():
 
     # initialize advection parameters
     dt = timedelta(hours=1)
-    time = pd.date_range(start='2015-01-01', end='2016-01-01', freq=dt, closed='left')
+    time = pd.date_range(start='2015-01-01T12', end='2016-01-01T12', freq=dt, closed='left')
     save_every = 24
 
     print('Performing advection calculation...')
     P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time,
-                                             save_every=save_every, platform_and_device=(0, 2), # change this to None for interactive device selection
+                                             save_every=save_every, platform_and_device=None, # change this to None for interactive device selection
                                              verbose=True)
 
     return P
