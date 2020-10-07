@@ -28,7 +28,6 @@ def openCL_advect(field: xr.Dataset,
                                                    time it took to transfer memory to/from device,
                                                    time it took to execute kernel on device)
     """
-    field = field.transpose('time', 'lon', 'lat')  # make sure the underlying numpy arrays are in the correct shape
 
     # calculate constants associated with advection
     num_particles = len(p0)
@@ -70,9 +69,16 @@ def setup_opencl_objects(platform_and_device, kernel_file):
     return context, queue, program
 
 
-def create_buffers(context, field, p0, num_particles, out_timesteps, t0, verbose):
+def create_buffers(context, field, p0, out_timesteps, t0, verbose):
     """here we create host and device buffers, and return them as dictionaries"""
+    host_bufs = create_host_buffers(field, p0, out_timesteps, t0, verbose)
+    device_bufs, write_time = create_device_buffers(context, host_bufs)
+    return host_bufs, device_bufs, write_time
+
+
+def create_host_buffers(field, p0, out_timesteps, t0, verbose):
     # initialize host vectors.  These are the host-side arguments for the kernel.
+    field = field.transpose('time', 'lon', 'lat')  # make sure the underlying numpy arrays are in the correct shape
     h_field_x = field.lon.values.astype(np.float64)
     h_field_y = field.lat.values.astype(np.float64)
     h_field_t = field.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
@@ -80,9 +86,9 @@ def create_buffers(context, field, p0, num_particles, out_timesteps, t0, verbose
     h_field_V = field.V.values.astype(np.float32).flatten()
     h_x0 = p0.lon.values.astype(np.float32)
     h_y0 = p0.lat.values.astype(np.float32)
-    h_t0 = (t0 * np.ones(num_particles)).astype(np.float32)
-    h_X_out = np.zeros(num_particles * out_timesteps).astype(np.float32)
-    h_Y_out = np.zeros(num_particles * out_timesteps).astype(np.float32)
+    h_t0 = (t0 * np.ones(len(p0))).astype(np.float32)
+    h_X_out = np.zeros(len(p0) * out_timesteps).astype(np.float32)
+    h_Y_out = np.zeros(len(p0) * out_timesteps).astype(np.float32)
     host_bufs = {'h_field_x': h_field_x, 'h_field_y': h_field_y, 'h_field_t': h_field_t,
                  'h_field_U': h_field_U, 'h_field_V': h_field_V,
                  'h_x0': h_x0, 'h_y0': h_y0, 'h_t0': h_t0,
@@ -91,12 +97,17 @@ def create_buffers(context, field, p0, num_particles, out_timesteps, t0, verbose
         # print size of buffers
         for buf_name, buf_value in host_bufs.items():
             print(f'{buf_name}: {buf_value.nbytes / 1e6} MB')
+    return host_bufs
 
+
+def create_device_buffers(context, host_bufs):
     # Create the input arrays in device memory and copy data from host
     tic = time.time()
     d_field_x, d_field_y, d_field_t, d_field_U, d_field_V, d_x0, d_y0, d_t0 = \
         (cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
-         for hostbuf in (h_field_x, h_field_y, h_field_t, h_field_U, h_field_V, h_x0, h_y0, h_t0))
+         for hostbuf in (host_bufs['h_field_x'], host_bufs['h_field_y'], host_bufs['h_field_t'],
+                         host_bufs['h_field_U'], host_bufs['h_field_V'],
+                         host_bufs['h_x0'], host_bufs['h_y0'], host_bufs['h_t0']))
     # Create the output arrays in device memory
     d_X_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, h_X_out.nbytes)
     d_Y_out = cl.Buffer(context, cl.mem_flags.READ_WRITE, h_Y_out.nbytes)
@@ -105,8 +116,7 @@ def create_buffers(context, field, p0, num_particles, out_timesteps, t0, verbose
                    'd_x0': d_x0, 'd_y0': d_y0, 'd_t0': d_t0,
                    'd_X_out': d_X_out, 'd_Y_out': d_Y_out}
     write_time = time.time() - tic
-
-    return host_bufs, device_bufs, write_time
+    return device_bufs, write_time
 
 
 def execute_kernel(program, queue, host_bufs, device_bufs, num_particles, dt, num_timesteps, save_every):

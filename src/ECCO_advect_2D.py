@@ -45,5 +45,6 @@ def test_ECCO():
     return P
 
 
-P = test_ECCO()
-plot_ocean_advection(P)
+if __name__ == '__main__':
+    P = test_ECCO()
+    plot_ocean_advection(P)
