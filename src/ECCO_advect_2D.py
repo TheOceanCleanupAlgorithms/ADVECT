@@ -39,7 +39,7 @@ def test_ECCO():
 
     print('Performing advection calculation...')
     P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time,
-                                             save_every=save_every, platform_and_device=None, # change this to None for interactive device selection
+                                             save_every=save_every, platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
 
     return P
