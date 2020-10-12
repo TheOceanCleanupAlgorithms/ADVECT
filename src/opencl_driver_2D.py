@@ -4,7 +4,7 @@ import xarray as xr
 import pandas as pd
 
 from typing import Tuple
-from kernels.kernels import EulerianKernel2D
+from kernels.EulerianKernel2D import EulerianKernel2D
 
 
 def openCL_advect(field: xr.Dataset,
@@ -42,27 +42,24 @@ def openCL_advect(field: xr.Dataset,
     else:
         context = cl.create_some_context(answers=list(platform_and_device))
 
-    # perform the basic steps of the advection calculation, leaving details up to subfunctions
+    # create the kernel wrapper object, pass it arguments
     kernel = create_kernel(context, field=field, p0=p0, num_particles=num_particles,
                            dt=dt, t0=t0, num_timesteps=num_timesteps, save_every=save_every,
                            out_timesteps=out_timesteps)
-
-    X_out, Y_out = kernel.execute_and_return_result()
-
-    # store results in Dataset
-    P = create_dataset_from_advection_output(p0=p0, X_out=X_out, Y_out=Y_out,
-                                             num_particles=num_particles, out_timesteps=out_timesteps,
-                                             advect_time=advect_time, save_every=save_every)
+    kernel.execute()
 
     if verbose:
         kernel.print_memory_footprint()
         kernel.print_execution_time()
 
+    P = create_dataset_from_kernel(kernel, advect_time[::save_every])
+
     return P, kernel.buf_time, kernel.kernel_time
 
 
-def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame, num_particles: int,
-                  dt: float, t0: pd.Timestamp, num_timesteps: int, save_every: int, out_timesteps: int):
+def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
+                  num_particles: int, dt: float, t0: pd.Timestamp,
+                  num_timesteps: int, save_every: int, out_timesteps: int) -> EulerianKernel2D:
     """create and return the wrapper for the opencl kernel"""
     return EulerianKernel2D(
             context=context,
@@ -82,13 +79,17 @@ def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame, num_
     )
 
 
-def create_dataset_from_advection_output(p0, X_out, Y_out, num_particles, out_timesteps, advect_time, save_every):
-    lon = np.concatenate([p0.lon.values[:, np.newaxis],
-                          X_out.reshape([num_particles, out_timesteps])], axis=1)
-    lat = np.concatenate([p0.lat.values[:, np.newaxis],
-                          Y_out.reshape([num_particles, out_timesteps])], axis=1)
+def create_dataset_from_kernel(kernel: EulerianKernel2D, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+    """assumes kernel has been run"""
+    num_particles = len(kernel.x0)
+    lon = np.concatenate([kernel.x0[:, np.newaxis],
+                          kernel.X_out.reshape([num_particles, -1])], axis=1)
+    lat = np.concatenate([kernel.y0[:, np.newaxis],
+                          kernel.Y_out.reshape([num_particles, -1])], axis=1)
+    assert all(kernel.t0 == kernel.t0[0])  # break if all particles not released simultaneously
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat)},
                    coords={'p_id': np.arange(num_particles),
-                           'time': advect_time[::save_every]})
+                           'time': advect_time}
+                   )
     return P
