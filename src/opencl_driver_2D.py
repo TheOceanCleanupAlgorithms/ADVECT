@@ -2,10 +2,11 @@ import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-import math
 
 from typing import Tuple
+from dask.diagnostics import ProgressBar
 from kernels.EulerianKernel2D import EulerianKernel2D
+from chunking import chunk_advection_params
 
 
 def openCL_advect(field: xr.Dataset,
@@ -29,10 +30,7 @@ def openCL_advect(field: xr.Dataset,
                                                    time it took to execute kernel on device)
     """
     num_particles = len(p0)
-    num_timesteps = len(advect_time) - 1  # because initial position is given!
-    t0 = advect_time[0]
     dt = (advect_time[1] - advect_time[0]).total_seconds()
-    out_timesteps = num_timesteps // save_every
 
     # choose the device/platform we're running on
     if platform_and_device is None:
@@ -41,24 +39,44 @@ def openCL_advect(field: xr.Dataset,
         context = cl.create_some_context(answers=list(platform_and_device))
 
     # get the minimum RAM available on the specified compute devices.
-    available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
-
+    #available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
+    available_RAM = int(20e6)
     advect_time_chunks, out_time_chunks, field_chunks = \
-        chunk_advection(available_RAM, field, p0, advect_time, save_every)
+        chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
 
-    # create the kernel wrapper object, pass it arguments
-    kernel = create_kernel(context, field=field, p0=p0, num_particles=num_particles,
-                           dt=dt, t0=t0, num_timesteps=num_timesteps, save_every=save_every,
-                           out_timesteps=out_timesteps)
-    kernel.execute()
+    buf_time, kernel_time = 0, 0
+    P_chunks = []
+    p0_chunk = p0
+    for advect_time_chunk, out_time_chunk, field_chunk in zip(advect_time_chunks, out_time_chunks, field_chunks):
+        print(f'Chunk {len(P_chunks)+1:3}/{len(field_chunks)}: '
+              f'{field_chunk.time.values[0]} to {field_chunk.time.values[-1]}...')
+        print(f'  Loading currents...')
+        with ProgressBar():
+            field_chunk.load()
 
-    if verbose:
-        kernel.print_memory_footprint()
-        kernel.print_execution_time()
+        num_timesteps = len(advect_time_chunk) - 1  # because initial position is given!
+        out_timesteps = len(out_time_chunk) - 1     #
+        # create the kernel wrapper object, pass it arguments
+        kernel = create_kernel(context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
+                               dt=dt, t0=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
+                               out_timesteps=out_timesteps)
+        kernel.execute()
 
-    P = create_dataset_from_kernel(kernel, advect_time[::save_every])
+        buf_time += kernel.buf_time
+        kernel_time += kernel.kernel_time
+        if verbose:
+            kernel.print_memory_footprint()
+            kernel.print_execution_time()
 
-    return P, kernel.buf_time, kernel.kernel_time
+        P_chunk = create_dataset_from_kernel(kernel, out_time_chunk)
+        if len(P_chunks) > 0:  # except for first chunk, leave out p0
+            P_chunk = P_chunk.isel(time=slice(1, None))
+        P_chunks.append(P_chunk)
+        p0_chunk = P_chunk.isel(time=-1).to_dataframe()
+
+    P = xr.concat(P_chunks, dim='time')
+
+    return P, buf_time, kernel_time
 
 
 def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
@@ -99,48 +117,3 @@ def create_dataset_from_kernel(kernel: EulerianKernel2D, advect_time: pd.Datetim
                            'time': advect_time}
                    )
     return P
-
-
-def chunk_advection(device_bytes, field, p0, advect_time, save_every):
-    out_time = advect_time[::save_every]
-    # each element of out_time marks a time at which the driver will return particle position
-
-    # estimate total size of memory we need to eventually run through the device
-    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(field, len(p0), len(out_time)-1)
-    available_bytes_for_field = device_bytes - (output_bytes + p0_bytes)
-    num_chunks = math.ceil(field_bytes / available_bytes_for_field)  # minimum chunking to potentially fit RAM
-
-    # it's hard to pre-compute the exact number of chunks necessary that will fit into RAM.  we start with a good guess,
-    # but if any of the chunks we create don't fit into RAM, just increment the number of chunks and try again.
-    while True:
-        # now we split up the advection OUTPUT into chunks.  All else will be based on this splitting.
-        assert len(out_time) >= num_chunks, 'Cannot split computation, output frequency is too low!'
-        # the above situation arises when the span of time between particle save points corresponds to a chunk of field
-        # which is too large to fit onto the compute device.
-
-        chunk_len = math.ceil(len(out_time) / num_chunks)
-        out_time_chunks = [out_time[i*chunk_len: (i+1)*chunk_len + 1] for i in range(num_chunks)]
-        advect_time_chunks = [advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
-                              for out_time_chunk in out_time_chunks]
-        # subsequent time chunks have overlapping endpoints.  This is because the final reported value
-        # from a computation will be fed to the next computation as the start point, at the same time.
-
-        field_chunks = [field.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-                        for out_time_chunk in out_time_chunks]
-
-        if all(device_bytes-sum(estimate_memory_bytes(field_chunk, len(p0), len(out_time_chunk)-1)) > 0
-               for field_chunk, out_time_chunk in zip(field_chunks, out_time_chunks)):
-            break
-        num_chunks += 1
-
-    return advect_time_chunks, out_time_chunks, field_chunks
-
-
-def estimate_memory_bytes(field, num_particles, out_timesteps):
-    """This estimates total memory needed for the buffers.
-    There's a bit more needed for the scalar arguments, but this is tiny"""
-    field_bytes = (2 * 4 * np.prod(field.U.shape) +  # two 32-bit fields
-                   8 * (len(field.lon) + len(field.lat) + len(field.time)))  # the 3 64-bit coordinate arrays
-    output_bytes = 2 * 4 * num_particles * out_timesteps   # two 32-bit variables for each particle for each timestep
-    p0_bytes = 2 * 4 * num_particles  # two 32-bit variables for each particle
-    return field_bytes, output_bytes, p0_bytes

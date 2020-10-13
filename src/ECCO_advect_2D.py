@@ -8,7 +8,6 @@ import pandas as pd
 from datetime import timedelta
 from opencl_driver_2D import openCL_advect
 from plot_advection import plot_ocean_advection
-from dask.diagnostics import ProgressBar
 
 
 def test_ECCO():
@@ -16,10 +15,6 @@ def test_ECCO():
     U = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/U_2015*.nc')
     V = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/V_2015*.nc')
     currents = xr.merge((U, V)).sel(depth=0, method='nearest')
-
-    print(f'Loading surface currents into RAM ({currents.nbytes/1e6:.0f} MB)...')
-    with ProgressBar():
-        currents.load()
 
     # create a land mask, then replace currents on land with 0 (easy method to get beaching)
     land = currents.U.isel(time=0).isnull()
