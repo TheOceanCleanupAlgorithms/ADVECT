@@ -34,12 +34,14 @@ def chunk_advection_params(device_bytes: int, field: xr.Dataset, num_particles: 
         # the above situation arises when the span of time between particle save points corresponds to a chunk of field
         # which is too large to fit onto the compute device.
 
-        chunk_len = math.ceil(len(out_time) / num_chunks)
-        out_time_chunks = [out_time[i*chunk_len: (i+1)*chunk_len + 1] for i in range(num_chunks)]
+        out_time_chunks = np.array_split(out_time, num_chunks)
+        out_time_chunks[1:] = [out_time_chunks[i-1][-1:].append(out_time_chunks[i])
+                               for i in range(1, len(out_time_chunks))]
+        # give subsequent time chunks overlapping endpoints.  This is because the final reported value
+        # from a computation will be fed to the next computation as the start point, at the same time.
+
         advect_time_chunks = [advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
                               for out_time_chunk in out_time_chunks]
-        # subsequent time chunks have overlapping endpoints.  This is because the final reported value
-        # from a computation will be fed to the next computation as the start point, at the same time.
 
         field_chunks = [field.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
                         for out_time_chunk in out_time_chunks]
