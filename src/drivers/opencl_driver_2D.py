@@ -6,7 +6,7 @@ import pandas as pd
 from typing import Tuple
 from dask.diagnostics import ProgressBar
 from kernels.EulerianKernel2D import EulerianKernel2D
-from chunking import chunk_advection_params
+from drivers.advection_chunking import chunk_advection_params
 
 
 def openCL_advect(field: xr.Dataset,
@@ -39,8 +39,7 @@ def openCL_advect(field: xr.Dataset,
         context = cl.create_some_context(answers=list(platform_and_device))
 
     # get the minimum RAM available on the specified compute devices.
-    #available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
-    available_RAM = int(20e6)
+    available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
     advect_time_chunks, out_time_chunks, field_chunks = \
         chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
 

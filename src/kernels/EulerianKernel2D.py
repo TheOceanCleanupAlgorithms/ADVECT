@@ -4,7 +4,7 @@ Args are passed upon initialization, execution is triggered by method "execute".
 of executing kernels.
 """
 
-import opencl_specification_constants as cl_const
+import kernels.opencl_specification_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time

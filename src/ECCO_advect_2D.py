@@ -6,8 +6,8 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 from datetime import timedelta
-from opencl_driver_2D import openCL_advect
-from plot_advection import plot_ocean_advection
+from drivers.opencl_driver_2D import openCL_advect
+from plotting.plot_advection import plot_ocean_advection
 
 
 def test_ECCO():
@@ -37,9 +37,9 @@ def test_ECCO():
                                              save_every=save_every, platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
 
-    return P
+    return P, (buf_time, kernel_time)
 
 
 if __name__ == '__main__':
-    P = test_ECCO()
+    P, (buf_time, kernel_time) = test_ECCO()
     plot_ocean_advection(P)
