@@ -4,7 +4,7 @@ Args are passed upon initialization, execution is triggered by method "execute".
 of executing kernels.
 """
 
-import opencl_specification_constants as cl_const
+import kernels.opencl_specification_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time
@@ -86,16 +86,17 @@ class EulerianKernel2D:
         vars_bytes = (self.field_U.nbytes + self.field_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.t0.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes)
-        print(f'Field Coordinates:  {coords_bytes/1e6:4} MB')
-        print(f'Field Variables:    {vars_bytes/1e6:4} MB')
-        print(f'Particle Positions: {particle_bytes/1e6:4} MB')
-        print(f'-------------------------------------------')
-        print(f'Total:              {(coords_bytes+vars_bytes+particle_bytes)/1e6:4} MB')
+        print(f'Field Coordinates:  {coords_bytes/1e6:10.3f} MB')
+        print(f'Field Variables:    {vars_bytes/1e6:10.3f} MB')
+        print(f'Particle Positions: {particle_bytes/1e6:10.3f} MB')
+        print(f'Total:              {(coords_bytes+vars_bytes+particle_bytes)/1e6:10.3f} MB')
+        print('')
 
     def print_execution_time(self):
-        print('-----EXECUTION TIME-----')
-        print(f'Kernel execution time: {self.kernel_time:.3f} s')
-        print(f'Memory Read/Write time: {self.buf_time} s')
+        print('------EXECUTION TIME------')
+        print(f'Kernel Execution:   {self.kernel_time:10.3f} s')
+        print(f'Memory Read/Write:  {self.buf_time:10.3f} s')
+        print('')
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""

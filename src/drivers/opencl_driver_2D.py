@@ -4,7 +4,9 @@ import xarray as xr
 import pandas as pd
 
 from typing import Tuple
+from dask.diagnostics import ProgressBar
 from kernels.EulerianKernel2D import EulerianKernel2D
+from drivers.advection_chunking import chunk_advection_params
 
 
 def openCL_advect(field: xr.Dataset,
@@ -14,7 +16,7 @@ def openCL_advect(field: xr.Dataset,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
-    advect particles on device using OpenCL.  Assumes device memory is big enough to handle it.
+    advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param field: xarray Dataset storing vector field/axes.
                     Dimensions: {'time', 'lon', 'lat'}
                     Variables: {'U', 'V'}
@@ -27,14 +29,8 @@ def openCL_advect(field: xr.Dataset,
                                                    time it took to transfer memory to/from device,
                                                    time it took to execute kernel on device)
     """
-    field = field.transpose('time', 'lon', 'lat')  # make sure the underlying numpy arrays are in the correct shape
-
-    # calculate constants associated with advection
     num_particles = len(p0)
-    num_timesteps = len(advect_time) - 1  # because initial position is given!
-    t0 = advect_time[0]
     dt = (advect_time[1] - advect_time[0]).total_seconds()
-    out_timesteps = num_timesteps // save_every
 
     # choose the device/platform we're running on
     if platform_and_device is None:
@@ -42,25 +38,52 @@ def openCL_advect(field: xr.Dataset,
     else:
         context = cl.create_some_context(answers=list(platform_and_device))
 
-    # create the kernel wrapper object, pass it arguments
-    kernel = create_kernel(context, field=field, p0=p0, num_particles=num_particles,
-                           dt=dt, t0=t0, num_timesteps=num_timesteps, save_every=save_every,
-                           out_timesteps=out_timesteps)
-    kernel.execute()
+    # get the minimum RAM available on the specified compute devices.
+    available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
+    advect_time_chunks, out_time_chunks, field_chunks = \
+        chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
 
-    if verbose:
-        kernel.print_memory_footprint()
-        kernel.print_execution_time()
+    buf_time, kernel_time = 0, 0
+    P_chunks = []
+    p0_chunk = p0
+    for advect_time_chunk, out_time_chunk, field_chunk in zip(advect_time_chunks, out_time_chunks, field_chunks):
+        print(f'Chunk {len(P_chunks)+1:3}/{len(field_chunks)}: '
+              f'{field_chunk.time.values[0]} to {field_chunk.time.values[-1]}...')
+        print(f'  Loading currents...')
+        with ProgressBar():
+            field_chunk.load()
 
-    P = create_dataset_from_kernel(kernel, advect_time[::save_every])
+        num_timesteps = len(advect_time_chunk) - 1  # because initial position is given!
+        out_timesteps = len(out_time_chunk) - 1     #
+        # create the kernel wrapper object, pass it arguments
+        kernel = create_kernel(context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
+                               dt=dt, t0=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
+                               out_timesteps=out_timesteps)
+        kernel.execute()
 
-    return P, kernel.buf_time, kernel.kernel_time
+        buf_time += kernel.buf_time
+        kernel_time += kernel.kernel_time
+        if verbose:
+            kernel.print_memory_footprint()
+            kernel.print_execution_time()
+
+        P_chunk = create_dataset_from_kernel(kernel, out_time_chunk)
+        if len(P_chunks) > 0:  # except for first chunk, leave out p0
+            P_chunk = P_chunk.isel(time=slice(1, None))
+        P_chunks.append(P_chunk)
+        p0_chunk = P_chunk.isel(time=-1).to_dataframe()
+
+    P = xr.concat(P_chunks, dim='time')
+
+    return P, buf_time, kernel_time
 
 
 def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: float, t0: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> EulerianKernel2D:
     """create and return the wrapper for the opencl kernel"""
+    field = field.transpose('time', 'lon', 'lat')
+
     return EulerianKernel2D(
             context=context,
             field_x=field.lon.values.astype(np.float64),
@@ -80,7 +103,7 @@ def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
 
 
 def create_dataset_from_kernel(kernel: EulerianKernel2D, advect_time: pd.DatetimeIndex) -> xr.Dataset:
-    """assumes kernel has been run"""
+    """assumes kernel has been run, assumes simultaneous particle release"""
     num_particles = len(kernel.x0)
     lon = np.concatenate([kernel.x0[:, np.newaxis],
                           kernel.X_out.reshape([num_particles, -1])], axis=1)
