@@ -8,6 +8,8 @@ from dask.diagnostics import ProgressBar
 from kernels.EulerianKernel2D import EulerianKernel2D
 from drivers.advection_chunking import chunk_advection_params
 
+from kernels.Taylor2Kernel2D import Taylor2Kernel2D
+
 
 def openCL_advect(field: xr.Dataset,
                   p0: pd.DataFrame,
@@ -80,11 +82,11 @@ def openCL_advect(field: xr.Dataset,
 
 def create_kernel(context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: float, t0: pd.Timestamp,
-                  num_timesteps: int, save_every: int, out_timesteps: int) -> EulerianKernel2D:
+                  num_timesteps: int, save_every: int, out_timesteps: int) -> Taylor2Kernel2D:
     """create and return the wrapper for the opencl kernel"""
     field = field.transpose('time', 'lon', 'lat')
 
-    return EulerianKernel2D(
+    return Taylor2Kernel2D(
             context=context,
             field_x=field.lon.values.astype(np.float64),
             field_y=field.lat.values.astype(np.float64),

@@ -1,5 +1,5 @@
 unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing);
-float index_vector_field(float* field, unsigned int x_len, unsigned int y_len,
+float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
                          unsigned int x_idx, unsigned int y_idx, unsigned int t_idx);
 float meters_to_degrees_lon(float dx_meters, float y);
 float meters_to_degrees_lat(float dy_meters, float y);
@@ -38,47 +38,54 @@ __kernel void advect(
     double t = t0[p_id];
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
 
-        // find nearest neighbors in grid
+        // find nearest neighbor grid cell
         unsigned int x_idx = find_nearest_neighbor_idx(x, field_x, x_len, x_spacing);
         unsigned int y_idx = find_nearest_neighbor_idx(y, field_y, y_len, y_spacing);
         unsigned int t_idx = find_nearest_neighbor_idx(t, field_t, t_len, t_spacing);
 
-        //////////// advect particle using second-order taylor approx advection scheme (Black and Gay, 199?)
-        // meters displacement
+        // find adjacent cells
+        unsigned int x_idx_w = (x_idx + 1) % x_len;
+        unsigned int x_idx_e = (x_idx - 1) % x_len;
+        unsigned int y_idx_s = max(y_idx - 1, 0u);
+        unsigned int y_idx_n = min(y_idx + 1, y_len - 1);
+        unsigned int t_idx_dt = min(t_idx + 1, t_len - 1);
 
-        float u = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, t_idx);  // u at the particle
-        float v = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, t_idx);  // v at the particle
-        float u_w = index_vector_field(field_U, x_len, y_len, (x_idx - 1) % x_len, y_idx, t_idx);  // u one grid cell left
-        float u_e = index_vector_field(field_U, x_len, y_len, (x_idx + 1) % x_len, y_idx, t_idx);  // u one grid cell right
-        float u_s = index_vector_field(field_U, x_len, y_len, x_idx, max(y_idx - 1, 0), t_idx);  // u one grid cell down
-        float u_n = index_vector_field(field_U, x_len, y_len, x_idx, min(y_idx + 1, y_len - 1), t_idx);  // u one grid cell up
-        float v_w = index_vector_field(field_V, x_len, y_len, (x_idx - 1) % x_len, y_idx, t_idx);  // v one grid cell left
-        float v_e = index_vector_field(field_V, x_len, y_len, (x_idx + 1) % x_len, y_idx, t_idx);  // v one grid cell right
-        float v_s = index_vector_field(field_V, x_len, y_len, x_idx, max(y_idx - 1, 0), t_idx);  // v one grid cell down
-        float v_n = index_vector_field(field_V, x_len, y_len, x_idx, min(y_idx + 1, y_len - 1), t_idx);  // v one grid cell up
-        float u_dt = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, min(t_idx + 1, t_len - 1));  // u at particle position one index in future
-        float v_dt = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, min(t_idx + 1, t_len - 1));  // v at particle position one index in future
+        // extract values from nearest neighbor + adjacent cells
+        float u = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, t_idx);       // at the particle
+        float v = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, t_idx);       //
+        float u_w = index_vector_field(field_U, x_len, y_len, x_idx_w, y_idx, t_idx);   // one grid cell left
+        float v_w = index_vector_field(field_V, x_len, y_len, x_idx_w, y_idx, t_idx);   //
+        float u_e = index_vector_field(field_U, x_len, y_len, x_idx_e, y_idx, t_idx);   // one grid cell right
+        float v_e = index_vector_field(field_V, x_len, y_len, x_idx_e, y_idx, t_idx);   //
+        float u_s = index_vector_field(field_U, x_len, y_len, x_idx, y_idx_s, t_idx);   // one grid cell down
+        float v_s = index_vector_field(field_V, x_len, y_len, x_idx, y_idx_s, t_idx);   //
+        float u_n = index_vector_field(field_U, x_len, y_len, x_idx, y_idx_n, t_idx);   // one grid cell up
+        float v_n = index_vector_field(field_V, x_len, y_len, x_idx, y_idx_n, t_idx);   //
+        float u_dt = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, t_idx_dt);  // one grid cell in future
+        float v_dt = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, t_idx_dt);  //
 
         // grid spacing at particle in x direction (m)
+        float dx;
         if (x_idx == 0) {
-            float dx = field_x[x_idx + 1] - field_x[x_idx];
+            dx = field_x[x_idx + 1] - field_x[x_idx];
         } else {
-            float dy = field_x[x_idx] - field_x[x_idx - 1];
+            dx = field_x[x_idx] - field_x[x_idx - 1];
         }
         float dx_m = degrees_lon_to_meters(dx, y);
 
         // grid spacing at particle in y direction (m)
+        float dy;
         if (y_idx == 0) {
-            float dy = field_y[y_idx + 1] - field_y[y_idx];
+            dy = field_y[y_idx + 1] - field_y[y_idx];
         } else {
-            float dy = field_y[y_idx] - field_y[y_idx - 1];
+            dy = field_y[y_idx] - field_y[y_idx - 1];
         }
         float dy_m = degrees_lat_to_meters(dy, y);
 
         // Calculate horizontal gradients
         float ux = (u_w - u_e) / (2*dx_m);
-        float uy = (u_s - u_n) / (2*dy_m);
         float vx = (v_w - v_e) / (2*dx_m);
+        float uy = (u_s - u_n) / (2*dy_m);
         float vy = (v_s - v_n) / (2*dy_m);
 
         // Calculate time gradients
@@ -86,17 +93,15 @@ __kernel void advect(
         float vt = (v_dt - v) / dt;
 
         // simplifying term
-        float u_ = u + (dt*ut)/2;  // these units don't even make sense...
+        float u_ = u + (dt*ut)/2;
         float v_ = v + (dt*vt)/2;
 
-        float u_taylor = ( u_ + ( uy.*v_ - vy.*u_ )*dt/2 ) ./ ( (1-ux*dt/2).*(1-vy*dt/2) - (uy.*vx*dt^2)/4 ) ;
-        float v_taylor = ( v_ + ( vx.*u_ - ux.*v_ )*dt/2 ) ./ ( (1-uy*dt/2).*(1-vx*dt/2) - (ux.*vy*dt^2)/4 ) ;
+        //////////// advect particle using second-order taylor approx advection scheme (Black and Gay, 1990, eq. 12/13)
+        float x_disp_meters = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
+        float y_disp_meters = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - uy*dt/2) * (1 - vx*dt/2) - (ux*vy * pow(dt, 2)) / 4);
 
-        float x_disp_meters = u_taylor * dt;
-        float y_disp_meters = v_taylor * dt;
-
-        float dx_deg = meters_to_degrees_lon(x_disp_meters, y)
-        float dy_deg = meters_to_degrees_lat(y_disp_meters, y)
+        float dx_deg = meters_to_degrees_lon(x_disp_meters, y);
+        float dy_deg = meters_to_degrees_lat(y_disp_meters, y);
 
         // update
         x = x + dx_deg;
@@ -131,7 +136,7 @@ unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const
     return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
 }
 
-float index_vector_field(float* field, unsigned int x_len, unsigned int y_len,
+float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
                          unsigned int x_idx, unsigned int y_idx, unsigned int t_idx) {
     /*
     field: the vector field from which to retrieve a value.  Dimensions (time, x, y)
@@ -139,9 +144,8 @@ float index_vector_field(float* field, unsigned int x_len, unsigned int y_len,
     [dim]_idx: the index along the [dim] dimension
     assumption: [dim]_idx args will be in [0, [dim]_len - 1]
     */
-
     return field[(t_idx*x_len + x_idx)*y_len + y_idx];
-
+}
 
 // convert meters displacement to lat/lon and back(Reference: American Practical Navigator, Vol II, 1975 Edition, p 5)
 float meters_to_degrees_lon(float dx_meters, float y) {
