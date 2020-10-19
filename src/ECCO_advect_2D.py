@@ -7,6 +7,7 @@ import xarray as xr
 import pandas as pd
 from datetime import timedelta
 from drivers.opencl_driver_2D import openCL_advect
+from kernels.Taylor2Kernel2D import Taylor2Kernel2D
 from plotting.plot_advection import plot_ocean_advection
 
 
@@ -33,8 +34,9 @@ def test_ECCO():
     save_every = 24
 
     print('Performing advection calculation...')
-    P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time,
-                                             save_every=save_every, platform_and_device=(0, 2), # change this to None for interactive device selection
+    P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time, save_every=save_every,
+                                             kernel_class=Taylor2Kernel2D,
+                                             platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
 
     return P, (buf_time, kernel_time)
