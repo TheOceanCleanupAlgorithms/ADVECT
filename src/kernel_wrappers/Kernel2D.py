@@ -34,7 +34,7 @@ class Kernel2D(abc.ABC):
         # create opencl objects
         self.context = context
         self.queue = cl.CommandQueue(context)
-        self.cl_kernel = cl.Program(context, open(kernel_source_path).read()).build().advect
+        self.cl_kernel = cl.Program(context, open(kernel_source_path).read()).build(options=['-I', 'kernels']).advect
 
         # some handy timers
         self.buf_time = 0

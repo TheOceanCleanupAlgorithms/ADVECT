@@ -7,6 +7,7 @@ import xarray as xr
 import pandas as pd
 from datetime import timedelta
 from drivers.opencl_driver_2D import openCL_advect
+from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
 from plotting.plot_advection import plot_ocean_advection
 
