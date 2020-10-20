@@ -8,13 +8,14 @@ from dask.diagnostics import ProgressBar
 from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from drivers.advection_chunking import chunk_advection_params
 from kernel_wrappers.Kernel2D import Kernel2D
+from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
 
 
 def openCL_advect(field: xr.Dataset,
                   p0: pd.DataFrame,
                   advect_time: pd.DatetimeIndex,
                   save_every: int,
-                  kernel_class: Type[Union[EulerianKernel2D]],
+                  kernel_class: Type[Union[EulerianKernel2D, Taylor2Kernel2D]],
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
