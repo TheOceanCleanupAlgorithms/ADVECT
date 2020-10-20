@@ -3,20 +3,20 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+import abc
+from pathlib import Path
 
 import kernels.opencl_specification_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time
-import pathlib
-import os
-
-KERNEL_PATH = os.path.join(pathlib.Path(__file__).parent.absolute(), 'eulerian_kernel_2d.cl')
 
 
-class EulerianKernel2D:
-    """python wrapper object for function "advect" in eulerian_kernel_2d.cl"""
+class Kernel2D(abc.ABC):
+    """abstract base class for 2D opencl kernel wrappers"""
+
     def __init__(self,
+                 kernel_source_path: Path,
                  context: cl.Context,
                  field_x: np.ndarray, field_y: np.ndarray, field_t: np.ndarray,
                  field_U: np.ndarray, field_V: np.ndarray,
@@ -34,7 +34,8 @@ class EulerianKernel2D:
         # create opencl objects
         self.context = context
         self.queue = cl.CommandQueue(context)
-        self.cl_kernel = cl.Program(context, open(KERNEL_PATH).read()).build().advect
+        self.cl_kernel = cl.Program(context, open(kernel_source_path).read())\
+            .build(options=['-I', str(kernel_source_path.parent)]).advect
 
         # some handy timers
         self.buf_time = 0
@@ -86,10 +87,10 @@ class EulerianKernel2D:
         vars_bytes = (self.field_U.nbytes + self.field_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.t0.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes)
-        print(f'Field Coordinates:  {coords_bytes/1e6:10.3f} MB')
-        print(f'Field Variables:    {vars_bytes/1e6:10.3f} MB')
-        print(f'Particle Positions: {particle_bytes/1e6:10.3f} MB')
-        print(f'Total:              {(coords_bytes+vars_bytes+particle_bytes)/1e6:10.3f} MB')
+        print(f'Field Coordinates:  {coords_bytes / 1e6:10.3f} MB')
+        print(f'Field Variables:    {vars_bytes / 1e6:10.3f} MB')
+        print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
+        print(f'Total:              {(coords_bytes + vars_bytes + particle_bytes) / 1e6:10.3f} MB')
         print('')
 
     def print_execution_time(self):
@@ -100,6 +101,7 @@ class EulerianKernel2D:
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""
+
         def is_uniformly_spaced(arr):
             tol = 1e-5
             return all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
