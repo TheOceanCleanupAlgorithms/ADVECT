@@ -1,12 +1,12 @@
 from pathlib import Path
-from kernels.Kernel2D import Kernel2D
+from kernel_wrappers.Kernel2D import Kernel2D
 
 
-class Taylor2Kernel2D(Kernel2D):
-    """python wrapper object for function "advect" in taylor2_kernel_2d.cl"""
+class EulerianKernel2D(Kernel2D):
+    """python wrapper object for function "advect" in eulerian_kernel_2d.cl"""
     def __init__(self, **kwargs):
         """store args to object, perform argument checking, create opencl objects and some timers"""
-        super().__init__(Path(__file__).parent / Path('taylor2_kernel_2d.cl'), **kwargs)
+        super().__init__(Path(__file__).parent / Path('../kernels/eulerian_kernel_2d.cl'), **kwargs)
 
     def execute(self):
         super().execute()

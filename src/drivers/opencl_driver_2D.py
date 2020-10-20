@@ -5,11 +5,11 @@ import pandas as pd
 
 from typing import Tuple, Type, Union
 from dask.diagnostics import ProgressBar
-from kernels.EulerianKernel2D import EulerianKernel2D
+from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from drivers.advection_chunking import chunk_advection_params
-from kernels.Kernel2D import Kernel2D
+from kernel_wrappers.Kernel2D import Kernel2D
 
-from kernels.Taylor2Kernel2D import Taylor2Kernel2D
+from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
 
 
 def openCL_advect(field: xr.Dataset,
