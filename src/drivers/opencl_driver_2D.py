@@ -9,14 +9,12 @@ from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from drivers.advection_chunking import chunk_advection_params
 from kernel_wrappers.Kernel2D import Kernel2D
 
-from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
-
 
 def openCL_advect(field: xr.Dataset,
                   p0: pd.DataFrame,
                   advect_time: pd.DatetimeIndex,
                   save_every: int,
-                  kernel_class: Type[Union[EulerianKernel2D, Taylor2Kernel2D]] = Taylor2Kernel2D,
+                  kernel_class: Type[Union[EulerianKernel2D]],
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
@@ -84,7 +82,7 @@ def openCL_advect(field: xr.Dataset,
     return P, buf_time, kernel_time
 
 
-def create_kernel(kernel_class: Type[Union[EulerianKernel2D, Taylor2Kernel2D]],
+def create_kernel(kernel_class: Type[Union[EulerianKernel2D]],
                   context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: float, t0: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
