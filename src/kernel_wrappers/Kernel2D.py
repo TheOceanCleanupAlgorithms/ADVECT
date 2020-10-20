@@ -104,7 +104,7 @@ class Kernel2D(abc.ABC):
 
         def is_uniformly_spaced(arr):
             tol = 1e-5
-            return all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
+            return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
         assert max(self.field_x) < 180
         assert min(self.field_x) >= -180
