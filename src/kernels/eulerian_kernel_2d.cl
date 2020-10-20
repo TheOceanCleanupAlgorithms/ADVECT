@@ -12,7 +12,7 @@ __kernel void advect(
     __global float* x0,         // lon, Deg E (-180 to 180)
     __global float* y0,         // lat, Deg N (-90 to 90)
     __global float* t0,         // unix timestamp
-    const float dt,             // seconds
+    const double dt,             // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
     __global float* X_out,      // lon, Deg E (-180 to 180)
@@ -43,11 +43,11 @@ __kernel void advect(
 
         //////////// advect particle using euler forward advection scheme
         // meters displacement
-        float dx_meters = u * dt;
-        float dy_meters = v * dt;
+        double dx_meters = u * dt;
+        double dy_meters = v * dt;
 
-        float dx_deg = meters_to_degrees_lon(dx_meters, p.y);
-        float dy_deg = meters_to_degrees_lat(dy_meters, p.y);
+        double dx_deg = meters_to_degrees_lon(dx_meters, p.y);
+        double dy_deg = meters_to_degrees_lat(dy_meters, p.y);
 
         p = update_position(p, dx_deg, dy_deg, dt);
 

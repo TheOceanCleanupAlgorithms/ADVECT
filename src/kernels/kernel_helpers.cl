@@ -3,21 +3,21 @@ This file contains useful functions for advection tasks, which might be useful t
 */
 typedef struct particle {
     int id;
-    float x;
-    float y;
-    float t;
+    double x;
+    double y;
+    double t;
 } particle;
 
 particle constrain_lat_lon(particle p);
-particle update_position(particle p, float dx, float dy, float dt);
+particle update_position(particle p, double dx, double dy, double dt);
 void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx);
 unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing);
 float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
                          unsigned int x_idx, unsigned int y_idx, unsigned int t_idx);
-float degrees_lat_to_meters(float dy, float y);
-float degrees_lon_to_meters(float dx, float y);
-float meters_to_degrees_lon(float dx_meters, float y);
-float meters_to_degrees_lat(float dy_meters, float y);
+double degrees_lat_to_meters(double dy, double y);
+double degrees_lon_to_meters(double dx, double y);
+double meters_to_degrees_lon(double dx_meters, double y);
+double meters_to_degrees_lat(double dy_meters, double y);
 
 particle constrain_lat_lon(particle p) {
     // deal with advecting over the poles
@@ -36,7 +36,7 @@ particle constrain_lat_lon(particle p) {
     return p;
 }
 
-particle update_position(particle p, float dx, float dy, float dt) {
+particle update_position(particle p, double dx, double dy, double dt) {
     p.x = p.x + dx;
     p.y = p.y + dy;
     p.t = p.t + dt;
@@ -44,8 +44,8 @@ particle update_position(particle p, float dx, float dy, float dt) {
 }
 
 void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx) {
-    X_out[p.id*out_timesteps + out_idx] = p.x;
-    Y_out[p.id*out_timesteps + out_idx] = p.y;
+    X_out[p.id*out_timesteps + out_idx] = (float) p.x;
+    Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
 }
 
 unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing) {
@@ -67,22 +67,22 @@ float index_vector_field(__global float* field, unsigned int x_len, unsigned int
 }
 
 // convert meters displacement to lat/lon and back(Reference: American Practical Navigator, Vol II, 1975 Edition, p 5)
-float meters_to_degrees_lon(float dx_meters, float y) {
-    float rlat = y * M_PI/180;
+double meters_to_degrees_lon(double dx_meters, double y) {
+    double rlat = y * M_PI/180;
     return dx_meters / (111415.13 * cos(rlat) - 94.55 * cos(3 * rlat));
 }
 
-float meters_to_degrees_lat(float dy_meters, float y) {
-    float rlat = y * M_PI/180;
+double meters_to_degrees_lat(double dy_meters, double y) {
+    double rlat = y * M_PI/180;
     return dy_meters / (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
 }
 
-float degrees_lon_to_meters(float dx, float y) {
-    float rlat = y * M_PI/180;
+double degrees_lon_to_meters(double dx, double y) {
+    double rlat = y * M_PI/180;
     return dx * (111415.13 * cos(rlat) - 94.55 * cos(3 * rlat));
 }
 
-float degrees_lat_to_meters(float dy, float y) {
-    float rlat = y * M_PI/180;
+double degrees_lat_to_meters(double dy, double y) {
+    double rlat = y * M_PI/180;
     return dy * (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
 }

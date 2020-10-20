@@ -14,6 +14,7 @@ from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
 import matplotlib.pyplot as plt
 
+
 def compare_alg_drift():
     nx = 20
     lon = np.linspace(-.02, .02, nx*2)  # .01 degrees at equator ~= 1 km
@@ -36,10 +37,10 @@ def compare_alg_drift():
         },
     )
 
-    p0 = pd.DataFrame({'lon': [0], 'lat': [.001]})
+    p0 = pd.DataFrame({'lon': [0], 'lat': [.005]})
     num_particles = 1
-    dt = timedelta(seconds=20)
-    time = pd.date_range(start='2000-01-01', end='2000-01-01T18:00:00', freq=dt)
+    dt = timedelta(seconds=1)
+    time = pd.date_range(start='2000-01-01', end='2000-01-01T6:00:00', freq=dt)
     save_every = 1
 
     euler, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every, kernel_class=EulerianKernel2D,
@@ -48,17 +49,18 @@ def compare_alg_drift():
     taylor, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every,  kernel_class=Taylor2Kernel2D,
                                  platform_and_device=(0, 0), verbose=True)
 
-    plt.figure()
+    plt.figure(figsize=(8, 4))
     ax = plt.axes()
     ax.quiver(field.lon, field.lat, field.U.isel(time=0), field.V.isel(time=0))
     ax.plot(p0.lon, p0.lat, 'go')
 
     for name, P in {'euler': euler, 'taylor': taylor}.items():
-        ax.plot(P.isel(p_id=0).lon, P.isel(p_id=0).lat, label=name)
+        ax.plot(P.isel(p_id=0).lon, P.isel(p_id=0).lat, '.', label=name)
         ax.plot(P.isel(p_id=0, time=-1).lon, P.isel(p_id=0, time=-1).lat, 'rs')
     plt.legend()
     plt.title('drift comparison in circular field')
+    return euler, taylor
 
 
 if __name__ == '__main__':
-    compare_alg_drift()
+    E, T = compare_alg_drift()

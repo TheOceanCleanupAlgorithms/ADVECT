@@ -12,7 +12,7 @@ __kernel void advect(
     __global float* x0,         // lon, Deg E (-180 to 180)
     __global float* y0,         // lat, Deg N (-90 to 90)
     __global float* t0,         // unix timestamp
-    const float dt,             // seconds
+    const double dt,             // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
     __global float* X_out,      // lon, Deg E (-180 to 180)
@@ -60,43 +60,43 @@ __kernel void advect(
         float v_dt = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, t_idx_dt);  //
 
         // grid spacing at particle in x direction (m)
-        float dx;
+        double dx;
         if (x_idx == 0) {
             dx = field_x[x_idx + 1] - field_x[x_idx];
         } else {
             dx = field_x[x_idx] - field_x[x_idx - 1];
         }
-        float dx_m = degrees_lon_to_meters(dx, p.y);
+        double dx_m = degrees_lon_to_meters(dx, p.y);
 
         // grid spacing at particle in y direction (m)
-        float dy;
+        double dy;
         if (y_idx == 0) {
             dy = field_y[y_idx + 1] - field_y[y_idx];
         } else {
             dy = field_y[y_idx] - field_y[y_idx - 1];
         }
-        float dy_m = degrees_lat_to_meters(dy, p.y);
+        double dy_m = degrees_lat_to_meters(dy, p.y);
 
         // Calculate horizontal gradients
-        float ux = (u_w - u_e) / (2*dx_m);
-        float vx = (v_w - v_e) / (2*dx_m);
-        float uy = (u_s - u_n) / (2*dy_m);
-        float vy = (v_s - v_n) / (2*dy_m);
+        double ux = (u_w - u_e) / (2*dx_m);
+        double vx = (v_w - v_e) / (2*dx_m);
+        double uy = (u_s - u_n) / (2*dy_m);
+        double vy = (v_s - v_n) / (2*dy_m);
 
         // Calculate time gradients
-        float ut = (u_dt - u) / dt;
-        float vt = (v_dt - v) / dt;
+        double ut = (u_dt - u) / dt;
+        double vt = (v_dt - v) / dt;
 
         // simplifying term
-        float u_ = u + (dt*ut)/2;
-        float v_ = v + (dt*vt)/2;
+        double u_ = u + (dt*ut)/2;
+        double v_ = v + (dt*vt)/2;
 
         //////////// advect particle using second-order taylor approx advection scheme (Black and Gay, 1990, eq. 12/13)
-        float x_disp_meters = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
-        float y_disp_meters = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - uy*dt/2) * (1 - vx*dt/2) - (ux*vy * pow(dt, 2)) / 4);
+        double x_disp_meters = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
+        double y_disp_meters = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - uy*dt/2) * (1 - vx*dt/2) - (ux*vy * pow(dt, 2)) / 4);
 
-        float dx_deg = meters_to_degrees_lon(x_disp_meters, p.y);
-        float dy_deg = meters_to_degrees_lat(y_disp_meters, p.y);
+        double dx_deg = meters_to_degrees_lon(x_disp_meters, p.y);
+        double dy_deg = meters_to_degrees_lat(y_disp_meters, p.y);
 
         p = update_position(p, dx_deg, dy_deg, dt);
 

@@ -58,7 +58,7 @@ class Kernel2D(abc.ABC):
                 [None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
                  None, None, None,
-                 np.float32, np.uint32, np.uint32,
+                 np.float64, np.uint32, np.uint32,
                  None, None])
         execution_start = time.time()
         self.cl_kernel(
@@ -68,7 +68,7 @@ class Kernel2D(abc.ABC):
                 d_field_t, np.uint32(len(self.field_t)),
                 d_field_U, d_field_V,
                 d_x0, d_y0, d_t0,
-                np.float32(self.dt), np.uint32(self.ntimesteps), np.uint32(self.save_every),
+                np.float64(self.dt), np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out)
 
         # wait for the computation to complete
