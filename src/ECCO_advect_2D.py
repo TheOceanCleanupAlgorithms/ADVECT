@@ -12,9 +12,6 @@ from plotting.plot_advection import plot_ocean_advection
 
 
 def test_ECCO():
-    import os
-    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-
     print('Opening ECCO current files...')
     U = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/U_2015*.nc')
     V = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/V_2015*.nc')

@@ -29,10 +29,10 @@ __kernel void advect(
 
     field2d field = {.x = field_x, .y = field_y, .t = field_t,
                      .x_len = x_len, .y_len = y_len, .t_len = t_len,
-                     .U = field_U, .V = field_V,
                      .x_spacing = field_x[1]-field_x[0],
                      .y_spacing = field_y[1]-field_y[0],
-                     .t_spacing = field_t[1]-field_t[0]};
+                     .t_spacing = field_t[1]-field_t[0],
+                     .U = field_U, .V = field_V};
 
     // loop timesteps
     int id = get_global_id(0);
