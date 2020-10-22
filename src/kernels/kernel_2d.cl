@@ -51,11 +51,11 @@ __kernel void advect(
                                                                field_y, y_len,
                                                                t_len, dt);
         } else if (advection_scheme == TAYLOR2) {
-            displacement_meters = eulerian_displacement(p, x_idx, y_idx, t_idx,
-                                                               field_U, field_V,
-                                                               field_x, x_len,
-                                                               field_y, y_len,
-                                                               t_len, dt);
+            displacement_meters = taylor2_displacement(p, x_idx, y_idx, t_idx,
+                                                       field_U, field_V,
+                                                       field_x, x_len,
+                                                       field_y, y_len,
+                                                       t_len, dt);
         } else {
             return;  // can't throw errors but at least this way things will obviously fail
         }
