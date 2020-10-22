@@ -4,6 +4,7 @@ Args are passed upon initialization, execution is triggered by method "execute".
 of executing kernels.
 """
 import abc
+from enum import Enum
 from pathlib import Path
 
 import kernels.opencl_specification_constants as cl_const
@@ -11,13 +12,20 @@ import numpy as np
 import pyopencl as cl
 import time
 
+KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_2d.cl')
 
-class Kernel2D(abc.ABC):
+
+class AdvectionScheme(Enum):
+    """matching definitions in src/kernels/kernel_2d.cl"""
+    eulerian = 0
+    taylor2 = 1
+
+
+class Kernel2D:
     """abstract base class for 2D opencl kernel wrappers"""
 
     def __init__(self,
-                 kernel_source_path: Path,
-                 context: cl.Context,
+                 advection_scheme: AdvectionScheme, context: cl.Context,
                  field_x: np.ndarray, field_y: np.ndarray, field_t: np.ndarray,
                  field_U: np.ndarray, field_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, t0: np.ndarray,
@@ -29,13 +37,14 @@ class Kernel2D(abc.ABC):
         self.x0, self.y0, self.t0 = x0, y0, t0
         self.dt, self.ntimesteps, self.save_every = dt, ntimesteps, save_every
         self.X_out, self.Y_out = X_out, Y_out
+        self.advection_scheme = advection_scheme
         self._check_args()
 
         # create opencl objects
         self.context = context
         self.queue = cl.CommandQueue(context)
-        self.cl_kernel = cl.Program(context, open(kernel_source_path).read())\
-            .build(options=['-I', str(kernel_source_path.parent)]).advect
+        self.cl_kernel = cl.Program(context, open(KERNEL_SOURCE).read())\
+            .build(options=['-I', str(KERNEL_SOURCE.parent)]).advect
 
         # some handy timers
         self.buf_time = 0
@@ -58,8 +67,8 @@ class Kernel2D(abc.ABC):
                 [None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
                  None, None, None,
-                 np.float32, np.uint32, np.uint32,
-                 None, None])
+                 np.float64, np.uint32, np.uint32,
+                 None, None, np.uint32])
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -68,8 +77,8 @@ class Kernel2D(abc.ABC):
                 d_field_t, np.uint32(len(self.field_t)),
                 d_field_U, d_field_V,
                 d_x0, d_y0, d_t0,
-                np.float32(self.dt), np.uint32(self.ntimesteps), np.uint32(self.save_every),
-                d_X_out, d_Y_out)
+                np.float64(self.dt), np.uint32(self.ntimesteps), np.uint32(self.save_every),
+                d_X_out, d_Y_out, np.uint32(self.advection_scheme.value))
 
         # wait for the computation to complete
         self.queue.finish()
@@ -104,7 +113,7 @@ class Kernel2D(abc.ABC):
 
         def is_uniformly_spaced(arr):
             tol = 1e-5
-            return all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
+            return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
         assert max(self.field_x) < 180
         assert min(self.field_x) >= -180
@@ -124,3 +133,5 @@ class Kernel2D(abc.ABC):
 
         assert max(self.y0) < 90
         assert min(self.y0) >= -90
+
+        assert self.advection_scheme.value in (0, 1)

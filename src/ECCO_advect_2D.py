@@ -7,7 +7,7 @@ import xarray as xr
 import pandas as pd
 from datetime import timedelta
 from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
+from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_advection
 
 
@@ -35,7 +35,7 @@ def test_ECCO():
 
     print('Performing advection calculation...')
     P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time, save_every=save_every,
-                                             kernel_class=EulerianKernel2D,
+                                             advection_scheme=AdvectionScheme.taylor2,
                                              platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
 
