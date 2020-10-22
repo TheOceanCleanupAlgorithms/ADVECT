@@ -3,33 +3,7 @@
 /*
 This file contains useful functions for advection tasks, which might be useful to multiple kernels.
 */
-
-typedef struct dataset {
-    double
-} dataset;
-
-typedef struct particle {
-    int id;
-    double x;
-    double y;
-    double t;
-} particle;
-
-typedef struct vector {
-    double x;
-    double y;
-} vector;
-
-particle constrain_lat_lon(particle p);
-particle update_position(particle p, double dx, double dy, double dt);
-void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned int out_timesteps, unsigned int out_idx);
-unsigned int find_nearest_neighbor_idx(double value, __global double *arr, const unsigned int arr_len, const double spacing);
-float index_vector_field(__global float *field, unsigned int x_len, unsigned int y_len,
-                         unsigned int x_idx, unsigned int y_idx, unsigned int t_idx);
-double degrees_lat_to_meters(double dy, double y);
-double degrees_lon_to_meters(double dx, double y);
-double meters_to_degrees_lon(double dx_meters, double y);
-double meters_to_degrees_lat(double dy_meters, double y);
+#include "structs.cl"
 
 particle constrain_lat_lon(particle p) {
     // deal with advecting over the poles

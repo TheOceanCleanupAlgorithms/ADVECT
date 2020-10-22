@@ -1,3 +1,5 @@
+#include "headers.cl"
+#include "structs.cl"
 #include "kernel_helpers.cl"
 #include "advection_schemes.cl"
 

@@ -1,16 +1,6 @@
 #include "kernel_helpers.cl"
-
-/* headers */
-vector eulerian_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float *field_U, __global float *field_V,
-                            __global double *field_x, unsigned int x_len,
-                            __global double *field_y, unsigned int y_len,
-                            unsigned int t_len, double dt);
-vector taylor2_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float *field_U, __global float *field_V,
-                            __global double *field_x, unsigned int x_len,
-                            __global double *field_y, unsigned int y_len,
-                            unsigned int t_len, double dt);
+#include "headers.cl"
+#include "structs.cl"
 
 vector eulerian_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
                             __global float *field_U, __global float *field_V,
