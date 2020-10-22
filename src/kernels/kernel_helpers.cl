@@ -3,28 +3,7 @@
 /*
 This file contains useful functions for advection tasks, which might be useful to multiple kernels.
 */
-typedef struct particle {
-    int id;
-    double x;
-    double y;
-    double t;
-} particle;
-
-typedef struct vector {
-    double x;
-    double y;
-} vector;
-
-particle constrain_lat_lon(particle p);
-particle update_position(particle p, double dx, double dy, double dt);
-void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx);
-unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing);
-float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
-                         unsigned int x_idx, unsigned int y_idx, unsigned int t_idx);
-double degrees_lat_to_meters(double dy, double y);
-double degrees_lon_to_meters(double dx, double y);
-double meters_to_degrees_lon(double dx_meters, double y);
-double meters_to_degrees_lat(double dy_meters, double y);
+#include "structs.cl"
 
 particle constrain_lat_lon(particle p) {
     // deal with advecting over the poles
@@ -50,27 +29,33 @@ particle update_position(particle p, double dx, double dy, double dt) {
     return constrain_lat_lon(p);
 }
 
-void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx) {
+void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned int out_timesteps, unsigned int out_idx) {
     X_out[p.id*out_timesteps + out_idx] = (float) p.x;
     Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
 }
 
-unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing) {
+grid_point find_nearest_neighbor(particle p, field2d field) {
+        grid_point neighbor;
+        neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
+        neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
+        neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
+        return neighbor;
+}
+
+unsigned int find_nearest_neighbor_idx(double value, __global const double *arr, const unsigned int arr_len, const double spacing) {
     // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
     // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
     // inside a kernel so we must perform the check in the host code.
     return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
 }
 
-float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
-                         unsigned int x_idx, unsigned int y_idx, unsigned int t_idx) {
+vector index_vector_field(field2d field, grid_point gp) {
     /*
-    field: the vector field from which to retrieve a value.  Dimensions (time, x, y)
-    [dim]_len: the length of the [dim] dimension of 'field'
-    [dim]_idx: the index along the [dim] dimension
-    assumption: [dim]_idx args will be in [0, [dim]_len - 1]
+    assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1]
     */
-    return field[(t_idx*x_len + x_idx)*y_len + y_idx];
+    vector v = {.x = field.U[(gp.t_idx*field.x_len + gp.x_idx)*field.y_len + gp.y_idx],
+                .y = field.V[(gp.t_idx*field.x_len + gp.x_idx)*field.y_len + gp.y_idx]};
+    return v;
 }
 
 // convert meters displacement to lat/lon and back(Reference: American Practical Navigator, Vol II, 1975 Edition, p 5)
