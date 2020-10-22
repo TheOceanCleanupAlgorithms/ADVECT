@@ -3,6 +3,11 @@
 /*
 This file contains useful functions for advection tasks, which might be useful to multiple kernels.
 */
+
+typedef struct dataset {
+    double
+} dataset;
+
 typedef struct particle {
     int id;
     double x;
@@ -17,9 +22,9 @@ typedef struct vector {
 
 particle constrain_lat_lon(particle p);
 particle update_position(particle p, double dx, double dy, double dt);
-void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx);
-unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing);
-float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
+void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned int out_timesteps, unsigned int out_idx);
+unsigned int find_nearest_neighbor_idx(double value, __global double *arr, const unsigned int arr_len, const double spacing);
+float index_vector_field(__global float *field, unsigned int x_len, unsigned int y_len,
                          unsigned int x_idx, unsigned int y_idx, unsigned int t_idx);
 double degrees_lat_to_meters(double dy, double y);
 double degrees_lon_to_meters(double dx, double y);
@@ -50,19 +55,19 @@ particle update_position(particle p, double dx, double dy, double dt) {
     return constrain_lat_lon(p);
 }
 
-void write_p(particle p, __global float* X_out, __global float* Y_out, unsigned int out_timesteps, unsigned int out_idx) {
+void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned int out_timesteps, unsigned int out_idx) {
     X_out[p.id*out_timesteps + out_idx] = (float) p.x;
     Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
 }
 
-unsigned int find_nearest_neighbor_idx(double value, __global double* arr, const unsigned int arr_len, const double spacing) {
+unsigned int find_nearest_neighbor_idx(double value, __global double *arr, const unsigned int arr_len, const double spacing) {
     // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
     // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
     // inside a kernel so we must perform the check in the host code.
     return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
 }
 
-float index_vector_field(__global float* field, unsigned int x_len, unsigned int y_len,
+float index_vector_field(__global float *field, unsigned int x_len, unsigned int y_len,
                          unsigned int x_idx, unsigned int y_idx, unsigned int t_idx) {
     /*
     field: the vector field from which to retrieve a value.  Dimensions (time, x, y)

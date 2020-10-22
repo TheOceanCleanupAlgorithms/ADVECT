@@ -2,20 +2,20 @@
 
 /* headers */
 vector eulerian_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float* field_U, __global float* field_V,
-                            __global double* field_x, unsigned int x_len,
-                            __global double* field_y, unsigned int y_len,
+                            __global float *field_U, __global float *field_V,
+                            __global double *field_x, unsigned int x_len,
+                            __global double *field_y, unsigned int y_len,
                             unsigned int t_len, double dt);
 vector taylor2_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float* field_U, __global float* field_V,
-                            __global double* field_x, unsigned int x_len,
-                            __global double* field_y, unsigned int y_len,
+                            __global float *field_U, __global float *field_V,
+                            __global double *field_x, unsigned int x_len,
+                            __global double *field_y, unsigned int y_len,
                             unsigned int t_len, double dt);
 
 vector eulerian_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float* field_U, __global float* field_V,
-                            __global double* field_x, unsigned int x_len,
-                            __global double* field_y, unsigned int y_len,
+                            __global float *field_U, __global float *field_V,
+                            __global double *field_x, unsigned int x_len,
+                            __global double *field_y, unsigned int y_len,
                             unsigned int t_len, double dt) {
     // find U and V nearest to particle position
     float u = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, t_idx);
@@ -30,9 +30,9 @@ vector eulerian_displacement(particle p, unsigned int x_idx, unsigned int y_idx,
 }
 
 vector taylor2_displacement(particle p, unsigned int x_idx, unsigned int y_idx, unsigned int t_idx,
-                            __global float* field_U, __global float* field_V,
-                            __global double* field_x, unsigned int x_len,
-                            __global double* field_y, unsigned int y_len,
+                            __global float *field_U, __global float *field_V,
+                            __global double *field_x, unsigned int x_len,
+                            __global double *field_y, unsigned int y_len,
                             unsigned int t_len, double dt) {
     // find adjacent cells
     unsigned int x_idx_w = (x_idx + 1) % x_len;

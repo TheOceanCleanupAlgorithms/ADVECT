@@ -5,22 +5,22 @@
 #define TAYLOR2 1
 
 __kernel void advect(
-    __global double* field_x,    // lon, Deg E (-180 to 180), uniform spacing
+    __global double *field_x,    // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int x_len,   // <= UINT_MAX + 1
-    __global double* field_y,    // lat, Deg N (-90 to 90), uniform spacing
+    __global double *field_y,    // lat, Deg N (-90 to 90), uniform spacing
     const unsigned int y_len,   // <= UINT_MAX + 1
-    __global double* field_t,     // time, seconds since epoch, uniform spacing
+    __global double *field_t,     // time, seconds since epoch, uniform spacing
     const unsigned int t_len,   // <= UINT_MAX + 1
-    __global float* field_U,    // m / s, 32 bit to save space
-    __global float* field_V,    // m / s
-    __global float* x0,         // lon, Deg E (-180 to 180)
-    __global float* y0,         // lat, Deg N (-90 to 90)
-    __global float* t0,         // unix timestamp
+    __global float *field_U,    // m / s, 32 bit to save space
+    __global float *field_V,    // m / s
+    __global float *x0,         // lon, Deg E (-180 to 180)
+    __global float *y0,         // lat, Deg N (-90 to 90)
+    __global float *t0,         // unix timestamp
     const double dt,             // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
-    __global float* X_out,      // lon, Deg E (-180 to 180)
-    __global float* Y_out,      // lat, Deg N (-90 to 90)
+    __global float *X_out,      // lon, Deg E (-180 to 180)
+    __global float *Y_out,      // lat, Deg N (-90 to 90)
     const unsigned int advection_scheme)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
