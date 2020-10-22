@@ -1,3 +1,5 @@
+#ifndef KERNEL_HELPERS
+#define KERNEL_HELPERS
 /*
 This file contains useful functions for advection tasks, which might be useful to multiple kernels.
 */
@@ -7,6 +9,11 @@ typedef struct particle {
     double y;
     double t;
 } particle;
+
+typedef struct vector {
+    double x;
+    double y;
+} vector;
 
 particle constrain_lat_lon(particle p);
 particle update_position(particle p, double dx, double dy, double dt);
@@ -86,3 +93,5 @@ double degrees_lat_to_meters(double dy, double y) {
     double rlat = y * M_PI/180;
     return dy * (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
 }
+
+#endif

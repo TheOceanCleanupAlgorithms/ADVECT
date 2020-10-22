@@ -3,19 +3,17 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from typing import Tuple, Type, Union
+from typing import Tuple
 from dask.diagnostics import ProgressBar
-from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
 from drivers.advection_chunking import chunk_advection_params
-from kernel_wrappers.Kernel2D import Kernel2D
-from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
+from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
 def openCL_advect(field: xr.Dataset,
                   p0: pd.DataFrame,
                   advect_time: pd.DatetimeIndex,
                   save_every: int,
-                  kernel_class: Type[Union[EulerianKernel2D, Taylor2Kernel2D]],
+                  advection_scheme: AdvectionScheme,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
@@ -26,7 +24,7 @@ def openCL_advect(field: xr.Dataset,
     :param p0: initial positions of particles, numpy array shape (num_particles, 2)
     :param advect_time: pandas DatetimeIndex corresponding to the timeseries which the particles will be advected over
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
-    :param kernel_class: the class of kernel to use for the advection
+    :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
     :return: (P, buffer_seconds, kernel_seconds): (numpy array with advection paths, shape (num_particles, num_timesteps, 2),
@@ -60,7 +58,7 @@ def openCL_advect(field: xr.Dataset,
         num_timesteps = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps = len(out_time_chunk) - 1     #
         # create the kernel wrapper object, pass it arguments
-        kernel = create_kernel(kernel_class=kernel_class,
+        kernel = create_kernel(advection_scheme=advection_scheme,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
                                dt=dt, t0=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
                                out_timesteps=out_timesteps)
@@ -83,14 +81,14 @@ def openCL_advect(field: xr.Dataset,
     return P, buf_time, kernel_time
 
 
-def create_kernel(kernel_class: Type[Union[EulerianKernel2D]],
-                  context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
+def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: float, t0: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
     field = field.transpose('time', 'lon', 'lat')
 
-    return kernel_class(
+    return Kernel2D(
+            advection_scheme=advection_scheme,
             context=context,
             field_x=field.lon.values.astype(np.float64),
             field_y=field.lat.values.astype(np.float64),

@@ -1,4 +1,8 @@
 #include "kernel_helpers.cl"
+#include "advection_schemes.cl"
+
+#define EULERIAN 0  // matches definitions in src/kernel_wrappers/Kernel2D.py
+#define TAYLOR2 1
 
 __kernel void advect(
     __global double* field_x,    // lon, Deg E (-180 to 180), uniform spacing
@@ -16,7 +20,8 @@ __kernel void advect(
     const unsigned int ntimesteps,
     const unsigned int save_every,
     __global float* X_out,      // lon, Deg E (-180 to 180)
-    __global float* Y_out)      // lat, Deg N (-90 to 90)
+    __global float* Y_out,      // lat, Deg N (-90 to 90)
+    const unsigned int advection_scheme)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -37,17 +42,26 @@ __kernel void advect(
         unsigned int y_idx = find_nearest_neighbor_idx(p.y, field_y, y_len, y_spacing);
         unsigned int t_idx = find_nearest_neighbor_idx(p.t, field_t, t_len, t_spacing);
 
-        // find U and V nearest to particle position
-        float u = index_vector_field(field_U, x_len, y_len, x_idx, y_idx, t_idx);
-        float v = index_vector_field(field_V, x_len, y_len, x_idx, y_idx, t_idx);
 
-        //////////// advect particle using euler forward advection scheme
-        // meters displacement
-        double dx_meters = u * dt;
-        double dy_meters = v * dt;
+        vector displacement_meters;
+        if (advection_scheme == EULERIAN) {
+            displacement_meters = eulerian_displacement(p, x_idx, y_idx, t_idx,
+                                                               field_U, field_V,
+                                                               field_x, x_len,
+                                                               field_y, y_len,
+                                                               t_len, dt);
+        } else if (advection_scheme == TAYLOR2) {
+            displacement_meters = eulerian_displacement(p, x_idx, y_idx, t_idx,
+                                                               field_U, field_V,
+                                                               field_x, x_len,
+                                                               field_y, y_len,
+                                                               t_len, dt);
+        } else {
+            return;  // can't throw errors but at least this way things will obviously fail
+        }
 
-        double dx_deg = meters_to_degrees_lon(dx_meters, p.y);
-        double dy_deg = meters_to_degrees_lat(dy_meters, p.y);
+        double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
+        double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
 
         p = update_position(p, dx_deg, dy_deg, dt);
 
