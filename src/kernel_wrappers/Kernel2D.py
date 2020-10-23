@@ -138,3 +138,6 @@ class Kernel2D:
         assert self.advection_scheme.value in (0, 1)
 
         assert all(self.release_date >= self.start_time), "you can't release particles before the simulation starts!"
+
+        assert abs(np.diff(self.field_y)[0]) >= 1/3, "eddy diffusivity constant is only valid for >1/3 deg grids." \
+                                                     "See src/kernels/eddy_diffusion.cl for details."
