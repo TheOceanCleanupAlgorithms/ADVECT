@@ -28,14 +28,14 @@ class Kernel2D:
                  advection_scheme: AdvectionScheme, context: cl.Context,
                  field_x: np.ndarray, field_y: np.ndarray, field_t: np.ndarray,
                  field_U: np.ndarray, field_V: np.ndarray,
-                 x0: np.ndarray, y0: np.ndarray, t0: np.ndarray,
-                 dt: float, ntimesteps: int, save_every: int,
+                 x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
+                 start_time: float, dt: float, ntimesteps: int, save_every: int,
                  X_out: np.ndarray, Y_out: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.field_x, self.field_y, self.field_t = field_x, field_y, field_t
         self.field_U, self.field_V = field_U, field_V
-        self.x0, self.y0, self.t0 = x0, y0, t0
-        self.dt, self.ntimesteps, self.save_every = dt, ntimesteps, save_every
+        self.x0, self.y0, self.release_date = x0, y0, release_date
+        self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
         self.X_out, self.Y_out = X_out, Y_out
         self.advection_scheme = advection_scheme
         self._check_args()
@@ -54,12 +54,12 @@ class Kernel2D:
         """tranfers arguments to the compute device, triggers execution, waits on result"""
         # write arguments to compute device
         write_start = time.time()
-        d_field_x, d_field_y, d_field_t, d_field_U, d_field_V, d_x0, d_y0, d_t0 = \
+        d_field_x, d_field_y, d_field_t, d_field_U, d_field_V, d_x0, d_y0, d_release_date = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
-             (self.field_x, self.field_y, self.field_t, self.field_U, self.field_V, self.x0, self.y0, self.t0))
-        d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE, self.X_out.nbytes)
-        d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE, self.Y_out.nbytes)
+             (self.field_x, self.field_y, self.field_t, self.field_U, self.field_V, self.x0, self.y0, self.release_date))
+        d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
+        d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -67,7 +67,7 @@ class Kernel2D:
                 [None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
                  None, None, None,
-                 np.float64, np.uint32, np.uint32,
+                 np.float64, np.float64, np.uint32, np.uint32,
                  None, None, np.uint32])
         execution_start = time.time()
         self.cl_kernel(
@@ -76,8 +76,9 @@ class Kernel2D:
                 d_field_y, np.uint32(len(self.field_y)),
                 d_field_t, np.uint32(len(self.field_t)),
                 d_field_U, d_field_V,
-                d_x0, d_y0, d_t0,
-                np.float64(self.dt), np.uint32(self.ntimesteps), np.uint32(self.save_every),
+                d_x0, d_y0, d_release_date,
+                np.float64(self.start_time), np.float64(self.dt),
+                np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out, np.uint32(self.advection_scheme.value))
 
         # wait for the computation to complete
@@ -94,7 +95,7 @@ class Kernel2D:
         print('-----MEMORY FOOTPRINT-----')
         coords_bytes = (self.field_x.nbytes + self.field_y.nbytes + self.field_t.nbytes)
         vars_bytes = (self.field_U.nbytes + self.field_V.nbytes)
-        particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.t0.nbytes +
+        particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes)
         print(f'Field Coordinates:  {coords_bytes / 1e6:10.3f} MB')
         print(f'Field Variables:    {vars_bytes / 1e6:10.3f} MB')
@@ -135,3 +136,5 @@ class Kernel2D:
         assert min(self.y0) >= -90
 
         assert self.advection_scheme.value in (0, 1)
+
+        assert all(self.release_date >= self.start_time), "you can't release particles before the simulation starts!"

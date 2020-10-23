@@ -17,7 +17,8 @@ __kernel void advect(
     __global const float *field_V,    // m / s
     __global const float *x0,         // lon, Deg E (-180 to 180)
     __global const float *y0,         // lat, Deg N (-90 to 90)
-    __global const float *t0,         // unix timestamp
+    __global const double *release_date,         // unix timestamp
+    const double start_time,          // unix timestamp
     const double dt,             // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
@@ -36,8 +37,13 @@ __kernel void advect(
 
     // loop timesteps
     int id = get_global_id(0);
-    particle p = {.id = id, .x = x0[id], .y = y0[id], .t = t0[id]};
+    particle p = {.id = id, .x = x0[id], .y = y0[id], .t = start_time};
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
+        if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
+            p.t += dt;
+            continue;
+        }
+
         // find nearest neighbors in grid
         grid_point neighbor = find_nearest_neighbor(p, field);
 
