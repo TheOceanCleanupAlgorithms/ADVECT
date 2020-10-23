@@ -3,16 +3,14 @@ The purpose of this test is to ensure that the second-order taylor kernel advect
 It should also show that the Eulerian kernel fails to do this.
 We will use a small latitude/longitude scale in order to approximate cartesian behavior.
 """
-from datetime import timedelta
-
 import numpy as np
 import xarray as xr
 import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import timedelta
 
 from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.EulerianKernel2D import EulerianKernel2D
-from kernel_wrappers.Taylor2Kernel2D import Taylor2Kernel2D
-import matplotlib.pyplot as plt
+from kernel_wrappers.Kernel2D import AdvectionScheme
 
 
 def compare_alg_drift():
@@ -39,14 +37,14 @@ def compare_alg_drift():
 
     p0 = pd.DataFrame({'lon': [0], 'lat': [.005]})
     num_particles = 1
-    dt = timedelta(seconds=1)
+    dt = timedelta(seconds=30)
     time = pd.date_range(start='2000-01-01', end='2000-01-01T6:00:00', freq=dt)
     save_every = 1
 
-    euler, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every, kernel_class=EulerianKernel2D,
+    euler, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every, advection_scheme=AdvectionScheme.eulerian,
                                 platform_and_device=(0, 0), verbose=True)
 
-    taylor, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every,  kernel_class=Taylor2Kernel2D,
+    taylor, _, _ = openCL_advect(field=field, p0=p0, advect_time=time, save_every=save_every,  advection_scheme=AdvectionScheme.taylor2,
                                  platform_and_device=(0, 0), verbose=True)
 
     plt.figure(figsize=(8, 4))
