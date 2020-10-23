@@ -21,7 +21,7 @@ def openCL_advect(field: xr.Dataset,
     :param field: xarray Dataset storing vector field/axes.
                     Dimensions: {'time', 'lon', 'lat'}
                     Variables: {'U', 'V'}
-    :param p0: initial positions of particles, numpy array shape (num_particles, 2)
+    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
     :param advect_time: pandas DatetimeIndex corresponding to the timeseries which the particles will be advected over
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
@@ -60,7 +60,7 @@ def openCL_advect(field: xr.Dataset,
         # create the kernel wrapper object, pass it arguments
         kernel = create_kernel(advection_scheme=advection_scheme,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
-                               dt=dt, t0=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
+                               dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
                                out_timesteps=out_timesteps)
         kernel.execute()
 
@@ -82,7 +82,7 @@ def openCL_advect(field: xr.Dataset,
 
 
 def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
-                  num_particles: int, dt: float, t0: pd.Timestamp,
+                  num_particles: int, dt: float, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
     field = field.transpose('time', 'lon', 'lat')
@@ -97,26 +97,25 @@ def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field:
             field_V=field.V.values.astype(np.float32).flatten(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
-            t0=(t0.timestamp() * np.ones(num_particles)).astype(np.float32),
+            release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
+            start_time=start_time.timestamp(),
             dt=dt,
             ntimesteps=num_timesteps,
             save_every=save_every,
-            X_out=np.zeros(num_particles*out_timesteps).astype(np.float32),
-            Y_out=np.zeros(num_particles*out_timesteps).astype(np.float32),
+            X_out=np.full((num_particles*out_timesteps), np.nan).astype(np.float32),  # output will have this value
+            Y_out=np.full((num_particles*out_timesteps), np.nan).astype(np.float32),  # unless overwritten (e.g. pre-release)
     )
 
 
 def create_dataset_from_kernel(kernel: Kernel2D, advect_time: pd.DatetimeIndex) -> xr.Dataset:
-    """assumes kernel has been run, assumes simultaneous particle release"""
+    """assumes kernel has been run"""
     num_particles = len(kernel.x0)
-    lon = np.concatenate([kernel.x0[:, np.newaxis],
-                          kernel.X_out.reshape([num_particles, -1])], axis=1)
-    lat = np.concatenate([kernel.y0[:, np.newaxis],
-                          kernel.Y_out.reshape([num_particles, -1])], axis=1)
-    assert all(kernel.t0 == kernel.t0[0])  # break if all particles not released simultaneously
+    lon = kernel.X_out.reshape([num_particles, -1])
+    lat = kernel.Y_out.reshape([num_particles, -1])
+
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat)},
                    coords={'p_id': np.arange(num_particles),
-                           'time': advect_time}
+                           'time': advect_time[1:]}  # initial positions are not returned
                    )
     return P

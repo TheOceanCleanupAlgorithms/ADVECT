@@ -26,14 +26,17 @@ def plot_advection(P, time, field, streamfunc=True, ax=None):
         plt.pause(.01)
 
 
-def plot_ocean_advection(P: xr.Dataset):
+def plot_ocean_advection(P: xr.Dataset, lon_range=(-180, 180), lat_range=(-90, 90)):
     # plot le advection
     proj = ccrs.PlateCarree()
     fig = plt.figure(figsize=[14, 8])
     ax = plt.axes(projection=proj)
     ax.coastlines()
 
-    dot, = ax.plot(P.isel(time=0).lon, P.isel(time=0).lat, '.')  # , transform=ccrs.Geodetic())
+    # invisible line forces map to at least cover the specified area, regardless of particle tracks
+    ax.plot(np.linspace(*lon_range), np.linspace(*lat_range), alpha=0)
+
+    dot, = ax.plot(P.isel(time=0).lon, P.isel(time=0).lat, '.', color='tab:blue')  # , transform=ccrs.Geodetic())
 
     for i in range(len(P.time)):
         dot.set_xdata(P.isel(time=i).lon)
