@@ -25,7 +25,7 @@ class Kernel2D:
     """abstract base class for 2D opencl kernel wrappers"""
 
     def __init__(self,
-                 advection_scheme: AdvectionScheme, context: cl.Context,
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, context: cl.Context,
                  field_x: np.ndarray, field_y: np.ndarray, field_t: np.ndarray,
                  field_U: np.ndarray, field_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
@@ -38,6 +38,7 @@ class Kernel2D:
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
         self.X_out, self.Y_out = X_out, Y_out
         self.advection_scheme = advection_scheme
+        self.eddy_diffusivity = eddy_diffusivity
         self._check_args()
 
         # create opencl objects
@@ -68,7 +69,7 @@ class Kernel2D:
                  None, None,
                  None, None, None,
                  np.float64, np.float64, np.uint32, np.uint32,
-                 None, None, np.uint32])
+                 None, None, np.uint32, np.float64])
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -79,7 +80,8 @@ class Kernel2D:
                 d_x0, d_y0, d_release_date,
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
-                d_X_out, d_Y_out, np.uint32(self.advection_scheme.value))
+                d_X_out, d_Y_out,
+                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity))
 
         # wait for the computation to complete
         self.queue.finish()
@@ -138,6 +140,3 @@ class Kernel2D:
         assert self.advection_scheme.value in (0, 1)
 
         assert all(self.release_date >= self.start_time), "you can't release particles before the simulation starts!"
-
-        assert abs(np.diff(self.field_y)[0]) >= 1/3, "eddy diffusivity constant is only valid for >1/3 deg grids." \
-                                                     "See src/kernels/eddy_diffusion.cl for details."

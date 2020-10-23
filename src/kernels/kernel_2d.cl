@@ -25,7 +25,8 @@ __kernel void advect(
     const unsigned int save_every,
     __global float *X_out,      // lon, Deg E (-180 to 180)
     __global float *Y_out,      // lat, Deg N (-90 to 90)
-    const unsigned int advection_scheme)
+    const unsigned int advection_scheme,
+    const double eddy_diffusivity)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -58,8 +59,8 @@ __kernel void advect(
             return;  // can't throw errors but at least this way things will obviously fail
         }
 
-        displacement_meters.x += eddy_diffusion_meters(dt, &rstate);
-        displacement_meters.y += eddy_diffusion_meters(dt, &rstate);
+        displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
+        displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
 
         double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
         double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);

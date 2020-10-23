@@ -16,6 +16,6 @@ double degrees_lon_to_meters(double dx, double y);
 double meters_to_degrees_lon(double dx_meters, double y);
 double meters_to_degrees_lat(double dy_meters, double y);
 double random(random_state *state);
-double eddy_diffusion_meters(double dt, random_state *state);
+double eddy_diffusion_meters(const double dt, random_state *state, const double eddy_diffusivity);
 
 #endif
