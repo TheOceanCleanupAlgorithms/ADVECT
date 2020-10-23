@@ -64,7 +64,7 @@ vector taylor2_displacement(particle p, grid_point gp, field2d field, double dt)
     //////////// advect particle using second-order taylor approx advection scheme (Black and Gay, 1990, eq. 12/13)
     vector displacement_meters;
     displacement_meters.x = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
-    displacement_meters.y = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - uy*dt/2) * (1 - vx*dt/2) - (ux*vy * pow(dt, 2)) / 4);
+    displacement_meters.y = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (ux*vy * pow(dt, 2)) / 4);
 
     return displacement_meters;
 }
