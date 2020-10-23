@@ -136,3 +136,5 @@ class Kernel2D:
         assert min(self.y0) >= -90
 
         assert self.advection_scheme.value in (0, 1)
+
+        assert all(self.release_date >= self.start_time), "you can't release particles before the simulation starts!"
