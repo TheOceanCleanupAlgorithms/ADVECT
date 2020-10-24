@@ -22,10 +22,9 @@ particle constrain_lat_lon(particle p) {
     return p;
 }
 
-particle update_position(particle p, double dx, double dy, double dt) {
+particle update_position(particle p, double dx, double dy) {
     p.x = p.x + dx;
     p.y = p.y + dy;
-    p.t = p.t + dt;
     return constrain_lat_lon(p);
 }
 
@@ -52,9 +51,12 @@ unsigned int find_nearest_neighbor_idx(double value, __global const double *arr,
 vector index_vector_field(field2d field, grid_point gp) {
     /*
     assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1]
+    if value is null, this means it's land; return 0.
     */
     vector v = {.x = field.U[(gp.t_idx*field.x_len + gp.x_idx)*field.y_len + gp.y_idx],
                 .y = field.V[(gp.t_idx*field.x_len + gp.x_idx)*field.y_len + gp.y_idx]};
+    if (isnan(v.x)) v.x = 0;
+    if (isnan(v.y)) v.y = 0;
     return v;
 }
 
@@ -77,6 +79,15 @@ double degrees_lon_to_meters(double dx, double y) {
 double degrees_lat_to_meters(double dy, double y) {
     double rlat = y * M_PI/180;
     return dy * (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
+}
+
+bool is_land(grid_point gp, field2d field) {
+    /* where'er you find the vector to be nan,
+       you sure as hell can bet that this is land.
+        -- William Shakespeare */
+
+    vector nearest_uv = index_vector_field(field, gp);
+    return (isnan(nearest_uv.x) || isnan(nearest_uv.y));
 }
 
 #endif
