@@ -1,3 +1,5 @@
+import datetime
+
 import pyopencl as cl
 import numpy as np
 import xarray as xr
@@ -11,7 +13,9 @@ from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 def openCL_advect(field: xr.Dataset,
                   p0: pd.DataFrame,
-                  advect_time: pd.DatetimeIndex,
+                  start_time: datetime.datetime,
+                  dt: datetime.timedelta,
+                  num_timesteps: int,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   platform_and_device: Tuple[int, int] = None,
@@ -22,7 +26,9 @@ def openCL_advect(field: xr.Dataset,
                     Dimensions: {'time', 'lon', 'lat'}
                     Variables: {'U', 'V'}
     :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
-    :param advect_time: pandas DatetimeIndex corresponding to the timeseries which the particles will be advected over
+    :param start_time: advection start time
+    :param dt: timestep duration
+    :param num_timesteps: number of timesteps
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
@@ -32,7 +38,7 @@ def openCL_advect(field: xr.Dataset,
                                                    time it took to execute kernel on device)
     """
     num_particles = len(p0)
-    dt = (advect_time[1] - advect_time[0]).total_seconds()
+    advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
 
     # choose the device/platform we're running on
     if platform_and_device is None:
@@ -55,13 +61,13 @@ def openCL_advect(field: xr.Dataset,
         with ProgressBar():
             field_chunk.load()
 
-        num_timesteps = len(advect_time_chunk) - 1  # because initial position is given!
-        out_timesteps = len(out_time_chunk) - 1     #
+        num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
+        out_timesteps_chunk = len(out_time_chunk) - 1     #
         # create the kernel wrapper object, pass it arguments
         kernel = create_kernel(advection_scheme=advection_scheme,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
-                               dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
-                               out_timesteps=out_timesteps)
+                               dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
+                               out_timesteps=out_timesteps_chunk)
         kernel.execute()
 
         buf_time += kernel.buf_time
@@ -82,7 +88,7 @@ def openCL_advect(field: xr.Dataset,
 
 
 def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
-                  num_particles: int, dt: float, start_time: pd.Timestamp,
+                  num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
     field = field.transpose('time', 'lon', 'lat')
@@ -99,7 +105,7 @@ def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field:
             y0=p0.lat.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
             start_time=start_time.timestamp(),
-            dt=dt,
+            dt=dt.total_seconds(),
             ntimesteps=num_timesteps,
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan).astype(np.float32),  # output will have this value
