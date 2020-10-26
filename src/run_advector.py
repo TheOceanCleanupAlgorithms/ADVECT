@@ -23,6 +23,7 @@ def run_advector(
     num_timesteps: int,
     save_period: int,
     advection_scheme: AdvectionScheme,
+    eddy_diffusivity: float,
     sourcefile_varname_map: dict = None,
     currents_varname_map: dict = None,
     platform_and_device: Tuple[int, int] = None,
@@ -38,6 +39,7 @@ def run_advector(
     :param num_timesteps: number of timesteps
     :param save_period: how often to write output.  Particle state will be saved every {save_period} timesteps.
     :param advection_scheme: which numerical advection scheme to use
+    :param eddy_diffusivity: (m^2 / s) constant controlling the scale of each particle's random walk; model dependent
     :param sourcefile_varname_map: mapping from names in sourcefile to advector standard variable names
             advector standard names: ('id', 'lat', 'lon', 'release_date')
     :param currents_varname_map: mapping from names in current file to advector standard variable names
@@ -65,6 +67,7 @@ def run_advector(
         num_timesteps=num_timesteps,
         save_every=save_period,
         advection_scheme=advection_scheme,
+        eddy_diffusivity=eddy_diffusivity,
         platform_and_device=platform_and_device,
         verbose=verbose,
     )

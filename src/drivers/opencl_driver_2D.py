@@ -18,6 +18,7 @@ def openCL_advect(field: xr.Dataset,
                   num_timesteps: int,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
+                  eddy_diffusivity: float,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
@@ -31,6 +32,7 @@ def openCL_advect(field: xr.Dataset,
     :param num_timesteps: number of timesteps
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
+    :param eddy_diffusivity: constant, scales random walk, model dependent value
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
     :return: (P, buffer_seconds, kernel_seconds): (numpy array with advection paths, shape (num_particles, num_timesteps, 2),
@@ -64,7 +66,7 @@ def openCL_advect(field: xr.Dataset,
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
         # create the kernel wrapper object, pass it arguments
-        kernel = create_kernel(advection_scheme=advection_scheme,
+        kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
                                dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
                                out_timesteps=out_timesteps_chunk)
@@ -87,7 +89,8 @@ def openCL_advect(field: xr.Dataset,
     return P, buf_time, kernel_time
 
 
-def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
+def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
+                  context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
@@ -95,6 +98,7 @@ def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field:
 
     return Kernel2D(
             advection_scheme=advection_scheme,
+            eddy_diffusivity=eddy_diffusivity,
             context=context,
             field_x=field.lon.values.astype(np.float64),
             field_y=field.lat.values.astype(np.float64),
