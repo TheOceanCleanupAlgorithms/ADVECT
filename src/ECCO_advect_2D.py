@@ -11,6 +11,15 @@ from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_advection
 
 
+EDDY_DIFFUSIVITY = 0  # m^2 / s
+''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
+  This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
+  Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
+  we're doubling up on the eddy transport.  For reference, to resolve 300km eddies, the grid scale probably needs to be
+  on order 30km, which at the equator would be ~1/3 degree.
+'''
+
+
 def test_ECCO():
     print('Opening ECCO current files...')
     U = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/U_2015*.nc')
@@ -36,7 +45,7 @@ def test_ECCO():
 
     print('Performing advection calculation...')
     P, buf_time, kernel_time = openCL_advect(field=currents, p0=p0, advect_time=time, save_every=save_every,
-                                             advection_scheme=AdvectionScheme.taylor2,
+                                             advection_scheme=AdvectionScheme.taylor2, eddy_diffusivity=EDDY_DIFFUSIVITY,
                                              platform_and_device=(0, 2), # change this to None for interactive device selection
                                              verbose=True)
 

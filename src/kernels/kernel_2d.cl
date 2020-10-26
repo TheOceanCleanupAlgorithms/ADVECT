@@ -2,6 +2,7 @@
 #include "structs.cl"
 #include "kernel_helpers.cl"
 #include "advection_schemes.cl"
+#include "eddy_diffusion.cl"
 
 #define EULERIAN 0  // matches definitions in src/kernel_wrappers/Kernel2D.py
 #define TAYLOR2 1
@@ -24,7 +25,8 @@ __kernel void advect(
     const unsigned int save_every,
     __global float *X_out,      // lon, Deg E (-180 to 180)
     __global float *Y_out,      // lat, Deg N (-90 to 90)
-    const unsigned int advection_scheme)
+    const unsigned int advection_scheme,
+    const double eddy_diffusivity)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -36,8 +38,9 @@ __kernel void advect(
                      .U = field_U, .V = field_V};
 
     // loop timesteps
-    int id = get_global_id(0);
-    particle p = {.id = id, .x = x0[id], .y = y0[id], .t = start_time};
+    int global_id = get_global_id(0);
+    particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .t = start_time};
+    random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
             p.t += dt;
@@ -58,6 +61,9 @@ __kernel void advect(
             } else {
                 return;  // can't throw errors but at least this way things will obviously fail
             }
+
+            displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
+            displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
 
             double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
             double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
