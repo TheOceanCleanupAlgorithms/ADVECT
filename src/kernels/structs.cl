@@ -26,4 +26,8 @@ typedef struct vector {
     double y;
 } vector;
 
+typedef struct random_state { // for the xor random number generator
+  unsigned int a;  // 32 bits
+} random_state;
+
 #endif

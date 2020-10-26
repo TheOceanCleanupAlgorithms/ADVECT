@@ -14,6 +14,7 @@ def openCL_advect(field: xr.Dataset,
                   advect_time: pd.DatetimeIndex,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
+                  eddy_diffusivity: float,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[xr.Dataset, float, float]:
     """
@@ -58,7 +59,7 @@ def openCL_advect(field: xr.Dataset,
         num_timesteps = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps = len(out_time_chunk) - 1     #
         # create the kernel wrapper object, pass it arguments
-        kernel = create_kernel(advection_scheme=advection_scheme,
+        kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
                                dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps, save_every=save_every,
                                out_timesteps=out_timesteps)
@@ -81,7 +82,8 @@ def openCL_advect(field: xr.Dataset,
     return P, buf_time, kernel_time
 
 
-def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
+def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
+                  context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: float, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
@@ -89,6 +91,7 @@ def create_kernel(advection_scheme: AdvectionScheme, context: cl.Context, field:
 
     return Kernel2D(
             advection_scheme=advection_scheme,
+            eddy_diffusivity=eddy_diffusivity,
             context=context,
             field_x=field.lon.values.astype(np.float64),
             field_y=field.lat.values.astype(np.float64),
