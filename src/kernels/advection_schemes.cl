@@ -4,7 +4,7 @@
 
 vector eulerian_displacement(particle p, grid_point neighbor, field2d field, double dt) {
     // find U and V nearest to particle position
-    vector uv = index_vector_field(field, neighbor);
+    vector uv = index_vector_field(field, neighbor, true);
 
     //////////// advect particle using euler forward advection scheme
     // meters displacement
@@ -22,12 +22,12 @@ vector taylor2_displacement(particle p, grid_point gp, field2d field, double dt)
     grid_point gp_dt = {.x_idx = gp.x_idx, .y_idx = gp.y_idx, .t_idx = min(gp.t_idx + 1, field.t_len - 1)};
 
     // extract values from nearest neighbor + adjacent cells
-    vector uv = index_vector_field(field, gp);        // at the particle
-    vector uv_w = index_vector_field(field, gp_w);    // one grid cell left
-    vector uv_e = index_vector_field(field, gp_e);    // one grid cell right
-    vector uv_s = index_vector_field(field, gp_s);    // one grid cell down
-    vector uv_n = index_vector_field(field, gp_n);    // one grid cell up
-    vector uv_dt = index_vector_field(field, gp_dt);  // one grid cell in future
+    vector uv = index_vector_field(field, gp, true);        // at the particle
+    vector uv_w = index_vector_field(field, gp_w, true);    // one grid cell left
+    vector uv_e = index_vector_field(field, gp_e, true);    // one grid cell right
+    vector uv_s = index_vector_field(field, gp_s, true);    // one grid cell down
+    vector uv_n = index_vector_field(field, gp_n, true);    // one grid cell up
+    vector uv_dt = index_vector_field(field, gp_dt, true);  // one grid cell in future
 
     // grid spacing at particle in x direction (m)
     double dx;

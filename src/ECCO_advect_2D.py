@@ -26,9 +26,8 @@ def test_ECCO():
     V = xr.open_mfdataset('../forcing_data/ECCO/ECCO_interp/V_2015*.nc')
     currents = xr.merge((U, V)).sel(depth=0, method='nearest')
 
-    # create a land mask, then replace currents on land with 0 (easy method to get beaching)
+    # create a land mask
     land = currents.U.isel(time=0).isnull()
-    currents = currents.fillna(value=0)
 
     # initialize particles
     [X, Y] = np.meshgrid(currents.lon, currents.lat)
