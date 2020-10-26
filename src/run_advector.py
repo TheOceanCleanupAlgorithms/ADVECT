@@ -3,7 +3,7 @@ the master advection runner.  Takes as input a path to a particle sourcefile, an
 variable.  Outputs the advection results to a particle sourcefile.
 """
 import datetime
-import os
+from pathlib import Path
 from typing import Tuple
 
 from drivers.opencl_driver_2D import openCL_advect
@@ -14,8 +14,8 @@ from dateutil import parser
 
 
 def run_advector(
-    output_dir: str,
     sourcefile_path: str,
+    outputfile_path: str,
     u_path: str,
     v_path: str,
     advection_start: str,
@@ -30,8 +30,8 @@ def run_advector(
     verbose: bool = None,
 ) -> str:
     """
-    :param output_dir: path to the directory where the outputfile will be written
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
+    :param outputfile_path: path which will be populated with the outfile.
     :param u_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_path: wildcard path to the zonal current files.  See u_path for more details.
     :param advection_start: ISO 8601 datetime string.
@@ -59,8 +59,10 @@ def run_advector(
 
     start_date = parser.isoparse(advection_start)  # python datetime.datetime
     dt = datetime.timedelta(seconds=timestep_seconds)
-    P, buf_time, kernel_time = openCL_advect(
+
+    openCL_advect(
         field=currents,
+        out_path=Path(outputfile_path),
         p0=p0,
         start_time=start_date,
         dt=dt,
@@ -71,9 +73,5 @@ def run_advector(
         platform_and_device=platform_and_device,
         verbose=verbose,
     )
-    out_path = os.path.join(
-        output_dir, f"{datetime.datetime.utcnow().timestamp()}_advection.nc"
-    )
-    P.to_netcdf(out_path)
 
-    return out_path
+    return outputfile_path

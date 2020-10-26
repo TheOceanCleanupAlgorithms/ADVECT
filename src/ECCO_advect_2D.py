@@ -8,7 +8,7 @@ from plotting.plot_advection import plot_ocean_advection
 from run_advector import run_advector
 
 
-EDDY_DIFFUSIVITY = 0  # m^2 / s
+EDDY_DIFFUSIVITY = 1800  # m^2 / s
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
   This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
   Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
@@ -19,7 +19,7 @@ EDDY_DIFFUSIVITY = 0  # m^2 / s
 
 if __name__ == '__main__':
     out_path = run_advector(
-        output_dir='../outputfiles/',
+        outputfile_path='../outputfiles/2015_ECCO.nc',
         sourcefile_path='../sourcefiles/2015_uniform.nc',
         u_path='../forcing_data/ECCO/ECCO_interp/U*.nc',
         v_path='../forcing_data/ECCO/ECCO_interp/V*.nc',
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        verbose=True
+        verbose=True,
     )
     P = xr.open_dataset(out_path)
     plot_ocean_advection(P)

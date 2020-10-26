@@ -1,9 +1,13 @@
 import datetime
+import glob
+from pathlib import Path
 
 import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
+import os
+import shutil
 
 from typing import Tuple
 from dask.diagnostics import ProgressBar
@@ -12,6 +16,7 @@ from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
 def openCL_advect(field: xr.Dataset,
+                  out_path: Path,
                   p0: pd.DataFrame,
                   start_time: datetime.datetime,
                   dt: datetime.timedelta,
@@ -20,12 +25,13 @@ def openCL_advect(field: xr.Dataset,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
                   platform_and_device: Tuple[int, int] = None,
-                  verbose=False) -> Tuple[xr.Dataset, float, float]:
+                  verbose=False) -> Tuple[float, float]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param field: xarray Dataset storing vector field/axes.
                     Dimensions: {'time', 'lon', 'lat'}
                     Variables: {'U', 'V'}
+    :param out_path: path at which to save the outputfile
     :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
@@ -35,9 +41,8 @@ def openCL_advect(field: xr.Dataset,
     :param eddy_diffusivity: constant, scales random walk, model dependent value
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
-    :return: (P, buffer_seconds, kernel_seconds): (numpy array with advection paths, shape (num_particles, num_timesteps, 2),
-                                                   time it took to transfer memory to/from device,
-                                                   time it took to execute kernel on device)
+    :return: (buffer_seconds, kernel_seconds): (time it took to transfer memory to/from device,
+                                                time it took to execute kernel on device)
     """
     num_particles = len(p0)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
@@ -53,11 +58,14 @@ def openCL_advect(field: xr.Dataset,
     advect_time_chunks, out_time_chunks, field_chunks = \
         chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
 
+    tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
+    os.mkdir(tmp_chunk_dir)
+
     buf_time, kernel_time = 0, 0
-    P_chunks = []
-    p0_chunk = p0
+    p0_chunk = p0.copy()
+    chunk_paths = []
     for advect_time_chunk, out_time_chunk, field_chunk in zip(advect_time_chunks, out_time_chunks, field_chunks):
-        print(f'Chunk {len(P_chunks)+1:3}/{len(field_chunks)}: '
+        print(f'Chunk {len(chunk_paths)+1:3}/{len(field_chunks)}: '
               f'{field_chunk.time.values[0]} to {field_chunk.time.values[-1]}...')
         print(f'  Loading currents...')
         with ProgressBar():
@@ -65,6 +73,7 @@ def openCL_advect(field: xr.Dataset,
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
+
         # create the kernel wrapper object, pass it arguments
         kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
                                context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
@@ -78,15 +87,26 @@ def openCL_advect(field: xr.Dataset,
             kernel.print_memory_footprint()
             kernel.print_execution_time()
 
-        P_chunk = create_dataset_from_kernel(kernel, out_time_chunk)
-        if len(P_chunks) > 0:  # except for first chunk, leave out p0
-            P_chunk = P_chunk.isel(time=slice(1, None))
-        P_chunks.append(P_chunk)
+        P_chunk = create_dataset_from_kernel(kernel=kernel,
+                                             release_date=p0_chunk.release_date,
+                                             advect_time=out_time_chunk)
+
+        chunk_path = tmp_chunk_dir / (out_path.name + f'_chunk{len(chunk_paths)+1}')
+        P_chunk.to_netcdf(path=chunk_path, mode='w')
+        chunk_paths.append(chunk_path)
+
         p0_chunk = P_chunk.isel(time=-1).to_dataframe()
+        # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
+        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
 
-    P = xr.concat(P_chunks, dim='time')
+    # now we concatenate all the temp outputs.  xarray can do this in a streaming fashion.  thus by saving chunks
+    # and concatenating them here, we avoid loading all the particles into RAM at once.
+    # this would be simpler if we could just append to the final netcdf the whole time, but xarray doesn't allow this.
+    chunk_files = xr.open_mfdataset(paths=chunk_paths)
+    chunk_files.to_netcdf(out_path)
+    shutil.rmtree(tmp_chunk_dir)
 
-    return P, buf_time, kernel_time
+    return buf_time, kernel_time
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
@@ -117,14 +137,15 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
     lat = kernel.Y_out.reshape([num_particles, -1])
 
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
-                              'lat': (['p_id', 'time'], lat)},
+                              'lat': (['p_id', 'time'], lat),
+                              'release_date': (['p_id'], release_date)},
                    coords={'p_id': np.arange(num_particles),
                            'time': advect_time[1:]}  # initial positions are not returned
                    )
