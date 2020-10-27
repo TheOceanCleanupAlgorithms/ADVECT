@@ -21,10 +21,10 @@ EDDY_DIFFUSIVITY = 0  # m^2 / s
 if __name__ == '__main__':
     out_path = run_advector(
         outputfile_path='../outputfiles/1993_HYCOM.nc',
-        sourcefile_path='~/storage2/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
-        u_path='../forcing_data/ECCO/ECCO_interp/U*.nc',
-        v_path='../forcing_data/ECCO/ECCO_interp/V*.nc',
-        advection_start='2015-01-01T12',
+        sourcefile_path='/home/toc/storage2/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
+        u_path='/home/toc/storage2/HINDCAST_MODELS/CURRENT/HYCOM_global_3hrly_1993_01_2016_09/u/u_1993*.nc',
+        v_path='/home/toc/storage2/HINDCAST_MODELS/CURRENT/HYCOM_global_3hrly_1993_01_2016_09/v/v_1993*.nc',
+        advection_start='1993-01-01T01',
         timestep_seconds=3600,
         num_timesteps=24*365,
         save_period=24,
@@ -32,6 +32,7 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         platform_and_device=(['0']),
         sourcefile_varname_map={'releaseDate': 'release_date'},
+        currents_varname_map={'water_u': 'U', 'water_v': 'V', 'x': 'lon', 'y': 'lat'},
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
     )
