@@ -2,7 +2,6 @@
 advect on ECCO surface currents
 """
 
-import xarray as xr
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_advection
 from run_advector import run_advector
@@ -26,10 +25,10 @@ if __name__ == '__main__':
         advection_start='2015-01-01T12',
         timestep_seconds=3600,
         num_timesteps=24*365,
-        save_period=24,
-        advection_scheme=AdvectionScheme.taylor2,
-        eddy_diffusivity=EDDY_DIFFUSIVITY,
+        #save_period=24,
+        advection_scheme=AdvectionScheme.eulerian,
+        #eddy_diffusivity=EDDY_DIFFUSIVITY,
         verbose=True,
     )
-    P = xr.open_dataset(out_path)
-    plot_ocean_advection(P)
+
+    plot_ocean_advection(out_path)

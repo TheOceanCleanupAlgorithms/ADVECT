@@ -1,3 +1,4 @@
+import click
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
@@ -26,7 +27,8 @@ def plot_advection(P, time, field, streamfunc=True, ax=None):
         plt.pause(.01)
 
 
-def plot_ocean_advection(P: xr.Dataset, lon_range=(-180, 180), lat_range=(-90, 90)):
+def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90)):
+    P = xr.open_dataset(outputfile_path)
     # plot le advection
     proj = ccrs.PlateCarree()
     fig = plt.figure(figsize=[14, 8])
@@ -44,3 +46,13 @@ def plot_ocean_advection(P: xr.Dataset, lon_range=(-180, 180), lat_range=(-90, 9
         ax.set_title(P.time.values[i])
         ax.set_ylim(-90, 90)
         plt.pause(.01)
+
+
+@click.command()
+@click.argument("outputfile_path", type=click.Path(exists=True, dir_okay=False, readable=True))
+def plot_ocean_advection_CLI(outputfile_path: str):
+    plot_ocean_advection(outputfile_path)
+
+
+if __name__ == '__main__':
+    plot_ocean_advection_CLI()
