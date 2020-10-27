@@ -2,12 +2,14 @@
 advect on ECCO surface currents
 """
 
+import xarray as xr
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_advection
 from run_advector import run_advector
+from tools.open_sourcefile import SourceFileType
 
 
-EDDY_DIFFUSIVITY = 1800  # m^2 / s
+EDDY_DIFFUSIVITY = 0  # m^2 / s
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
   This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
   Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
@@ -18,17 +20,20 @@ EDDY_DIFFUSIVITY = 1800  # m^2 / s
 
 if __name__ == '__main__':
     out_path = run_advector(
-        outputfile_path='../outputfiles/2015_ECCO.nc',
-        sourcefile_path='../sourcefiles/2015_uniform.nc',
+        outputfile_path='../outputfiles/1993_HYCOM.nc',
+        sourcefile_path='~/storage2/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
         u_path='../forcing_data/ECCO/ECCO_interp/U*.nc',
         v_path='../forcing_data/ECCO/ECCO_interp/V*.nc',
         advection_start='2015-01-01T12',
         timestep_seconds=3600,
         num_timesteps=24*365,
         save_period=24,
-        advection_scheme=AdvectionScheme.eulerian,
+        advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
+        platform_and_device=(['0']),
+        sourcefile_varname_map={'releaseDate': 'release_date'},
         verbose=True,
+        source_file_type=SourceFileType.old_source_files,
     )
-
-    plot_ocean_advection(out_path)
+    P = xr.open_dataset(out_path)
+    plot_ocean_advection(P)

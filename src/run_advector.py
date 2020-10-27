@@ -7,12 +7,12 @@ import json
 import click
 from pathlib import Path
 from typing import Tuple
-from dateutil import parser
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from tools.open_currentfiles import open_currentfiles
-from tools.open_sourcefile import open_sourcefile
+from tools.open_sourcefile import SourceFileType, open_sourcefile
+from dateutil import parser
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
 DEFAULT_SAVE_PERIOD = 1
@@ -29,6 +29,7 @@ def run_advector(
     advection_scheme: AdvectionScheme,
     eddy_diffusivity: float = DEFAULT_EDDY_DIFFUSIVITY,
     save_period: int = DEFAULT_SAVE_PERIOD,
+    source_file_type: SourceFileType = SourceFileType.new_source_files,
     sourcefile_varname_map: dict = None,
     currents_varname_map: dict = None,
     platform_and_device: Tuple[int, int] = None,
@@ -45,6 +46,7 @@ def run_advector(
     :param advection_scheme: which numerical advection scheme to use
     :param eddy_diffusivity: (m^2 / s) constant controlling the scale of each particle's random walk; model dependent
     :param save_period: how often to write output.  Particle state will be saved every {save_period} timesteps.
+    :param source_file_type: enum of what format source file is input
     :param sourcefile_varname_map: mapping from names in sourcefile to advector standard variable names
             advector standard names: ('id', 'lat', 'lon', 'release_date')
     :param currents_varname_map: mapping from names in current file to advector standard variable names
@@ -56,7 +58,9 @@ def run_advector(
     if sourcefile_varname_map is None:
         sourcefile_varname_map = {}
     p0 = open_sourcefile(
-        sourcefile_path=sourcefile_path, variable_mapping=sourcefile_varname_map
+        sourcefile_path=sourcefile_path, 
+        variable_mapping=sourcefile_varname_map,
+        source_file_type=source_file_type
     )
     currents = open_currentfiles(
         u_path=u_path, v_path=v_path, variable_mapping=currents_varname_map
@@ -97,7 +101,9 @@ def run_advector(
 @click.option('--scheme', "advection_scheme", required=True,
               type=click.Choice([s.name for s in AdvectionScheme], case_sensitive=True))
 @click.option('--eddy_diff', "eddy_diffusivity", required=False, default=DEFAULT_EDDY_DIFFUSIVITY)
-@click.option("--save_period", "num_timesteps", required=False, default=DEFAULT_SAVE_PERIOD)
+@click.option("--save_period", "save_period", required=False, default=DEFAULT_SAVE_PERIOD)
+@click.option("--source_type", "source_file_type", required=False, default=SourceFileType.new_source_files.name,
+              type=click.Choice([t.name for t in SourceFileType]))
 @click.option("--source_name_map", "sourcefile_varname_map", required=False, type=click.STRING)
 @click.option("--currents_name_map", "sourcefile_varname_map", required=False, type=click.STRING)
 @click.option("--cl_platform", "cl_platform", required=False, type=click.INT)
