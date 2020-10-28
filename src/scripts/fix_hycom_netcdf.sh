@@ -5,7 +5,16 @@
 # to run this on all the hycom data, just replace the U_PATH and V_PATH with wildcards to the hycom files.  even though it's just modifying attributes inplace, it seems to take a long time.  sorry...
 FILL_VALUE=-30000
 SCALE_FACTOR=0.001
-U_PATH="./u_1993*.nc"
-V_PATH="./v_1993*.nc"
-ncatted -a _FillValue,water_u,c,s,$FILL_VALUE -a scale_factor,water_u,c,f,$SCALE_FACTOR $U_PATH
-ncatted -a _FillValue,water_v,c,s,$FILL_VALUE -a scale_factor,water_v,c,f,$SCALE_FACTOR $V_PATH
+U_PATH=/home/toc/Documents/Metocean/CURRENT/u/u_1993*.nc
+V_PATH=/home/toc/Documents/Metocean/CURRENT/v/v_1993*.nc
+for f in $U_PATH
+do
+    echo "Processing $f file.."
+    #ncatted -a _FillValue,water_u,c,s,$FILL_VALUE -a scale_factor,water_u,c,f,$SCALE_FACTOR $f
+done
+
+for f in $V_PATH
+do
+    echo "Processing $f file..."
+    ncatted -a _FillValue,water_v,c,s,$FILL_VALUE -a scale_factor,water_v,c,f,$SCALE_FACTOR $f
+done
