@@ -115,7 +115,7 @@ class Kernel2D:
         """ensure kernel arguments satisfy constraints"""
 
         def is_uniformly_spaced(arr):
-            tol = 1e-5
+            tol = 1e-3
             return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
         assert max(self.field_x) < 180

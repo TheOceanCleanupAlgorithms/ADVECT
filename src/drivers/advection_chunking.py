@@ -16,7 +16,8 @@ def chunk_advection_params(device_bytes: int, field: xr.Dataset, num_particles: 
     # each element of out_time marks a time at which the driver will return particle position
 
     # estimate total size of memory we need to eventually run through the device
-    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(field, num_particles, len(out_time)-1)
+    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(field.sel(time=slice(advect_time[0], advect_time[-1])),
+                                                                num_particles, len(out_time)-1)
     available_bytes_for_field = device_bytes - (output_bytes + p0_bytes)
     if available_bytes_for_field <= 0:
         raise RuntimeError('Particles take up all of device memory; no space for field chunks. '

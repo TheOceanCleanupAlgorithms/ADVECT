@@ -34,6 +34,7 @@ def run_advector(
     currents_varname_map: dict = None,
     platform_and_device: Tuple[int, int] = None,
     verbose: bool = False,
+    memory_utilization: float = .5,
 ) -> str:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
@@ -81,6 +82,7 @@ def run_advector(
         eddy_diffusivity=eddy_diffusivity,
         platform_and_device=platform_and_device,
         verbose=verbose,
+        memory_utilization=memory_utilization,
     )
 
     return outputfile_path
@@ -109,6 +111,7 @@ def run_advector(
 @click.option("--cl_platform", "cl_platform", required=False, type=click.INT)
 @click.option("--cl_device", "cl_device", required=False, type=click.INT)
 @click.option("--verbose", "-v", is_flag=True)
+@click.option("--mem_util", "memory_utilization", required=False, default=0.5)
 def run_advector_CLI(
     advection_scheme: str,
     sourcefile_varname_map: str = None,

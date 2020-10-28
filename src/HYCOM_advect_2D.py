@@ -31,8 +31,9 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         platform_and_device=(['0']),
         sourcefile_varname_map={'releaseDate': 'release_date'},
-        currents_varname_map={'water_u': 'U', 'water_v': 'V', 'x': 'lon', 'y': 'lat'},
+        currents_varname_map={'water_u': 'U', 'water_v': 'V'},
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
+        memory_utilization=.5,
     )
-    plot_ocean_advection(out_path)
+

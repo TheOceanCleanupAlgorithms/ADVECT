@@ -1,4 +1,5 @@
 import datetime
+import gc
 import glob
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def openCL_advect(field: xr.Dataset,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
+                  memory_utilization: float,
                   platform_and_device: Tuple[int, int] = None,
                   verbose=False) -> Tuple[float, float]:
     """
@@ -54,10 +56,10 @@ def openCL_advect(field: xr.Dataset,
         context = cl.create_some_context(answers=list(platform_and_device))
 
     # get the minimum RAM available on the specified compute devices.
-    available_RAM = min(device.global_mem_size for device in context.devices) * .95  # leave 5% for safety
+    available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
     advect_time_chunks, out_time_chunks, field_chunks = \
         chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
-
+    import pdb; pdb.set_trace()
     tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
     os.mkdir(tmp_chunk_dir)
 
@@ -67,18 +69,17 @@ def openCL_advect(field: xr.Dataset,
     for advect_time_chunk, out_time_chunk, field_chunk in zip(advect_time_chunks, out_time_chunks, field_chunks):
         print(f'Chunk {len(chunk_paths)+1:3}/{len(field_chunks)}: '
               f'{field_chunk.time.values[0]} to {field_chunk.time.values[-1]}...')
-        print(f'  Loading currents...')
-        with ProgressBar():
-            field_chunk.load()
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
 
         # create the kernel wrapper object, pass it arguments
-        kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
-                               context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
-                               dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
-                               out_timesteps=out_timesteps_chunk)
+        with ProgressBar():
+            print(f'  Loading currents...') # these get implicitly loaded when .values is called on field_chunk variables
+            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
+                                   context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
+                                   dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
+                                   out_timesteps=out_timesteps_chunk)
         kernel.execute()
 
         buf_time += kernel.buf_time
@@ -90,6 +91,9 @@ def openCL_advect(field: xr.Dataset,
         P_chunk = create_dataset_from_kernel(kernel=kernel,
                                              release_date=p0_chunk.release_date,
                                              advect_time=out_time_chunk)
+        
+        del kernel  # important for releasing memory for the next iteration
+        gc.collect()
 
         chunk_path = tmp_chunk_dir / (out_path.name + f'_chunk{len(chunk_paths)+1}')
         P_chunk.to_netcdf(path=chunk_path, mode='w')
@@ -99,11 +103,16 @@ def openCL_advect(field: xr.Dataset,
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
 
+
     # now we concatenate all the temp outputs.  xarray can do this in a streaming fashion.  thus by saving chunks
     # and concatenating them here, we avoid loading all the particles into RAM at once.
     # this would be simpler if we could just append to the final netcdf the whole time, but xarray doesn't allow this.
-    chunk_files = xr.open_mfdataset(paths=chunk_paths)
-    chunk_files.to_netcdf(out_path)
+    with ProgressBar():
+        print("Concatenating chunk outputs...")
+        chunk_files = xr.open_mfdataset(paths=chunk_paths, parallel=True)
+        print("Saving output to disk...")
+        chunk_files.to_netcdf(out_path)
+    print("Removing temp files...")
     shutil.rmtree(tmp_chunk_dir)
 
     return buf_time, kernel_time
