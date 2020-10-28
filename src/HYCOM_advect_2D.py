@@ -2,7 +2,6 @@
 advect on ECCO surface currents
 """
 
-import xarray as xr
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_advection
 from run_advector import run_advector
@@ -36,5 +35,4 @@ if __name__ == '__main__':
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
     )
-    P = xr.open_dataset(out_path)
-    plot_ocean_advection(P)
+    plot_ocean_advection(out_path)

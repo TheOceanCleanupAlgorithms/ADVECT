@@ -123,8 +123,8 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
             field_x=field.lon.values.astype(np.float64),
             field_y=field.lat.values.astype(np.float64),
             field_t=field.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            field_U=field.U.values.astype(np.float32).flatten(),
-            field_V=field.V.values.astype(np.float32).flatten(),
+            field_U=field.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            field_V=field.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
@@ -132,8 +132,8 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
             dt=dt.total_seconds(),
             ntimesteps=num_timesteps,
             save_every=save_every,
-            X_out=np.full((num_particles*out_timesteps), np.nan).astype(np.float32),  # output will have this value
-            Y_out=np.full((num_particles*out_timesteps), np.nan).astype(np.float32),  # unless overwritten (e.g. pre-release)
+            X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
+            Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
     )
 
 
