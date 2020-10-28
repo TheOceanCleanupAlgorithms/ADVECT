@@ -59,7 +59,7 @@ def openCL_advect(field: xr.Dataset,
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
     advect_time_chunks, out_time_chunks, field_chunks = \
         chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
-    import pdb; pdb.set_trace()
+
     tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
     os.mkdir(tmp_chunk_dir)
 
