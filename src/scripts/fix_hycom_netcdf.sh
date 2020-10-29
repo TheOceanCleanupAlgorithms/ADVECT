@@ -12,13 +12,13 @@ V_PATH=/home/toc/Documents/Metocean/CURRENT/v/v_1993*.nc
 for f in $U_PATH
 do
     echo "Processing $f file.."
-    #ncatted -a _FillValue,water_u,c,s,$FILL_VALUE -a scale_factor,water_u,c,f,$SCALE_FACTOR $f
-    ncrename -d x,lon -d y,lat $f
+    ncatted -a _FillValue,water_u,c,s,$FILL_VALUE -a scale_factor,water_u,c,f,$SCALE_FACTOR $f
+    #ncrename -d x,lon -d y,lat $f
 done
 
 for f in $V_PATH
 do
     echo "Processing $f file..."
-    #ncatted -a _FillValue,water_v,c,s,$FILL_VALUE -a scale_factor,water_v,c,f,$SCALE_FACTOR $f
-    ncrename -d x,lon -d y,lat $f
+    ncatted -a _FillValue,water_v,c,s,$FILL_VALUE -a scale_factor,water_v,c,f,$SCALE_FACTOR $f
+    #ncrename -d x,lon -d y,lat $f
 done
