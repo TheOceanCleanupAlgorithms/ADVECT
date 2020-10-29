@@ -4,6 +4,7 @@ advect on ECCO surface currents
 
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from run_advector import run_advector
+from plotting.plot_advection import plot_ocean_advection
 from tools.open_sourcefile import SourceFileType
 
 
@@ -19,9 +20,9 @@ EDDY_DIFFUSIVITY = 0  # m^2 / s
 if __name__ == '__main__':
     out_path = run_advector(
         outputfile_path='../outputfiles/1993_HYCOM.nc',
-        sourcefile_path='/home/toc/storage2/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
-        u_path='/home/toc/Documents/Metocean/CURRENT/u/u_1993*.nc',
-        v_path='/home/toc/Documents/Metocean/CURRENT/v/v_1993*.nc',
+        sourcefile_path='V:/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
+        u_path='E:/CURRENT/u/u_1993*.nc',
+        v_path='E:/CURRENT/v/v_1993*.nc',
         advection_start='1993-01-01T01',
         timestep_seconds=3600,
         num_timesteps=24*365,
@@ -30,8 +31,10 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         platform_and_device=(0,),
         sourcefile_varname_map={'releaseDate': 'release_date'},
-        currents_varname_map={'water_u': 'U', 'water_v': 'V', 'x': 'lon', 'y': 'lat'},
+        currents_varname_map={'water_u': 'U', 'water_v': 'V'},
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
-        memory_utilization=.5,
+        memory_utilization=.01,
     )
+
+    plot_ocean_advection(out_path)
