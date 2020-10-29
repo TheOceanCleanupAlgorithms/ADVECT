@@ -32,7 +32,7 @@ def run_advector(
     source_file_type: SourceFileType = SourceFileType.new_source_files,
     sourcefile_varname_map: dict = None,
     currents_varname_map: dict = None,
-    platform_and_device: Tuple[int, int] = None,
+    platform_and_device: Tuple[int, ...] = None,
     verbose: bool = False,
     memory_utilization: float = .5,
 ) -> str:
@@ -54,6 +54,9 @@ def run_advector(
             advector standard names: ('U', 'V', 'W', 'lat', 'lon', 'time', 'depth')
     :param platform_and_device: [index of opencl platform, index of opencl device] to specify hardware for computation
     :param verbose: whether to print out a bunch of extra stuff
+    :param memory_utilization: this defines what percentage of the device memory advector will use for opencl buffers.
+                                if using a separate, dedicated opencl device (e.g. GPU) try something close to 1.
+                                if using the main CPU, try something close to .5.
     :return: absolute path to the particle outputfile
     """
     if sourcefile_varname_map is None:
