@@ -111,6 +111,7 @@ def openCL_advect(field: xr.Dataset,
         chunk_files = xr.open_mfdataset(paths=chunk_paths, parallel=True)
         print("Saving output to disk...")
         chunk_files.to_netcdf(out_path)
+        chunk_files.close()
     print("Removing temp files...")
     shutil.rmtree(tmp_chunk_dir)
 
