@@ -3,7 +3,6 @@ advect on ECCO surface currents
 """
 
 from kernel_wrappers.Kernel2D import AdvectionScheme
-from plotting.plot_advection import plot_ocean_advection
 from run_advector import run_advector
 from tools.open_sourcefile import SourceFileType
 
@@ -29,11 +28,10 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        platform_and_device=(['0']),
+        platform_and_device=(0,),
         sourcefile_varname_map={'releaseDate': 'release_date'},
         currents_varname_map={'water_u': 'U', 'water_v': 'V'},
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
         memory_utilization=.5,
     )
-

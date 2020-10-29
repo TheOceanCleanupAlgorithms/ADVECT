@@ -1,6 +1,5 @@
 import datetime
 import gc
-import glob
 from pathlib import Path
 
 import pyopencl as cl
@@ -26,7 +25,7 @@ def openCL_advect(field: xr.Dataset,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
                   memory_utilization: float,
-                  platform_and_device: Tuple[int, int] = None,
+                  platform_and_device: Tuple[int] = None,
                   verbose=False) -> Tuple[float, float]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
@@ -41,6 +40,7 @@ def openCL_advect(field: xr.Dataset,
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: constant, scales random walk, model dependent value
+    :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
     :return: (buffer_seconds, kernel_seconds): (time it took to transfer memory to/from device,
@@ -75,7 +75,7 @@ def openCL_advect(field: xr.Dataset,
 
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents...') # these get implicitly loaded when .values is called on field_chunk variables
+            print(f'  Loading currents...')  # these get implicitly loaded when .values is called on field_chunk variables
             kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
                                    context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
@@ -102,7 +102,6 @@ def openCL_advect(field: xr.Dataset,
         p0_chunk = P_chunk.isel(time=-1).to_dataframe()
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
-
 
     # now we concatenate all the temp outputs.  xarray can do this in a streaming fashion.  thus by saving chunks
     # and concatenating them here, we avoid loading all the particles into RAM at once.
