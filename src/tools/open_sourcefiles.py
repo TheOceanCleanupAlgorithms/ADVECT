@@ -1,6 +1,7 @@
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
+import glob
 import xarray as xr
 import pandas as pd
 
@@ -31,7 +32,7 @@ def datenum_to_datetimeNS64(datenum):
 
 
 
-def open_sourcefile(
+def open_sourcefiles(
     sourcefile_path: str,
     variable_mapping: dict,
     source_file_type: SourceFileType = SourceFileType.new_source_files,
@@ -41,7 +42,19 @@ def open_sourcefile(
     :param variable_mapping: mapping from names in sourcefile to advector standard variable names
             advector standard names: ('id', 'lat', 'lon', 'release_date')
     """
-    sourcefile = xr.open_dataset(sourcefile_path)
+
+    # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
+    try:
+        concat_dim = [k for k in variable_mapping.keys() if variable_mapping[k] == "id"][0]
+    except:
+        concat_dim = "id"
+
+    sourcefile = xr.open_mfdataset(
+        sorted(glob.glob(sourcefile_path)),
+        parallel=True,
+        combine="nested",
+        concat_dim=concat_dim
+    )
     sourcefile = sourcefile.rename(variable_mapping)
 
     # make sure there's only one dimension
@@ -58,5 +71,6 @@ def open_sourcefile(
     
     if (source_file_type == SourceFileType.old_source_files):
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
+        sourcefile['lon'][sourcefile['lon'][:] >= 180] -= 360
 
     return sourcefile
