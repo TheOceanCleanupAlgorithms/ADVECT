@@ -8,8 +8,8 @@ def open_currentfiles(u_path, v_path, variable_mapping):
     :param v_path: wildcard path to the zonal current files.  See u_path for more details.
     :param variable_mapping: mapping from names in current file to advector standard variable names
             advector standard names: ('U', 'V', 'W', 'lat', 'lon', 'time', 'depth')"""
-    U = xr.open_mfdataset(sorted(glob.glob(u_path)))
-    V = xr.open_mfdataset(sorted(glob.glob(v_path)))
+    U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True)
+    V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
     currents = xr.merge((U, V))
     currents = currents.rename(variable_mapping)
 

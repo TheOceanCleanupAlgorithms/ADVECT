@@ -15,7 +15,7 @@ typedef struct grid_point {
 } grid_point;
 
 typedef struct particle {
-    const int id;
+    int id;
     double x;
     double y;
     double t;
