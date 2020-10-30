@@ -21,8 +21,8 @@ DEFAULT_SAVE_PERIOD = 1
 def run_advector(
     sourcefile_path: str,
     outputfile_path: str,
-    u_path: str,
-    v_path: str,
+    uwater_path: str,
+    vwater_path: str,
     advection_start: str,
     timestep_seconds: float,
     num_timesteps: int,
@@ -42,8 +42,8 @@ def run_advector(
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param outputfile_path: path which will be populated with the outfile.
-    :param u_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
-    :param v_path: wildcard path to the meridional current files.  See u_path for more details.
+    :param uwater_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
+    :param vwater_path: wildcard path to the meridional current files.  See u_path for more details.
     :param advection_start: ISO 8601 datetime string.
     :param timestep_seconds: duration of each timestep in seconds
     :param num_timesteps: number of timesteps
@@ -74,22 +74,22 @@ def run_advector(
         source_file_type=source_file_type,
     )
     currents = open_netcdf_vectorfield(
-        u_path=u_path, v_path=v_path, variable_mapping=currents_varname_map
+        u_path=uwater_path, v_path=vwater_path, variable_mapping=currents_varname_map
     )
 
-    wind = (
-        open_netcdf_vectorfield(
+    if uwnd_path is not None:
+        wind = open_netcdf_vectorfield(
             u_path=uwnd_path, v_path=vwnd_path, variable_mapping=windfile_varname_map
         )
-        if uwnd_path
-        else None
-    )
+    else:
+        wind = None
 
     start_date = parser.isoparse(advection_start)  # python datetime.datetime
     dt = datetime.timedelta(seconds=timestep_seconds)
 
     openCL_advect(
-        currents=currents,
+        current=currents,
+        wind=wind,
         out_path=Path(outputfile_path),
         p0=p0,
         start_time=start_date,
@@ -107,48 +107,25 @@ def run_advector(
 
 
 @click.command()
-@click.option(
-    "--source",
-    "sourcefile_path",
-    required=True,
-    type=click.Path(exists=True, dir_okay=False, readable=True),
-)
-@click.option(
-    "--output",
-    "outputfile_path",
-    required=True,
-    type=click.Path(exists=False, dir_okay=False, readable=True),
-)
+@click.option("--source", "sourcefile_path", required=True,
+              type=click.Path(exists=True, dir_okay=False, readable=True),
+              )
+@click.option("--output", "outputfile_path", required=True,
+              type=click.Path(exists=False, dir_okay=False, readable=True),
+              )
 @click.option("--u", "u_path", required=True, type=click.STRING)
 @click.option("--v", "v_path", required=True, type=click.STRING)
 @click.option("--start", "advection_start", required=True, type=click.STRING)
 @click.option("--dt", "timestep_seconds", required=True, type=click.FLOAT)
 @click.option("--nt", "num_timesteps", required=True, type=click.INT)
-@click.option(
-    "--scheme",
-    "advection_scheme",
-    required=True,
-    type=click.Choice([s.name for s in AdvectionScheme], case_sensitive=True),
-)
-@click.option(
-    "--eddy_diff", "eddy_diffusivity", required=False, default=DEFAULT_EDDY_DIFFUSIVITY
-)
-@click.option(
-    "--save_period", "save_period", required=False, default=DEFAULT_SAVE_PERIOD
-)
-@click.option(
-    "--source_type",
-    "source_file_type",
-    required=False,
-    default=SourceFileType.new_source_files.name,
-    type=click.Choice([t.name for t in SourceFileType]),
-)
-@click.option(
-    "--source_name_map", "sourcefile_varname_map", required=False, type=click.STRING
-)
-@click.option(
-    "--currents_name_map", "sourcefile_varname_map", required=False, type=click.STRING
-)
+@click.option('--scheme', "advection_scheme", required=True,
+              type=click.Choice([s.name for s in AdvectionScheme], case_sensitive=True))
+@click.option('--eddy_diff', "eddy_diffusivity", required=False, default=DEFAULT_EDDY_DIFFUSIVITY)
+@click.option("--save_period", "save_period", required=False, default=DEFAULT_SAVE_PERIOD)
+@click.option("--source_type", "source_file_type", required=False, default=SourceFileType.new_source_files.name,
+              type=click.Choice([t.name for t in SourceFileType]))
+@click.option("--source_name_map", "sourcefile_varname_map", required=False, type=click.STRING)
+@click.option("--currents_name_map", "sourcefile_varname_map", required=False, type=click.STRING)
 @click.option("--cl_platform", "cl_platform", required=False, type=click.INT)
 @click.option("--cl_device", "cl_device", required=False, type=click.INT)
 @click.option("--verbose", "-v", is_flag=True)
@@ -161,22 +138,18 @@ def run_advector_CLI(
     cl_device: int = None,
     **kwargs,
 ):
-    platform_and_device = (
-        None if cl_platform is None or cl_device is None else (cl_platform, cl_device)
-    )
+    platform_and_device = None if cl_platform is None or cl_device is None else (cl_platform, cl_device)
     if sourcefile_varname_map:
         sourcefile_varname_map = json.loads(sourcefile_varname_map)
     if currents_varname_map:
         currents_varname_map = json.loads(currents_varname_map)
 
-    run_advector(
-        advection_scheme=AdvectionScheme[advection_scheme],
-        sourcefile_varname_map=sourcefile_varname_map,
-        currents_varname_map=currents_varname_map,
-        platform_and_device=platform_and_device,
-        **kwargs,
-    )
+    run_advector(advection_scheme=AdvectionScheme[advection_scheme],
+                 sourcefile_varname_map=sourcefile_varname_map,
+                 currents_varname_map=currents_varname_map,
+                 platform_and_device=platform_and_device,
+                 **kwargs)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_advector_CLI()

@@ -12,8 +12,11 @@ def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
     V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
     vectors = xr.merge((U, V))
     vectors = vectors.rename(variable_mapping)
+    vectors = vectors[['U', 'V']]  # drop any additional variables
+    vectors = vectors.squeeze()  # remove any singleton dimensions
 
     if "depth" in vectors.dims:
-        vectors = vectors.isel(depth=0)
+        vectors = vectors.sel(depth=0, method='nearest')
 
+    assert set(vectors.dims) == {'lat', 'lon', 'time'}, f"Unexpected/missing dimension(s) ({vectors.dims})"
     return vectors

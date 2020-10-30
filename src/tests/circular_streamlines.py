@@ -41,10 +41,10 @@ def compare_alg_drift():
     time = pd.date_range(start='2000-01-01', end='2000-01-01T6:00:00', freq=dt)
     save_every = 1
 
-    euler, _, _ = openCL_advect(currents=field, p0=p0, advect_time=time, save_every=save_every, advection_scheme=AdvectionScheme.eulerian,
+    euler, _, _ = openCL_advect(current=field, p0=p0, advect_time=time, save_every=save_every, advection_scheme=AdvectionScheme.eulerian,
                                 platform_and_device=(0, 0), verbose=True)
 
-    taylor, _, _ = openCL_advect(currents=field, p0=p0, advect_time=time, save_every=save_every, advection_scheme=AdvectionScheme.taylor2,
+    taylor, _, _ = openCL_advect(current=field, p0=p0, advect_time=time, save_every=save_every, advection_scheme=AdvectionScheme.taylor2,
                                  platform_and_device=(0, 0), verbose=True)
 
     plt.figure(figsize=(8, 4))
