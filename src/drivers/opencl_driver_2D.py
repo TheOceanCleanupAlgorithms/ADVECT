@@ -9,13 +9,13 @@ import pandas as pd
 import os
 import shutil
 
-from typing import Tuple
+from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
-def openCL_advect(field: xr.Dataset,
+def openCL_advect(currents: xr.Dataset,
                   out_path: Path,
                   p0: pd.DataFrame,
                   start_time: datetime.datetime,
@@ -25,13 +25,14 @@ def openCL_advect(field: xr.Dataset,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
                   memory_utilization: float,
+                  wind: Optional[xr.Dataset] = None,
                   platform_and_device: Tuple[int] = None,
                   verbose=False) -> Tuple[float, float]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
-    :param field: xarray Dataset storing vector field/axes.
-                    Dimensions: {'time', 'lon', 'lat'}
-                    Variables: {'U', 'V'}
+    :param currents: xarray Dataset storing current vector field/axes.
+                     Dimensions: {'time', 'lon', 'lat'}
+                     Variables: {'U', 'V'}
     :param out_path: path at which to save the outputfile
     :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
     :param start_time: advection start time
@@ -41,6 +42,9 @@ def openCL_advect(field: xr.Dataset,
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: constant, scales random walk, model dependent value
     :param memory_utilization: fraction of the opencl device memory available for buffers
+    :param wind: xarray Dataset storing wind vector field/axes.
+                 Dimensions: {'time', 'lon', 'lat'}
+                 Variables: {'U', 'V'}
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
     :return: (buffer_seconds, kernel_seconds): (time it took to transfer memory to/from device,
@@ -58,7 +62,7 @@ def openCL_advect(field: xr.Dataset,
     # get the minimum RAM available on the specified compute devices.
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
     advect_time_chunks, out_time_chunks, field_chunks = \
-        chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
+        chunk_advection_params(available_RAM, currents, num_particles, advect_time, save_every)
 
     tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
     os.mkdir(tmp_chunk_dir)
