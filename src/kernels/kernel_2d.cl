@@ -50,26 +50,23 @@ __kernel void advect(
         // find nearest neighbors in grid
         grid_point neighbor = find_nearest_neighbor(p, field);
 
-        if (is_land(neighbor, field)) { // we're beached, me hearties!
-            // do nothing; stays on land forever.
-        } else {  // ah, the salt breeze, the open seas
-            vector displacement_meters;
-            if (advection_scheme == EULERIAN) {
-                displacement_meters = eulerian_displacement(p, neighbor, field, dt);
-            } else if (advection_scheme == TAYLOR2) {
-                displacement_meters = taylor2_displacement(p, neighbor, field, dt);
-            } else {
-                return;  // can't throw errors but at least this way things will obviously fail
-            }
-
-            displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
-            displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
-
-            double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
-            double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
-
-            p = update_position(p, dx_deg, dy_deg);
+        vector displacement_meters;
+        if (advection_scheme == EULERIAN) {
+            displacement_meters = eulerian_displacement(p, neighbor, field, dt);
+        } else if (advection_scheme == TAYLOR2) {
+            displacement_meters = taylor2_displacement(p, neighbor, field, dt);
+        } else {
+            return;  // can't throw errors but at least this way things will obviously fail
         }
+
+        displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
+        displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
+
+        double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
+        double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
+
+        p = update_position_no_beaching(p, dx_deg, dy_deg, field);
+
         p.t += dt;
         // save if necessary
         if ((timestep+1) % save_every == 0) {

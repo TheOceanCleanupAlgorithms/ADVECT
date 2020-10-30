@@ -22,6 +22,34 @@ particle constrain_lat_lon(particle p) {
     return p;
 }
 
+particle update_position_no_beaching(particle p, double dx, double dy, field2d field) {
+    /*so-called "slippery coastlines."  Try to move the particle by dx and dy, but avoid depositing it onto land.*/
+    particle new_p = update_position(p, dx, dy);  // always use this to keep lat/lon properly constrained
+
+    // simple case
+    if (!is_on_land(new_p, field)) return new_p;
+
+    // particle will beach.  We don't want this, but we do want to try to move the particle in at least one direction.
+    particle p_dx = update_position(p, dx, 0);  // only move in x direction
+    particle p_dy = update_position(p, 0, dy);  // only move in y direction
+    bool is_sea_x = !is_on_land(p_dx, field);
+    bool is_sea_y = !is_on_land(p_dy, field);
+
+    if (is_sea_x && is_sea_y) {  // could move in x OR y.  This is like being at a peninsula.
+        if (degrees_lon_to_meters(dx, p.y) > degrees_lat_to_meters(dy, p.y)) {
+            return p_dx;            // we choose which way to go based on which vector component is stronger.
+        } else {
+            return p_dy;
+        }
+    } else if (is_sea_x) {      // we can only move in x; this is like being against a horizontal coastline
+        return p_dx;
+    } else if (is_sea_y) {      // we can only move in y; this is like being against a vertical coastline
+        return p_dy;
+    } else {                    // we can't move in x or y; this is like being in a corner, surrounded by land
+        return p;
+    }
+}
+
 particle update_position(particle p, double dx, double dy) {
     p.x = p.x + dx;
     p.y = p.y + dy;
@@ -83,11 +111,11 @@ double degrees_lat_to_meters(double dy, double y) {
     return dy * (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
 }
 
-bool is_land(grid_point gp, field2d field) {
+bool is_on_land(particle p, field2d field) {
     /* where'er you find the vector to be nan,
        you sure as hell can bet that this is land.
         -- William Shakespeare */
-
+    grid_point gp = find_nearest_neighbor(p, field);
     vector nearest_uv = index_vector_field(field, gp, false);
     return (isnan(nearest_uv.x) || isnan(nearest_uv.y));
 }
