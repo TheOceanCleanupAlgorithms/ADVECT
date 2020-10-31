@@ -19,4 +19,18 @@ def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
         vectors = vectors.sel(depth=0, method='nearest')
 
     assert set(vectors.dims) == {'lat', 'lon', 'time'}, f"Unexpected/missing dimension(s) ({vectors.dims})"
+
+    # convert longitude [0, 360] --> [-180, 180]
+    # this operation could be expensive because of the resorting.  You may want to preprocess your data.
+    if max(vectors.lon) > 180:
+        vectors['lon'] = ((vectors.lon + 180) % 360) - 180
+        vectors = vectors.sortby('lon')
+
+    # make sure lon/lat are ascending
+    # this operation could be expensive because of the resorting.  You may want to preprocess your data.
+    if vectors.lon[1] - vectors.lon[0] < 0:
+        vectors = vectors.sortby('lon', ascending=True)
+    if vectors.lat[1] - vectors.lat[0] < 0:
+        vectors = vectors.sortby('lat', ascending=True)
+
     return vectors
