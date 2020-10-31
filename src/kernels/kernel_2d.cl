@@ -52,6 +52,13 @@ __kernel void advect(
                      .t_spacing = current_t[1]-current_t[0],
                      .U = current_U, .V = current_V};
 
+    field2d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
+                    .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
+                    .x_spacing = wind_x[1]-wind_x[0],
+                    .y_spacing = wind_y[1]-wind_y[0],
+                    .t_spacing = wind_t[1]-wind_t[0],
+                    .U = wind_U, .V = wind_V};
+
     // loop timesteps
     int global_id = get_global_id(0);
     particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .t = start_time};
@@ -81,6 +88,10 @@ __kernel void advect(
 
             displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
             displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
+
+            vector wind_displacement_meters = eulerian_displacement(p, find_nearest_neighbor(p, wind), wind, dt);
+            displacement_meters.x += wind_displacement_meters.x * windage_coefficient;
+            displacement_meters.y += wind_displacement_meters.y * windage_coefficient;
 
             double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
             double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
