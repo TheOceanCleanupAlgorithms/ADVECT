@@ -3,6 +3,7 @@
 #include "kernel_helpers.cl"
 #include "advection_schemes.cl"
 #include "eddy_diffusion.cl"
+#include "windage.cl"
 
 #define EULERIAN 0  // matches definitions in src/kernel_wrappers/Kernel2D.py
 #define TAYLOR2 1
@@ -41,7 +42,7 @@ __kernel void advect(
     /* physics parameters */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
-    const double windage_coefficient)
+    const double windage_coeff)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -83,15 +84,9 @@ __kernel void advect(
             } else {
                 return;  // can't throw errors but at least this way things will obviously fail
             }
-            displacement_meters.x = 0;
-            displacement_meters.y = 0;
 
-            displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
-            displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
-
-            vector wind_displacement_meters = eulerian_displacement(p, find_nearest_neighbor(p, wind), wind, dt);
-            displacement_meters.x += wind_displacement_meters.x * windage_coefficient;
-            displacement_meters.y += wind_displacement_meters.y * windage_coefficient;
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
+            displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
 
             double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
             double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);

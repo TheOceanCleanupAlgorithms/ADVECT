@@ -90,7 +90,7 @@ def openCL_advect(current: xr.Dataset,
 
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents...')  # these get implicitly loaded when .values is called on current_chunk variables
+            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
             kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
                                    context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,

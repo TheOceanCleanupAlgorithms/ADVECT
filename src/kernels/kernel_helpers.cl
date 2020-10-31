@@ -92,4 +92,9 @@ bool is_land(grid_point gp, field2d field) {
     return (isnan(nearest_uv.x) || isnan(nearest_uv.y));
 }
 
+vector add(vector a, vector b) {
+    vector res = {.x = a.x + b.x, .y = a.y + b.y};
+    return res;
+}
+
 #endif
