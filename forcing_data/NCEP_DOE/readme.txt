@@ -1,1 +1,0 @@
-download scripts and forcing data from the NCEP-DOE AMIP-ii atmospheric reanalysis (https://psl.noaa.gov/data/gridded/data.ncep.reanalysis2.html)
