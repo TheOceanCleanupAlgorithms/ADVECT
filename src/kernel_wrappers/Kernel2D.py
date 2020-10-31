@@ -137,11 +137,11 @@ class Kernel2D:
             return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
         # check current field valid
-        assert max(self.current_x) < 180
+        assert max(self.current_x) <= 180
         assert min(self.current_x) >= -180
         assert len(self.current_x) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_x)
-        assert max(self.current_y) < 90
+        assert max(self.current_y) <= 90
         assert min(self.current_y) >= -90
         assert len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_y)
@@ -149,11 +149,11 @@ class Kernel2D:
         assert is_uniformly_spaced(self.current_t)
 
         # check wind field valid
-        assert max(self.wind_x) < 180
+        assert max(self.wind_x) <= 180
         assert min(self.wind_x) >= -180
         assert len(self.wind_x) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.wind_x)
-        assert max(self.wind_y) < 90
+        assert max(self.wind_y) <= 90
         assert min(self.wind_y) >= -90
         assert len(self.wind_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.wind_y)
