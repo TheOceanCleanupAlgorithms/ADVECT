@@ -15,6 +15,7 @@ from tools.open_sourcefile import SourceFileType, open_sourcefile
 from dateutil import parser
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
+DEFAULT_WINDAGE_COEFF = 0
 DEFAULT_SAVE_PERIOD = 1
 
 
@@ -28,6 +29,7 @@ def run_advector(
     num_timesteps: int,
     advection_scheme: AdvectionScheme,
     eddy_diffusivity: float = DEFAULT_EDDY_DIFFUSIVITY,
+    windage_coeff: float = DEFAULT_WINDAGE_COEFF,
     save_period: int = DEFAULT_SAVE_PERIOD,
     source_file_type: SourceFileType = SourceFileType.new_source_files,
     sourcefile_varname_map: dict = None,
@@ -49,6 +51,7 @@ def run_advector(
     :param num_timesteps: number of timesteps
     :param advection_scheme: which numerical advection scheme to use
     :param eddy_diffusivity: (m^2 / s) constant controlling the scale of each particle's random walk; model dependent
+    :param windage_coeff: float in [0, 1], fraction of wind speed that is transferred to particle
     :param save_period: how often to write output.  Particle state will be saved every {save_period} timesteps.
     :param source_file_type: enum of what format source file is input
     :param sourcefile_varname_map: mapping from names in sourcefile to advector standard variable names
@@ -98,6 +101,7 @@ def run_advector(
         save_every=save_period,
         advection_scheme=advection_scheme,
         eddy_diffusivity=eddy_diffusivity,
+        windage_coeff=windage_coeff,
         platform_and_device=platform_and_device,
         verbose=verbose,
         memory_utilization=memory_utilization,
@@ -121,6 +125,7 @@ def run_advector(
 @click.option('--scheme', "advection_scheme", required=True,
               type=click.Choice([s.name for s in AdvectionScheme], case_sensitive=True))
 @click.option('--eddy_diff', "eddy_diffusivity", required=False, default=DEFAULT_EDDY_DIFFUSIVITY)
+@click.option('--windage', "windage_coeff", required=False, default=DEFAULT_WINDAGE_COEFF)
 @click.option("--save_period", "save_period", required=False, default=DEFAULT_SAVE_PERIOD)
 @click.option("--source_type", "source_file_type", required=False, default=SourceFileType.new_source_files.name,
               type=click.Choice([t.name for t in SourceFileType]))

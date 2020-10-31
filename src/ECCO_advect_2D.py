@@ -14,6 +14,7 @@ EDDY_DIFFUSIVITY = 0  # m^2 / s
   we're doubling up on the eddy transport.  For reference, to resolve 300km eddies, the grid scale probably needs to be
   on order 30km, which at the equator would be ~1/3 degree.
 '''
+WINDAGE_COEFF = 1  # float in [0, 1] representing fraction of wind speed that is transferred to particle
 
 
 if __name__ == '__main__':
@@ -31,7 +32,9 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme=AdvectionScheme.eulerian,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
+        windage_coeff=1,
         verbose=True,
+        platform_and_device=(0, 2),
     )
 
     plot_ocean_advection(out_path)

@@ -25,6 +25,7 @@ def openCL_advect(current: xr.Dataset,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
+                  windage_coeff: float,
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
                   verbose=False) -> Tuple[float, float]:
@@ -44,6 +45,7 @@ def openCL_advect(current: xr.Dataset,
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: constant, scales random walk, model dependent value
+    :param windage_coeff: constant in [0, 1], fraction of windspeed applied to particle
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
@@ -89,7 +91,7 @@ def openCL_advect(current: xr.Dataset,
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
             print(f'  Loading currents...')  # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
+            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
                                    context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
                                    out_timesteps=out_timesteps_chunk)
@@ -131,7 +133,7 @@ def openCL_advect(current: xr.Dataset,
     return buf_time, kernel_time
 
 
-def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
+def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
                   context: cl.Context, current: xr.Dataset, wind: Optional[xr.Dataset], p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
