@@ -8,34 +8,49 @@
 #define TAYLOR2 1
 
 __kernel void advect(
-    __global const double *field_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int x_len,   // <= UINT_MAX + 1
-    __global const double *field_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int y_len,   // <= UINT_MAX + 1
-    __global const double *field_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int t_len,   // <= UINT_MAX + 1
-    __global const float *field_U,    // m / s, 32 bit to save space
-    __global const float *field_V,    // m / s
+    /* current vector field */
+    __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int current_x_len,   // <= UINT_MAX + 1
+    __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int current_y_len,   // <= UINT_MAX + 1
+    __global const double *current_t,     // time, seconds since epoch, uniform spacing
+    const unsigned int current_t_len,   // <= UINT_MAX + 1
+    __global const float *current_U,    // m / s, 32 bit to save space
+    __global const float *current_V,    // m / s
+    /* wind vector field */
+    __global const double *wind_x,    // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int wind_x_len,   // <= UINT_MAX + 1
+    __global const double *wind_y,    // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int wind_y_len,   // <= UINT_MAX + 1
+    __global const double *wind_t,     // time, seconds since epoch, uniform spacing
+    const unsigned int wind_t_len,   // <= UINT_MAX + 1
+    __global const float *wind_U,    // m / s, 32 bit to save space
+    __global const float *wind_V,    // m / s
+    /* particle initialization information */
     __global const float *x0,         // lon, Deg E (-180 to 180)
     __global const float *y0,         // lat, Deg N (-90 to 90)
     __global const double *release_date,         // unix timestamp
+    /* advection time parameters */
     const double start_time,          // unix timestamp
     const double dt,             // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
+    /* output vectors */
     __global float *X_out,      // lon, Deg E (-180 to 180)
     __global float *Y_out,      // lat, Deg N (-90 to 90)
+    /* physics parameters */
     const unsigned int advection_scheme,
-    const double eddy_diffusivity)
+    const double eddy_diffusivity,
+    const double windage_coefficient)
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
-    field2d field = {.x = field_x, .y = field_y, .t = field_t,
-                     .x_len = x_len, .y_len = y_len, .t_len = t_len,
-                     .x_spacing = field_x[1]-field_x[0],
-                     .y_spacing = field_y[1]-field_y[0],
-                     .t_spacing = field_t[1]-field_t[0],
-                     .U = field_U, .V = field_V};
+    field2d current = {.x = current_x, .y = current_y, .t = current_t,
+                     .x_len = current_x_len, .y_len = current_y_len, .t_len = current_t_len,
+                     .x_spacing = current_x[1]-current_x[0],
+                     .y_spacing = current_y[1]-current_y[0],
+                     .t_spacing = current_t[1]-current_t[0],
+                     .U = current_U, .V = current_V};
 
     // loop timesteps
     int global_id = get_global_id(0);
@@ -48,19 +63,21 @@ __kernel void advect(
         }
 
         // find nearest neighbors in grid
-        grid_point neighbor = find_nearest_neighbor(p, field);
+        grid_point neighbor = find_nearest_neighbor(p, current);
 
-        if (is_land(neighbor, field)) { // we're beached, me hearties!
+        if (is_land(neighbor, current)) { // we're beached, me hearties!
             // do nothing; stays on land forever.
         } else {  // ah, the salt breeze, the open seas
             vector displacement_meters;
             if (advection_scheme == EULERIAN) {
-                displacement_meters = eulerian_displacement(p, neighbor, field, dt);
+                displacement_meters = eulerian_displacement(p, neighbor, current, dt);
             } else if (advection_scheme == TAYLOR2) {
-                displacement_meters = taylor2_displacement(p, neighbor, field, dt);
+                displacement_meters = taylor2_displacement(p, neighbor, current, dt);
             } else {
                 return;  // can't throw errors but at least this way things will obviously fail
             }
+            displacement_meters.x = 0;
+            displacement_meters.y = 0;
 
             displacement_meters.x += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);
             displacement_meters.y += eddy_diffusion_meters(dt, &rstate, eddy_diffusivity);

@@ -144,12 +144,18 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
     return Kernel2D(
             advection_scheme=advection_scheme,
             eddy_diffusivity=eddy_diffusivity,
+            windage_coeff=windage_coeff,
             context=context,
-            field_x=current.lon.values.astype(np.float64),
-            field_y=current.lat.values.astype(np.float64),
-            field_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            field_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
-            field_V=current.V.values.astype(np.float32, copy=False).ravel(),
+            current_x=current.lon.values.astype(np.float64),
+            current_y=current.lat.values.astype(np.float64),
+            current_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
+            current_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            current_V=current.V.values.astype(np.float32, copy=False).ravel(),
+            wind_x=wind.lon.values.astype(np.float64),
+            wind_y=wind.lat.values.astype(np.float64),
+            wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
+            wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
