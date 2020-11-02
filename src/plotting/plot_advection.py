@@ -27,6 +27,17 @@ def plot_advection(P, time, field, streamfunc=True, ax=None):
         plt.pause(.01)
 
 
+def plot_ocean_trajectories(outputfile_path: str):
+    P = xr.open_dataset(outputfile_path)
+    # plot le advection
+    proj = ccrs.PlateCarree()
+    fig = plt.figure(figsize=[14, 8])
+    ax = plt.axes(projection=proj)
+    ax.coastlines()
+
+    ax.plot(P.lon.transpose('time', 'p_id'), P.lat.transpose('time', 'p_id'), '.')
+
+
 def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90)):
     P = xr.open_dataset(outputfile_path)
     # plot le advection
