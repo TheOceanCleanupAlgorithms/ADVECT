@@ -44,13 +44,14 @@ def open_sourcefiles(
     """
 
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
-    try:
-        concat_dim = [k for k in variable_mapping.keys() if variable_mapping[k] == "id"][0]
-    except:
+    # If the "id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
+    if variable_mapping is None or 'id' not in variable_mapping.values():
         concat_dim = "id"
+    else:
+        concat_dim = next(k for k, v in variable_mapping.items() if v=='id')
 
     sourcefile = xr.open_mfdataset(
-        sorted(glob.glob(sourcefile_path)),
+        glob.glob(sourcefile_path),
         parallel=True,
         combine="nested",
         concat_dim=concat_dim

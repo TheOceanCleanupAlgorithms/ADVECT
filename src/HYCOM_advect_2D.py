@@ -6,16 +6,19 @@ from kernel_wrappers.Kernel2D import AdvectionScheme
 from run_advector import run_advector
 from plotting.plot_advection import plot_ocean_advection
 from tools.open_sourcefiles import SourceFileType
+from datetime import datetime
 
 
 EDDY_DIFFUSIVITY = 0  # m^2 / s
-NUM_YEARS = 2
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
   This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
   Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
   we're doubling up on the eddy transport.  For reference, to resolve 300km eddies, the grid scale probably needs to be
   on order 30km, which at the equator would be ~1/3 degree.
 '''
+
+ADVECTION_START = datetime(1993, 1, 1)
+ADVECTION_END = datetime(1995, 1, 1)
 
 
 if __name__ == '__main__':
@@ -24,9 +27,9 @@ if __name__ == '__main__':
         sourcefile_path='/home/toc/storage2/SourcesForTest/parts_source*.nc',
         u_path='/home/toc/Documents/Metocean/CURRENT/u/u_199*.nc',
         v_path='/home/toc/Documents/Metocean/CURRENT/v/v_199*.nc',
-        advection_start='1993-01-01T01',
+        advection_start=ADVECTION_START.isoformat(),
         timestep_seconds=3600,
-        num_timesteps=24*365*NUM_YEARS,
+        num_timesteps=24*(ADVECTION_END - ADVECTION_START).days,
         save_period=24,
         advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
