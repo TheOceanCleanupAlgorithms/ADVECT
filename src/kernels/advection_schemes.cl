@@ -1,6 +1,5 @@
-#include "kernel_helpers.cl"
-#include "headers.cl"
-#include "structs.cl"
+#include "advection_schemes.h"
+#include "geography.h"
 
 vector eulerian_displacement(particle p, grid_point neighbor, field2d field, double dt) {
     // find U and V nearest to particle position

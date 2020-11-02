@@ -6,7 +6,7 @@ of executing kernels.
 from enum import Enum
 from pathlib import Path
 
-import kernels.opencl_specification_constants as cl_const
+import kernel_wrappers.opencl_specification_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time

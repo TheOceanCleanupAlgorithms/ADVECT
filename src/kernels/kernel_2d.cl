@@ -1,12 +1,11 @@
-#include "headers.cl"
-#include "structs.cl"
-#include "kernel_helpers.cl"
+#include "geography.cl"
+#include "vector.cl"
+#include "fields.cl"
+#include "particle.cl"
+#include "random.cl"
 #include "advection_schemes.cl"
 #include "eddy_diffusion.cl"
 #include "windage.cl"
-
-#define EULERIAN 0  // matches definitions in src/kernel_wrappers/Kernel2D.py
-#define TAYLOR2 1
 
 __kernel void advect(
     /* current vector field */
