@@ -21,8 +21,8 @@ if __name__ == '__main__':
     out_path = run_advector(
         outputfile_path='../outputfiles/1993_HYCOM.nc',
         sourcefile_path='V:/SourcesForTest/Source_1_1993/outputfolder/parts_source_1993_c.nc',
-        uwater_path='E:/CURRENT/u/u_1993*.nc',
-        vwater_path='E:/CURRENT/v/v_1993*.nc',
+        u_water_path='E:/CURRENT/u/u_1993*.nc',
+        v_water_path='E:/CURRENT/v/v_1993*.nc',
         advection_start='1993-01-01T01',
         timestep_seconds=3600,
         num_timesteps=24*365,

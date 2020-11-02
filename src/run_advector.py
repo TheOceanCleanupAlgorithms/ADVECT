@@ -22,8 +22,8 @@ DEFAULT_SAVE_PERIOD = 1
 def run_advector(
     sourcefile_path: str,
     outputfile_path: str,
-    uwater_path: str,
-    vwater_path: str,
+    u_water_path: str,
+    v_water_path: str,
     advection_start: str,
     timestep_seconds: float,
     num_timesteps: int,
@@ -37,15 +37,15 @@ def run_advector(
     platform_and_device: Tuple[int, ...] = None,
     verbose: bool = False,
     memory_utilization: float = 0.5,
-    uwnd_path: Optional[str] = None,
-    vwnd_path: Optional[str] = None,
+    u_wind_path: Optional[str] = None,
+    v_wind_path: Optional[str] = None,
     windfile_varname_map: dict = None,
 ) -> str:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param outputfile_path: path which will be populated with the outfile.
-    :param uwater_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
-    :param vwater_path: wildcard path to the meridional current files.  See u_path for more details.
+    :param u_water_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
+    :param v_water_path: wildcard path to the meridional current files.  See u_path for more details.
     :param advection_start: ISO 8601 datetime string.
     :param timestep_seconds: duration of each timestep in seconds
     :param num_timesteps: number of timesteps
@@ -63,8 +63,8 @@ def run_advector(
     :param memory_utilization: this defines what percentage of the device memory advector will use for opencl buffers.
                                 if using a separate, dedicated opencl device (e.g. GPU) try something close to 1.
                                 if using the main CPU, try something close to .5.
-    :param uwnd_path: wildcard path to zonal surface wind files.  Assumes sorting paths by name == sorting paths in time
-    :param vwnd_path: wildcard path to meridional surface wind files.
+    :param u_wind_path: wildcard path to zonal surface wind files.  Assumes sorting paths by name == sorting paths in time
+    :param v_wind_path: wildcard path to meridional surface wind files.
     :param windfile_varname_map mapping from names in current file to advector standard variable names
             advector standard names: ('U', 'V', 'lat', 'lon', 'time')
     :return: absolute path to the particle outputfile
@@ -77,12 +77,12 @@ def run_advector(
         source_file_type=source_file_type,
     )
     currents = open_netcdf_vectorfield(
-        u_path=uwater_path, v_path=vwater_path, variable_mapping=currents_varname_map
+        u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
     )
 
-    if uwnd_path is not None:
+    if u_wind_path is not None:
         wind = open_netcdf_vectorfield(
-            u_path=uwnd_path, v_path=vwnd_path, variable_mapping=windfile_varname_map
+            u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
         )
     else:
         wind = None
