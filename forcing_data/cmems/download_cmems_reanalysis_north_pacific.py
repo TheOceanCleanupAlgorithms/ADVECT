@@ -9,9 +9,10 @@ from datetime import timedelta as td
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
+
 load_dotenv()
 
-dates = pd.date_range('2000-01-01', '2000-1-31', freq='1D')
+dates = pd.date_range("2000-01-01", "2000-1-31", freq="1D")
 # one day at a time is simplest; 3 days is bigger than max allowed download size anyways
 depth_min = 0
 depth_max = 500
@@ -21,7 +22,7 @@ lat_min = 15
 lat_max = 65
 for date in tqdm(dates):
     filename = f"uv_{date.strftime('%Y-%m-%d')}.nc"
-    print(f'Downloading {filename}')
+    print(f"Downloading {filename}")
 
     cmd = f"""python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu \
     --service-id GLOBAL_REANALYSIS_PHY_001_030-TDS --product-id global-reanalysis-phy-001-030-daily \

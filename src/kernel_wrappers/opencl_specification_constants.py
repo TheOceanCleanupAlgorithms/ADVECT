@@ -8,4 +8,4 @@ import pyopencl as cl
 
 assert cl.get_cl_header_version() == (2, 2), "This application requires OpenCL 2.2."
 
-UINT_MAX = 0xffffffff
+UINT_MAX = 0xFFFFFFFF
