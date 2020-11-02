@@ -3,9 +3,8 @@ advect on ECCO surface currents
 """
 
 from kernel_wrappers.Kernel2D import AdvectionScheme
-from plotting.plot_advection import plot_ocean_advection
+from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advection
 from run_advector import run_advector
-
 
 EDDY_DIFFUSIVITY = 1800  # m^2 / s
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
@@ -15,7 +14,7 @@ EDDY_DIFFUSIVITY = 1800  # m^2 / s
   on order 30km, which at the equator would be ~1/3 degree.
 '''
 WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that is transferred to particle
-            #  this needs a good literature source.  Responsibility of user.  This one is taken from trashtracker.
+# windage coeff needs a good literature source.  Responsibility of user.  This one is taken from trashtracker.
 
 if __name__ == '__main__':
     out_path = run_advector(
@@ -38,3 +37,4 @@ if __name__ == '__main__':
     )
 
     plot_ocean_advection(out_path)
+    #plot_ocean_trajectories(out_path)

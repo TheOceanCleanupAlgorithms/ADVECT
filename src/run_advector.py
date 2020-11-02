@@ -6,12 +6,12 @@ import datetime
 import json
 import click
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from tools.open_vectorfiles import open_netcdf_vectorfield
-from tools.open_sourcefile import SourceFileType, open_sourcefile
+from tools.open_sourcefiles import SourceFileType, open_sourcefiles
 from dateutil import parser
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
@@ -71,7 +71,7 @@ def run_advector(
     """
     if sourcefile_varname_map is None:
         sourcefile_varname_map = {}
-    p0 = open_sourcefile(
+    p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
         source_file_type=source_file_type,
@@ -79,7 +79,6 @@ def run_advector(
     currents = open_netcdf_vectorfield(
         u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
     )
-
     if u_wind_path is not None:
         wind = open_netcdf_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
