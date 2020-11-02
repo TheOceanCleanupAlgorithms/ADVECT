@@ -18,6 +18,8 @@ double meters_to_degrees_lon(double dx_meters, double y);
 double meters_to_degrees_lat(double dy_meters, double y);
 bool is_on_land(particle p, field2d field);
 double random(random_state *state);
-double eddy_diffusion_meters(const double dt, random_state *state, const double eddy_diffusivity);
+vector eddy_diffusion_meters(const double dt, random_state *state, const double eddy_diffusivity);
+vector add(vector a, vector b);
+vector windage_meters(particle p, field2d wind, double dt, double windage_coeff);
 
 #endif

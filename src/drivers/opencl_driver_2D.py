@@ -9,13 +9,14 @@ import pandas as pd
 import os
 import shutil
 
-from typing import Tuple
+from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
-def openCL_advect(field: xr.Dataset,
+def openCL_advect(current: xr.Dataset,
+                  wind: Optional[xr.Dataset],
                   out_path: Path,
                   p0: pd.DataFrame,
                   start_time: datetime.datetime,
@@ -24,14 +25,18 @@ def openCL_advect(field: xr.Dataset,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
+                  windage_coeff: float,
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
                   verbose=False) -> Tuple[float, float]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
-    :param field: xarray Dataset storing vector field/axes.
-                    Dimensions: {'time', 'lon', 'lat'}
-                    Variables: {'U', 'V'}
+    :param current: xarray Dataset storing current vector field/axes.
+                     Dimensions: {'time', 'lon', 'lat'}
+                     Variables: {'U', 'V'}
+    :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
+                 Dimensions: {'time', 'lon', 'lat'}
+                 Variables: {'U', 'V'}
     :param out_path: path at which to save the outputfile
     :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
     :param start_time: advection start time
@@ -40,6 +45,7 @@ def openCL_advect(field: xr.Dataset,
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: constant, scales random walk, model dependent value
+    :param windage_coeff: constant in [0, 1], fraction of windspeed applied to particle
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
@@ -48,6 +54,9 @@ def openCL_advect(field: xr.Dataset,
     """
     num_particles = len(p0)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
+    current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
+    if wind is not None:
+        wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
 
     # choose the device/platform we're running on
     if platform_and_device is None:
@@ -57,8 +66,13 @@ def openCL_advect(field: xr.Dataset,
 
     # get the minimum RAM available on the specified compute devices.
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
-    advect_time_chunks, out_time_chunks, field_chunks = \
-        chunk_advection_params(available_RAM, field, num_particles, advect_time, save_every)
+    advect_time_chunks, out_time_chunks, current_chunks, wind_chunks = \
+        chunk_advection_params(device_bytes=available_RAM,
+                               current=current,
+                               wind=wind,
+                               num_particles=num_particles,
+                               advect_time=advect_time,
+                               save_every=save_every)
 
     tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
     os.mkdir(tmp_chunk_dir)
@@ -66,18 +80,19 @@ def openCL_advect(field: xr.Dataset,
     buf_time, kernel_time = 0, 0
     p0_chunk = p0.copy()
     chunk_paths = []
-    for advect_time_chunk, out_time_chunk, field_chunk in zip(advect_time_chunks, out_time_chunks, field_chunks):
-        print(f'Chunk {len(chunk_paths)+1:3}/{len(field_chunks)}: '
-              f'{field_chunk.time.values[0]} to {field_chunk.time.values[-1]}...')
+    for advect_time_chunk, out_time_chunk, current_chunk, wind_chunk\
+            in zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks):
+        print(f'Chunk {len(chunk_paths)+1:3}/{len(current_chunks)}: '
+              f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
 
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents...')  # these get implicitly loaded when .values is called on field_chunk variables
-            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
-                                   context=context, field=field_chunk, p0=p0_chunk, num_particles=num_particles,
+            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
+            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
+                                   context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
                                    out_timesteps=out_timesteps_chunk)
         kernel.execute()
@@ -118,22 +133,29 @@ def openCL_advect(field: xr.Dataset,
     return buf_time, kernel_time
 
 
-def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float,
-                  context: cl.Context, field: xr.Dataset, p0: pd.DataFrame,
+def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
+                  context: cl.Context, current: xr.Dataset, wind: Optional[xr.Dataset], p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
-    field = field.transpose('time', 'lon', 'lat')
-
+    current = current.transpose('time', 'lon', 'lat')
+    if wind is not None:
+        wind = wind.transpose('time', 'lon', 'lat')
     return Kernel2D(
             advection_scheme=advection_scheme,
             eddy_diffusivity=eddy_diffusivity,
+            windage_coeff=windage_coeff,
             context=context,
-            field_x=field.lon.values.astype(np.float64),
-            field_y=field.lat.values.astype(np.float64),
-            field_t=field.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            field_U=field.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
-            field_V=field.V.values.astype(np.float32, copy=False).ravel(),
+            current_x=current.lon.values.astype(np.float64),
+            current_y=current.lat.values.astype(np.float64),
+            current_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
+            current_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            current_V=current.V.values.astype(np.float32, copy=False).ravel(),
+            wind_x=wind.lon.values.astype(np.float64),
+            wind_y=wind.lat.values.astype(np.float64),
+            wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
+            wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
