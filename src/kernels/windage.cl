@@ -1,6 +1,5 @@
-#include "headers.cl"
-#include "structs.cl"
-#include "kernel_helpers.cl"
+#include "windage.h"
+#include "advection_schemes.h"
 
 vector windage_meters(particle p, field2d wind, double dt, double windage_coeff) {
     vector wind_displacement_meters = eulerian_displacement(p, find_nearest_neighbor(p, wind), wind, dt);
