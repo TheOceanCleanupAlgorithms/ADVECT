@@ -18,24 +18,25 @@ EDDY_DIFFUSIVITY = 0  # m^2 / s
 '''
 
 ADVECTION_START = datetime(1993, 1, 1)
-ADVECTION_END = datetime(1995, 1, 1)
+ADVECTION_END = datetime(1994, 1, 1)
 
+storage_folder = "/scratch-shared/peytavin/"
 
 if __name__ == '__main__':
     out_path = run_advector(
-        outputfile_path='../outputfiles/1993_1994_HYCOM.nc',
-        sourcefile_path='/home/toc/storage2/SourcesForTest/parts_source*.nc',
-        u_path='/home/toc/Documents/Metocean/CURRENT/u/u_199*.nc',
-        v_path='/home/toc/Documents/Metocean/CURRENT/v/v_199*.nc',
+        outputfile_path=storage_folder+'output/1993_1994_HYCOM.nc',
+        sourcefile_path=storage_folder+'sources/parts_source*.nc',
+        u_path=storage_folder+'metocean/CURRENT/u/u_199*.nc',
+        v_path=storage_folder+'metocean/CURRENT/v/v_199*.nc',
         advection_start=ADVECTION_START.isoformat(),
         timestep_seconds=3600,
         num_timesteps=24*(ADVECTION_END - ADVECTION_START).days,
         save_period=24,
         advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        platform_and_device=(0,),
+        platform_and_device=('0'),
         sourcefile_varname_map={'release_date': 'release_date', 'x': 'id'},
-        currents_varname_map={'water_u': 'U', 'water_v': 'V', 'x': 'lon', 'y': 'lat'},
+        currents_varname_map={'water_u': 'U', 'water_v': 'V'},
         verbose=True,
         source_file_type=SourceFileType.old_source_files,
         memory_utilization=.5,
