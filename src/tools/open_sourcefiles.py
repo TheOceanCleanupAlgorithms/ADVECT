@@ -5,16 +5,12 @@ import glob
 import xarray as xr
 import pandas as pd
 
-
 class SourceFileType(Enum):
     """Allows to handle different type of source files."""
-
     old_source_files = 0
     new_source_files = 1
 
-
-SOURCEFILE_VARIABLES = ["id", "lon", "lat", "release_date"]
-
+SOURCEFILE_VARIABLES = ['id', 'lon', 'lat', 'release_date']
 
 def datenum_to_datetimeNS64(datenum):
     """
@@ -26,15 +22,14 @@ def datenum_to_datetimeNS64(datenum):
     # Matlab datenum goes down to Jan 0 of year 0, but Python datetime only goes down to Jan 1 year 1
     # On top of that, the representation of datetime64 in nanoseconds cannot go before 1678 and after 2262 approx.
 
-    if datenum > 612513:
+    if datenum > 612513: 
         days = datenum % 1
-        return (
-            datetime.fromordinal(int(datenum))
-            + timedelta(days=days)
-            - timedelta(days=366)
-        )
+        return (datetime.fromordinal(int(datenum)) \
+        + timedelta(days=days) \
+        - timedelta(days=366))
     else:
         return datetime(1678, 1, 1, 1, 1, 1, 1)
+
 
 
 def open_sourcefiles(
@@ -50,16 +45,16 @@ def open_sourcefiles(
 
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
     # If the "id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
-    if variable_mapping is None or "id" not in variable_mapping.values():
+    if variable_mapping is None or 'id' not in variable_mapping.values():
         concat_dim = "id"
     else:
-        concat_dim = next(k for k, v in variable_mapping.items() if v == "id")
+        concat_dim = next(k for k, v in variable_mapping.items() if v=='id')
 
     sourcefile = xr.open_mfdataset(
         glob.glob(sourcefile_path),
         parallel=True,
         combine="nested",
-        concat_dim=concat_dim,
+        concat_dim=concat_dim
     )
     sourcefile = sourcefile.rename(variable_mapping)
 
@@ -67,22 +62,16 @@ def open_sourcefiles(
     dims = list(sourcefile.dims.keys())
     assert len(dims) == 1, "sourcefile has more than one dimension."
 
-    if "id" not in dims:
+    if 'id' not in dims:
         sourcefile = sourcefile.to_dataframe()
     else:
-        sourcefile = (
-            sourcefile.to_dataframe().reset_index()
-        )  # move id from index to column
+        sourcefile = sourcefile.to_dataframe().reset_index()  # move id from index to column
 
     for var in SOURCEFILE_VARIABLES:
-        assert (
-            var in sourcefile.columns
-        ), f"missing variable '{var}'.  If differently named, pass in mapping."
-
-    if source_file_type == SourceFileType.old_source_files:
-        sourcefile["release_date"] = pd.to_datetime(
-            sourcefile["release_date"].apply(datenum_to_datetimeNS64)
-        )
-        sourcefile["lon"][sourcefile["lon"][:] >= 180] -= 360
+        assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."
+    
+    if (source_file_type == SourceFileType.old_source_files):
+        sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
+        sourcefile['lon'][sourcefile['lon'][:] >= 180] -= 360
 
     return sourcefile
