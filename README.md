@@ -18,3 +18,4 @@ Depending on your use-case, you may need to create a .env file with the followin
 copernicus_uname=<username>  # for downloading cmems data
 copernicus_pwd=<password>
 ```
+ 
