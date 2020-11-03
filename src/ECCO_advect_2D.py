@@ -19,7 +19,7 @@ WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that
 if __name__ == '__main__':
     out_path = run_advector(
         outputfile_path='../outputfiles/2015_ECCO.nc',
-        sourcefile_path='../sourcefiles/2015_uniform.nc',
+        sourcefile_path='../examples/sourcefiles/2015_uniform.nc',
         u_water_path='../forcing_data/ECCO/ECCO_interp/U*.nc',
         v_water_path='../forcing_data/ECCO/ECCO_interp/V*.nc',
         u_wind_path='../forcing_data/MERRA-2/SURFACE_WIND/*2015*.nc',
