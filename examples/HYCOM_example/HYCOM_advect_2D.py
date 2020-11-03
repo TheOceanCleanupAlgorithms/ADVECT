@@ -5,7 +5,7 @@ advect on ECCO surface currents
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from run_advector import run_advector
 from plotting.plot_advection import plot_ocean_advection
-from tools.open_sourcefiles import SourceFileType
+from io_tools.open_sourcefiles import SourceFileType
 from datetime import datetime
 
 

@@ -10,8 +10,8 @@ from typing import Optional, Tuple
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
-from tools.open_vectorfiles import open_netcdf_vectorfield
-from tools.open_sourcefiles import SourceFileType, open_sourcefiles
+from io_tools.open_vectorfiles import open_netcdf_vectorfield
+from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
 from dateutil import parser
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
