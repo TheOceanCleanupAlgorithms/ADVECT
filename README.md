@@ -4,17 +4,26 @@ The emerging interest in vertical dynamics and a constant trend towards increase
 ## Features and Timeline
 ### V0: Sea Surface Advection
 Version 0 aims to be a functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global dispersion studies, it will use a 2D, second-order advection scheme, and will include sea-surface-current advection, eddy diffusion, windage, and a "slippery" coastline handling, like trashtracker.
-### V1: 3D Advection (Buoyancy Driven)
+### V1.0: 3D Advection (Buoyancy Driven)
 Version 1 will consider depth, and will require vertical current as an input.  It will use a 3D second-order advection scheme and will support buoyancy-driven vertical movement.
-### V2: Elaborate Vertical Transport Mechanisms
-Version 2 will add new vertical transport mechanisms, and will support trilinear field interpolation for the advection algorithm.
-### V3: Boundary Processes (Coasts/Bathymetry)
-Version 3 will expand the consideration of coastal processes beyond simple beaching, will consider processes at the seafloor, and may add support for new advection kernels.
+### V1.1: Elaborate Vertical Transport Mechanisms
+Update 1.1 will add new vertical transport mechanisms, and will support trilinear field interpolation for the advection algorithm.
+### V1.2: Boundary Processes (Coasts/Bathymetry)
+Update 1.2 will expand the consideration of coastal processes beyond simple beaching, will consider processes at the seafloor, and may add support for new advection kernels.
 ## Setup
-You can set up your conda environment with `conda env create -f environment.yml`. Get miniconda [here](https://docs.conda.io/en/latest/miniconda.html).
+1. Install miniconda, found [here](https://docs.conda.io/en/latest/miniconda.html).
+2. In a terminal, clone this repo and navigate to repo root.
+3. Install dependencies
+    ```
+   conda env create -f environment.yml  # creates a conda environment, installs dependencies
+   conda activate ADVECTOR  # activates the conda environment
+    ```
+4. Acquire forcing data
 
-Depending on your use-case, you may need to create a .env file with the following keys:
-```
-copernicus_uname=<username>  # for downloading cmems data
-copernicus_pwd=<password>
-```
+    At minimum, ADVECTOR requires surface current data; it can also use surface wind data.  HYCOM is widely used by The Ocean Cleanup internally.  If you have access to HYCOM surface current already, you can follow instructions in examples/HYCOM/data.txt.  Otherwise, follow instructions in examples/ECCO/data.txt.
+
+5. Run example advection
+
+    HYCOM: `python src/examples/HYCOM/HYCOM_advect_2d.py`
+    
+    ECCO: `python scr/examples/ECCO/ECCO_advect_2d.py`
