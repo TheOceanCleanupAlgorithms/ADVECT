@@ -3,16 +3,18 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3
+  - numpy
   - pandas
-  - python-dotenv
-  - tqdm
-  - ipython
-  - pip
-  - zarr
-  - aiohttp
-  - requests
+  - xarray
+  - netcdf4
+  - dask
   - pyopencl
-  - pip:
-      - motuclient
-      - ecco_v4_py
+  - matplotlib
+  - cartopy
+  - scipy
+  - tqdm
+  - click
+  - nco
+  - ecco_v4_py
 prefix: /opt/miniconda3/envs/ADVECTOR
