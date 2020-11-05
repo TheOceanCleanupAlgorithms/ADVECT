@@ -5,12 +5,15 @@ import glob
 import xarray as xr
 import pandas as pd
 
+
 class SourceFileType(Enum):
     """Allows to handle different type of source files."""
     old_source_files = 0
     new_source_files = 1
 
+
 SOURCEFILE_VARIABLES = ['id', 'lon', 'lat', 'release_date']
+
 
 def datenum_to_datetimeNS64(datenum):
     """
@@ -24,23 +27,21 @@ def datenum_to_datetimeNS64(datenum):
 
     if datenum > 612513: 
         days = datenum % 1
-        return (datetime.fromordinal(int(datenum)) \
-        + timedelta(days=days) \
-        - timedelta(days=366))
+        return datetime.fromordinal(int(datenum)) + timedelta(days=days) - timedelta(days=366)
     else:
         return datetime(1678, 1, 1, 1, 1, 1, 1)
-
 
 
 def open_sourcefiles(
     sourcefile_path: str,
     variable_mapping: dict,
-    source_file_type: SourceFileType = SourceFileType.new_source_files,
+    source_file_type: SourceFileType,
 ) -> pd.DataFrame:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param variable_mapping: mapping from names in sourcefile to advector standard variable names
             advector standard names: ('id', 'lat', 'lon', 'release_date')
+    :param source_file_type: specify what sourcefile we have.
     """
 
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
@@ -48,7 +49,7 @@ def open_sourcefiles(
     if variable_mapping is None or 'id' not in variable_mapping.values():
         concat_dim = "id"
     else:
-        concat_dim = next(k for k, v in variable_mapping.items() if v=='id')
+        concat_dim = next(k for k, v in variable_mapping.items() if v == 'id')
 
     sourcefile = xr.open_mfdataset(
         glob.glob(sourcefile_path),
@@ -69,8 +70,8 @@ def open_sourcefiles(
 
     for var in SOURCEFILE_VARIABLES:
         assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."
-    
-    if (source_file_type == SourceFileType.old_source_files):
+
+    if source_file_type == SourceFileType.old_source_files:
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
         sourcefile['lon'][sourcefile['lon'][:] >= 180] -= 360
 

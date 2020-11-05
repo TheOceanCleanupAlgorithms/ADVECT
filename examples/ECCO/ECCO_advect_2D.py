@@ -5,6 +5,7 @@ advect on ECCO surface currents
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advection
 from run_advector import run_advector
+from datetime import datetime, timedelta
 
 EDDY_DIFFUSIVITY = 1800  # m^2 / s
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
@@ -25,8 +26,8 @@ if __name__ == '__main__':
         u_wind_path='../forcing_data/MERRA-2/SURFACE_WIND/*2015*.nc',
         v_wind_path='../forcing_data/MERRA-2/SURFACE_WIND/*2015*.nc',
         windfile_varname_map={'ULML': 'U', 'VLML': 'V'},
-        advection_start='2015-01-01T12',
-        timestep_seconds=3600,
+        advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
+        timestep=timedelta(hours=1),
         num_timesteps=24*365,
         save_period=24,
         advection_scheme=AdvectionScheme.eulerian,
