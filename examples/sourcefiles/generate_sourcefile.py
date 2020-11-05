@@ -4,12 +4,17 @@ import click
 import xarray as xr
 import pandas as pd
 import numpy as np
+import os
 
 
 @click.command()
-@click.option('-o', 'out_path', required=True, type=click.Path(exists=False, dir_okay=False))
 @click.option('-n', 'num_particles', required=True, type=click.INT)
-def generate_sourcefile(out_path: str, num_particles: int):
+@click.option('-o', 'out_path', required=False, type=click.Path(exists=False, dir_okay=False),
+              default=os.path.join(os.path.dirname(__file__), '2015_uniform_two_releases.nc'))
+def generate_sourcefile(
+    num_particles: int,
+    out_path: str,
+):
     """
     :param out_path: path to save the sourcefile at
     :param num_particles: number of particles to generate

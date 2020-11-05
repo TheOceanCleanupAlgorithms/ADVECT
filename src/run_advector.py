@@ -1,5 +1,5 @@
 """
-Top-level entry point.  Must be called from a python script; see examples/ECCO/ECCO_advect_2d.py for example usage
+Top-level entry point.  Must be called from a python script; see examples/HYCOM/HYCOM_advect_2d.py for example usage
 """
 import datetime
 from pathlib import Path

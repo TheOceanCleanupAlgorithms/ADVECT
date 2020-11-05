@@ -1,5 +1,6 @@
 # usage:
-# ./fix_trashtracker_hycom.sh "wildcard_path_to_u_files" "wildcard_path_to_v_files"  (quotes required)
+# ./fix_trashtracker_hycom.sh "wildcard_path_to_u_files" "wildcard_path_to_v_files"
+#     note: quotes required around wildcard paths (e.g. "./dir/*.nc")
 
 # A netcdf file which "packs" its float32 values into int16s with a scaling, offset, and fill value, should have a set
 #   of standard attributes which specify these things; these attribute names are defined by netcdf convention,
