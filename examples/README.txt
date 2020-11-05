@@ -5,7 +5,7 @@ HYCOM CURRENT DATA
 ------------------
 Off-the-shelf, HYCOM data is compliant with ADVECTOR netcdf vector field specifications, aside from some simple variable
 name mapping which is handled in HYCOM_advect_2D.  You can download some data by executing
-`python examples/HYCOM/download_hycom_currents.py`, if you don't already have access to HYCOM data.
+`python examples/HYCOM_currents/download_hycom_currents.py`, if you don't already have access to HYCOM data.
 
 Once you have some data, you may need to change around some paths in HYCOM_advect_2D.py, this should be pretty clear.
 
@@ -20,7 +20,7 @@ attributes before the files are usable by ADVECTOR.  See the script for usage in
 
 MERRA-2 WIND DATA
 -----------------
-Look in the script "download_merra2_wind.sh".  Follow directions; you need an earthdata account,
+Look in the script "MERRA2_wind/download_merra2_wind.sh".  Follow directions; you need an earthdata account,
 and need to run some terminal commands in order to set up authentication with this account.
 
 SOURCEFILE
@@ -33,6 +33,6 @@ HYCOM_advect_2D.py; there are comments which will guide you.
 RUNNING THE SCRIPT
 ------------------
 Once you have your current data and your sourcefile (and optionally, wind data), and HYCOM_advect_2D.py has the correct
-paths to these datasets, just run `python examples/HYCOM/HYCOM_advect_2D.py`.  You'll receive some prompts, asking what
+paths to these datasets, just run `python examples/HYCOM_advect_2D.py`.  You'll receive some prompts, asking what
 device to use for the computation.  You can of course use your CPU, or if your computer has a dedicated GPU,
 try that out!

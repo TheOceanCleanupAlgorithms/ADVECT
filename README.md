@@ -20,8 +20,8 @@ Update 1.2 will expand the consideration of coastal processes beyond simple beac
     ```
 4. Acquire forcing data
 
-    At minimum, ADVECTOR requires surface current data; it can also use surface wind data.  Instructions for downloading forcing data or using existing data can be found in `examples/HYCOM/README.txt`
+    At minimum, ADVECTOR requires surface current data; it can also use surface wind data.  Instructions for downloading forcing data or using existing data can be found in `examples/README.txt`
 
 5. Run example advection
 
-    Once you're all set up according to `examples/HYCOM/README.txt`, you can execute `python examples/HYCOM/HYCOM_advect_2d.py`
+    Once you're all set up according to `examples/README.txt`, you can execute `python examples/HYCOM_advect_2d.py`

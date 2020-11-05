@@ -1,5 +1,5 @@
 __pycache__
-examples/HYCOM/wind/MERRA2*
-examples/HYCOM/currents/*.nc
+examples/MERRA2_wind/MERRA2*
+examples/HYCOM_currents/*.nc
 .DS_Store
 .idea

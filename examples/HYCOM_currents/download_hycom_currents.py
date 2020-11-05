@@ -12,7 +12,7 @@ from tqdm import tqdm
 missing_days = [datetime.date.fromisoformat(datestr)
                 for datestr in ('2015-01-02', '2015-03-15', '2015-03-25', '2015-09-19')]
 
-out_dir = os.path.join(os.path.dirname(__file__), 'currents')
+out_dir = os.path.dirname(__file__)
 for time in tqdm(pd.date_range(start='2015-01-01T00', end='2016-01-01T00', closed='left', freq='1D')):
     url = 'http://ncss.hycom.org/thredds/ncss/grid/GLBu0.08/expt_91.1/uv3z?var=water_u&var=water_v' \
          f'&north=80&west=0&east=359.92&south=-80&horizStride=1&time={time.strftime("%Y-%m-%dT%H")}' \
