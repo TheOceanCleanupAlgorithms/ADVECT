@@ -18,6 +18,11 @@ will add these attributes back to the water_u and water_v variables, and must be
 attributes before the files are usable by ADVECTOR.  See the script for usage instructions.
 
 
+MERRA-2 WIND DATA
+-----------------
+Look in the script "download_merra2_wind.sh".  Follow directions; you need an earthdata account,
+and need to run some terminal commands in order to set up authentication with this account.
+
 SOURCEFILE
 ----------
 Sourcefiles hold the initial state of the particles, and HYCOM_advect_2D.py needs a path to one.  Generate a uniform one
@@ -27,8 +32,7 @@ HYCOM_advect_2D.py; there are comments which will guide you.
 
 RUNNING THE SCRIPT
 ------------------
-Once you have your current data and your sourcefile, and HYCOM_advect_2D.py has the correct paths to these datasets,
-just run `python examples/HYCOM/HYCOM_advect_2D.py`.  You'll receive some prompts, asking what device to use
-for the computation.  You can of course use your CPU, or if your computer has a dedicated GPU, try that out!  You might
-get errors if your hardware doesn't come with opencl drivers, or has really old ones.  Unfortunately nothing to do
-about that!
+Once you have your current data and your sourcefile (and optionally, wind data), and HYCOM_advect_2D.py has the correct
+paths to these datasets, just run `python examples/HYCOM/HYCOM_advect_2D.py`.  You'll receive some prompts, asking what
+device to use for the computation.  You can of course use your CPU, or if your computer has a dedicated GPU,
+try that out!

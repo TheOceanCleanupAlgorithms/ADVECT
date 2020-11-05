@@ -1,8 +1,5 @@
 __pycache__
-forcing_data/cmems/cmems_NP
-forcing_data/cmems/cmems_deep
-forcing_data/ECCO/ECCO_native
-forcing_data/ECCO/ECCO_interp
+examples/HYCOM/wind/MERRA2*
+examples/HYCOM/currents/*.nc
 .DS_Store
 .idea
-.env

@@ -1,5 +1,6 @@
 import xarray as xr
 import glob
+import dask
 
 
 def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
@@ -23,7 +24,8 @@ def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
     # convert longitude [0, 360] --> [-180, 180]
     # this operation could be expensive because of the resorting.  You may want to preprocess your data.
     if max(vectors.lon) > 180:
-        vectors['lon'] = ((vectors.lon + 180) % 360) - 180
-        vectors = vectors.sortby('lon')
+        with dask.config.set(**{'array.slicing.split_large_chunks': True}):
+            vectors['lon'] = ((vectors.lon + 180) % 360) - 180
+            vectors = vectors.sortby('lon')
 
     return vectors
