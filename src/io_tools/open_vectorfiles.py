@@ -1,9 +1,12 @@
+from typing import Optional
+
 import xarray as xr
 import glob
+import dask
 import numpy as np
 
 
-def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
+def open_netcdf_vectorfield(u_path: str, v_path: str, variable_mapping: Optional[dict]):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
@@ -24,8 +27,9 @@ def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
     # convert longitude [0, 360] --> [-180, 180]
     # this operation could be expensive because of the resorting.  You may want to preprocess your data.
     if max(vectors.lon) > 180:
-        vectors['lon'] = ((vectors.lon + 180) % 360) - 180
-        vectors = vectors.sortby('lon')
+        with dask.config.set(**{'array.slicing.split_large_chunks': True}):
+            vectors['lon'] = ((vectors.lon + 180) % 360) - 180
+            vectors = vectors.sortby('lon')
 
     return vectors
 

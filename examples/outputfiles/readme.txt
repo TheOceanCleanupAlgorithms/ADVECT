@@ -1,0 +1,1 @@
+This directory exists to hold output from the example scripts.
