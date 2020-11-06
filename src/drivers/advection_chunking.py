@@ -6,10 +6,10 @@ import xarray as xr
 import math
 import numpy as np
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 
-def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: Optional[xr.Dataset], num_particles: int, advect_time: pd.DatetimeIndex,
+def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: xr.Dataset, num_particles: int, advect_time: pd.DatetimeIndex,
                            save_every: int) -> Tuple[List[pd.DatetimeIndex], List[pd.DatetimeIndex], List[xr.Dataset], List[xr.Dataset]]:
     """given the parameters for advection, return parameters for an iterative advection"""
     out_time = advect_time[::save_every]
@@ -48,11 +48,8 @@ def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: Optiona
 
         current_chunks = [current.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
                           for out_time_chunk in out_time_chunks]
-        if wind is not None:
-            wind_chunks = [wind.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-                           for out_time_chunk in out_time_chunks]
-        else:
-            wind_chunks = [None]*len(out_time_chunks)
+        wind_chunks = [wind.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
+                       for out_time_chunk in out_time_chunks]
 
         if all(sum(estimate_memory_bytes(current=current_chunk,
                                          wind=wind_chunk,
@@ -65,17 +62,14 @@ def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: Optiona
     return advect_time_chunks, out_time_chunks, current_chunks, wind_chunks
 
 
-def estimate_memory_bytes(current: xr.Dataset, wind: Optional[xr.Dataset], num_particles: int, out_timesteps: int
+def estimate_memory_bytes(current: xr.Dataset, wind: xr.Dataset, num_particles: int, out_timesteps: int
                           ) -> Tuple[int, int, int]:
     """This estimates total memory needed for the buffers.
     There's a bit more needed for the scalar arguments, but this is tiny"""
     current_bytes = (2 * 4 * np.prod(current.U.shape) +  # two 32-bit fields
                      8 * (len(current.lon) + len(current.lat) + len(current.time)))  # the 3 64-bit coordinate arrays
-    if wind is not None:
-        wind_bytes = (2 * 4 * np.prod(wind.U.shape) +  # two 32-bit fields
-                      8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
-    else:
-        wind_bytes = 0
+    wind_bytes = (2 * 4 * np.prod(wind.U.shape) +  # two 32-bit fields
+                  8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
     output_bytes = 2 * 4 * num_particles * out_timesteps   # two 32-bit variables for each particle for each timestep
     p0_bytes = 2 * 4 * num_particles  # two 32-bit variables for each particle
     return (current_bytes+wind_bytes), output_bytes, p0_bytes

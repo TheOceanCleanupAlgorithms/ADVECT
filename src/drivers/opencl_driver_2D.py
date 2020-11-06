@@ -16,7 +16,7 @@ from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
 def openCL_advect(current: xr.Dataset,
-                  wind: Optional[xr.Dataset],
+                  wind: xr.Dataset,
                   out_path: Path,
                   p0: pd.DataFrame,
                   start_time: datetime.datetime,
@@ -25,7 +25,7 @@ def openCL_advect(current: xr.Dataset,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: float,
-                  windage_coeff: float,
+                  windage_coeff: Optional[float],
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
                   verbose=False) -> Tuple[float, float]:
@@ -55,8 +55,7 @@ def openCL_advect(current: xr.Dataset,
     num_particles = len(p0)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
     current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
-    if wind is not None:
-        wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
+    wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
 
     # choose the device/platform we're running on
     if platform_and_device is None:
@@ -134,13 +133,12 @@ def openCL_advect(current: xr.Dataset,
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
-                  context: cl.Context, current: xr.Dataset, wind: Optional[xr.Dataset], p0: pd.DataFrame,
+                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
     current = current.transpose('time', 'lon', 'lat')
-    if wind is not None:
-        wind = wind.transpose('time', 'lon', 'lat')
+    wind = wind.transpose('time', 'lon', 'lat')
     return Kernel2D(
             advection_scheme=advection_scheme,
             eddy_diffusivity=eddy_diffusivity,

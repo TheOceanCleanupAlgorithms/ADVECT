@@ -5,6 +5,7 @@ of executing kernels.
 """
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import kernel_wrappers.opencl_specification_constants as cl_const
 import numpy as np
@@ -31,13 +32,18 @@ class Kernel2D:
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
         self.current_U, self.current_V = current_U, current_V
-        self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
-        self.wind_U, self.wind_V = wind_U, wind_V
+        if windage_coeff is not None:
+            self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
+            self.wind_U, self.wind_V = wind_U, wind_V
+        else:  # opencl won't pass totally empty arrays to the kernel.  Windage disabled, so array contents don't matter
+            self.wind_x, self.wind_y, self.wind_t = [np.zeros(1)] * 3
+            self.wind_U, self.wind_V = [np.zeros((1, 1, 1))] * 2
+            self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
         self.x0, self.y0, self.release_date = x0, y0, release_date
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
         self.X_out, self.Y_out = X_out, Y_out

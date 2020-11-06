@@ -2,6 +2,8 @@ from datetime import datetime
 from datetime import timedelta
 from enum import Enum
 import glob
+from typing import Optional
+
 import xarray as xr
 import pandas as pd
 
@@ -34,7 +36,7 @@ def datenum_to_datetimeNS64(datenum):
 
 def open_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: dict,
+    variable_mapping: Optional[dict],
     source_file_type: SourceFileType,
 ) -> pd.DataFrame:
     """
@@ -43,10 +45,11 @@ def open_sourcefiles(
             advector standard names: ('id', 'lat', 'lon', 'release_date')
     :param source_file_type: specify what sourcefile we have.
     """
-
+    if variable_mapping is None:
+        variable_mapping = {}
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
     # If the "id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
-    if variable_mapping is None or 'id' not in variable_mapping.values():
+    if 'id' not in variable_mapping.values():
         concat_dim = "id"
     else:
         concat_dim = next(k for k, v in variable_mapping.items() if v == 'id')

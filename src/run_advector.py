@@ -7,8 +7,12 @@ from typing import Optional, Tuple
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
-from io_tools.open_vectorfiles import open_netcdf_vectorfield
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
+from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
+
+DEFAULT_EDDY_DIFFUSIVITY = 0
+DEFAULT_WINDAGE_COEFF = 0
+DEFAULT_SAVE_PERIOD = 1
 
 
 def run_advector(
@@ -24,7 +28,7 @@ def run_advector(
     save_period: int = 1,
     source_file_type: SourceFileType = SourceFileType.new_source_files,
     sourcefile_varname_map: dict = None,
-    currents_varname_map: dict = None,
+    currents_varname_map: Optional[dict] = None,
     platform_and_device: Tuple[int, ...] = None,
     verbose: bool = False,
     memory_utilization: float = 0.5,
@@ -61,8 +65,6 @@ def run_advector(
     :param windage_coeff: float in [0, 1], fraction of wind speed that is transferred to particle
     :return: absolute path to the particle outputfile
     """
-    if sourcefile_varname_map is None:
-        sourcefile_varname_map = {}
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
@@ -71,13 +73,15 @@ def run_advector(
     currents = open_netcdf_vectorfield(
         u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
     )
-    if u_wind_path is not None:
+
+    if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
         wind = open_netcdf_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
         )
     else:
-        wind = None
+        wind = empty_vectorfield()
+        windage_coeff = None  # this is how we flag windage=off
 
     openCL_advect(
         current=currents,
