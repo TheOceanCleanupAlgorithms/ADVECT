@@ -5,6 +5,7 @@ of executing kernels.
 """
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import kernel_wrappers.opencl_specification_constants as cl_const
 import numpy as np
@@ -31,7 +32,7 @@ class Kernel2D:
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
@@ -43,7 +44,7 @@ class Kernel2D:
         self.X_out, self.Y_out = X_out, Y_out
         self.advection_scheme = advection_scheme
         self.eddy_diffusivity = eddy_diffusivity
-        self.windage_coeff = windage_coeff
+        self.windage_coeff = windage_coeff if windage_coeff is not None else np.nan  # flags windage=disabled
         self._check_args()
 
         # create opencl objects

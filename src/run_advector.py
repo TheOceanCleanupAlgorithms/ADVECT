@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
-from tools.open_vectorfiles import open_netcdf_vectorfield
+from tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
 from tools.open_sourcefiles import SourceFileType, open_sourcefiles
 from dateutil import parser
 
@@ -32,8 +32,8 @@ def run_advector(
     windage_coeff: float = DEFAULT_WINDAGE_COEFF,
     save_period: int = DEFAULT_SAVE_PERIOD,
     source_file_type: SourceFileType = SourceFileType.new_source_files,
-    sourcefile_varname_map: dict = None,
-    currents_varname_map: dict = None,
+    sourcefile_varname_map: dict = {},
+    currents_varname_map: dict = {},
     platform_and_device: Tuple[int, ...] = None,
     verbose: bool = False,
     memory_utilization: float = 0.5,
@@ -69,8 +69,7 @@ def run_advector(
             advector standard names: ('U', 'V', 'lat', 'lon', 'time')
     :return: absolute path to the particle outputfile
     """
-    if sourcefile_varname_map is None:
-        sourcefile_varname_map = {}
+
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
@@ -79,12 +78,13 @@ def run_advector(
     currents = open_netcdf_vectorfield(
         u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
     )
-    if u_wind_path is not None:
+    if u_wind_path is not None and v_wind_path is not None:
         wind = open_netcdf_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
         )
     else:
-        wind = None
+        wind = empty_vectorfield()
+        windage_coeff = None  # this is how we flag windage=off
 
     start_date = parser.isoparse(advection_start)  # python datetime.datetime
     dt = datetime.timedelta(seconds=timestep_seconds)
