@@ -3,7 +3,7 @@ The emerging interest in vertical dynamics and a constant trend towards increase
 
 ## Features and Timeline
 ### V0: Sea Surface Advection
-Version 0 aims to be a functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global dispersion studies, it will use a 2D, second-order advection scheme, and will include sea-surface-current advection, eddy diffusion, windage, "slippery" coastline handling (prevents beaching), and delayed particle release.
+Version 0 aims to be functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global dispersion studies, it will use a 2D, second-order advection scheme, and will include sea-surface-current advection, eddy diffusion, windage, "slippery" coastline handling (prevents beaching), and delayed particle release.
 ### V1.0: 3D Advection (Buoyancy Driven)
 Version 1 will consider depth, and will require vertical current as an input.  It will use a 3D second-order advection scheme and will support buoyancy-driven vertical movement.
 ### V1.1: Elaborate Vertical Transport Mechanisms
