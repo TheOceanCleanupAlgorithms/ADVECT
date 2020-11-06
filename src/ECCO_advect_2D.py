@@ -18,12 +18,12 @@ WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that
 
 if __name__ == '__main__':
     out_path = run_advector(
-        outputfile_path='../examples/outputfiles/2015_ECCO.nc',
-        sourcefile_path='../examples/sourcefiles/2015_uniform_two_releases.nc',
-        u_water_path='../examples/forcing_data/ECCO/ECCO_interp/U*.nc',
-        v_water_path='../examples/forcing_data/ECCO/ECCO_interp/V*.nc',
-        #u_wind_path='../examples/MERRA2_wind/*2015*.nc',
-        #v_wind_path='../examples/MERRA2_wind/*2015*.nc',
+        outputfile_path='../outputfiles/2015_ECCO.nc',
+        sourcefile_path='../sourcefiles/2015_uniform.nc',
+        u_water_path='../forcing_data/ECCO/ECCO_interp/U*.nc',
+        v_water_path='../forcing_data/ECCO/ECCO_interp/V*.nc',
+        u_wind_path='../forcing_data/MERRA-2/SURFACE_WIND/*2015*.nc',
+        v_wind_path='../forcing_data/MERRA-2/SURFACE_WIND/*2015*.nc',
         windfile_varname_map={'ULML': 'U', 'VLML': 'V'},
         advection_start='2015-01-01T12',
         timestep_seconds=3600,
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme=AdvectionScheme.eulerian,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        #windage_coeff=WINDAGE_COEFF,
+        windage_coeff=WINDAGE_COEFF,
         verbose=True,
         platform_and_device=(0, 2),
     )

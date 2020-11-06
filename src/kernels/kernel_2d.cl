@@ -41,7 +41,7 @@ __kernel void advect(
     /* physics parameters */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
-    const double windage_coeff)
+    const double windage_coeff)  // if nan, disables windage
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -82,7 +82,9 @@ __kernel void advect(
         }
 
         displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
-        displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
+        if (!isnan(windage_coeff)) {
+            displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
+        }
 
         double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
         double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
