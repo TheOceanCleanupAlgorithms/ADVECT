@@ -10,8 +10,8 @@ import pandas as pd
 
 class SourceFileType(Enum):
     """Allows to handle different type of source files."""
-    old_source_files = 0
-    new_source_files = 1
+    trashtracker = 0
+    advector = 1
 
 
 SOURCEFILE_VARIABLES = ['id', 'lon', 'lat', 'release_date']
@@ -47,6 +47,10 @@ def open_sourcefiles(
     """
     if variable_mapping is None:
         variable_mapping = {}
+    if source_file_type == SourceFileType.trashtracker:  # merge defaults with passed map, passed map wins conflicts
+        default_mapping = {'releaseDate': 'release_date', 'x': 'id'}
+        variable_mapping = dict(default_mapping, **variable_mapping)
+
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
     # If the "id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
     if 'id' not in variable_mapping.values():
@@ -60,7 +64,7 @@ def open_sourcefiles(
         combine="nested",
         concat_dim=concat_dim
     )
-    sourcefile = sourcefile.rename(variable_mapping)
+    sourcefile = sourcefile.rename({key: value for key, value in variable_mapping.items() if key in sourcefile})
 
     # make sure there's only one dimension
     dims = list(sourcefile.dims.keys())
@@ -74,8 +78,8 @@ def open_sourcefiles(
     for var in SOURCEFILE_VARIABLES:
         assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."
 
-    if source_file_type == SourceFileType.old_source_files:
+    if source_file_type == SourceFileType.trashtracker:
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
-        sourcefile['lon'][sourcefile['lon'][:] >= 180] -= 360
+        sourcefile['lon'] = ((sourcefile.lon + 180) % 360) - 180  # enforce [-180, 180] longitude
 
     return sourcefile

@@ -26,7 +26,7 @@ def run_advector(
     eddy_diffusivity: float,
     advection_scheme: AdvectionScheme = AdvectionScheme.taylor2,
     save_period: int = 1,
-    source_file_type: SourceFileType = SourceFileType.new_source_files,
+    source_file_type: SourceFileType = SourceFileType.advector,
     sourcefile_varname_map: dict = None,
     currents_varname_map: Optional[dict] = None,
     platform_and_device: Tuple[int, ...] = None,

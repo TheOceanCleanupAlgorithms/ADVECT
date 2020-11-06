@@ -1,7 +1,6 @@
 """
 advect on HYCOM surface currents
 """
-from kernel_wrappers.Kernel2D import AdvectionScheme
 from run_advector import run_advector
 from plotting.plot_advection import plot_ocean_advection, plot_ocean_trajectories
 from io_tools.open_sourcefiles import SourceFileType
@@ -37,12 +36,9 @@ if __name__ == '__main__':
         timestep=timedelta(hours=1),
         num_timesteps=24*(ADVECTION_END - ADVECTION_START).days,
         save_period=24,
-        advection_scheme=AdvectionScheme.taylor2,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        platform_and_device=None,  # requests user input
         verbose=True,
-        source_file_type=SourceFileType.new_source_files,  # .old_source_files for trashtracker source files
-        # sourcefile_varname_map={'release_date': 'release_date', 'x': 'id'},  # for trashtracker source files
+        # source_file_type=SourceFileType.trashtracker,  # uncomment for trashtracker source files
         memory_utilization=.4,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
     )
 
