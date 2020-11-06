@@ -1,5 +1,6 @@
 import xarray as xr
 import glob
+import numpy as np
 
 
 def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
@@ -27,3 +28,13 @@ def open_netcdf_vectorfield(u_path, v_path, variable_mapping):
         vectors = vectors.sortby('lon')
 
     return vectors
+
+
+def empty_vectorfield():
+    return xr.Dataset(
+        data_vars={
+            "U": (["lat", "lon", "time"], np.ndarray((0, 0, 0))),
+            "V": (["lat", "lon", "time"], np.ndarray((0, 0, 0))),
+        },
+        coords={"lon": [], "lat": [], "time": []},
+    )
