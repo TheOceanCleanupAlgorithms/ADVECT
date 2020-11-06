@@ -10,9 +10,8 @@ name mapping which is handled in HYCOM_advect_2D.  You can download some data by
 Once you have some data, you may need to change around some paths in HYCOM_advect_2D.py, this should be pretty clear.
 
 Note for TOC personnel:
-In order to have well-defined scope, ADVECTOR requires that its input data adheres to netcdf conventions.  However,
-many of the HYCOM datasets existing internally at TOC have lost important attributes which convention specifies must
-exist for "packed" variables, due to a concatenation script in the trashtracker repo.  As such,
+In order to have well-defined scope, ADVECTOR requires that its input data adhere to netcdf conventions.  However,
+many of the internal HYCOM datasets at TOC are lacking important attributes related to "packed" variables.  As such,
 HYCOM data which has lost these attributes needs to have them added again.  The script "fix_trashtracker_hycom.sh"
 will add these attributes back to the water_u and water_v variables, and must be run on any HYCOM dataset missing these
 attributes before the files are usable by ADVECTOR.  See the script for usage instructions.
