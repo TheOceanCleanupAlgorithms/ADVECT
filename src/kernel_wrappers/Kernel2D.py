@@ -155,17 +155,16 @@ class Kernel2D:
         assert is_uniformly_spaced(self.current_t)
 
         # check wind field valid
-        if self.windage_coeff is not None:
-            assert max(self.wind_x) <= 180
-            assert min(self.wind_x) >= -180
-            assert len(self.wind_x) <= cl_const.UINT_MAX + 1
-            assert is_uniformly_spaced(self.wind_x)
-            assert max(self.wind_y) <= 90
-            assert min(self.wind_y) >= -90
-            assert len(self.wind_y) <= cl_const.UINT_MAX + 1
-            assert is_uniformly_spaced(self.wind_y)
-            assert len(self.wind_t) <= cl_const.UINT_MAX + 1
-            assert is_uniformly_spaced(self.wind_t)
+        assert max(self.wind_x) <= 180
+        assert min(self.wind_x) >= -180
+        assert len(self.wind_x) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced(self.wind_x)
+        assert max(self.wind_y) <= 90
+        assert min(self.wind_y) >= -90
+        assert len(self.wind_y) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced(self.wind_y)
+        assert len(self.wind_t) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced(self.wind_t)
 
         # cehck particle positions valid
         assert max(self.x0) < 180
