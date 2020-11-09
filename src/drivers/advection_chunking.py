@@ -20,11 +20,8 @@ def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: xr.Data
                                                                 wind=wind,
                                                                 num_particles=num_particles,
                                                                 out_timesteps=len(out_time) - 1)
-    available_bytes_for_field = device_bytes - (output_bytes + p0_bytes)
-    if available_bytes_for_field <= 0:
-        raise RuntimeError('Particles take up all of device memory; no space for field chunks. '
-                           'Decrease number of particles and try again.')
-    num_chunks = math.ceil(field_bytes / available_bytes_for_field)  # minimum chunking to potentially fit RAM
+
+    num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))  # minimum chunking to potentially fit RAM
     if num_chunks > len(current.time):
         raise RuntimeError('Particles take up too much device memory; not enough space for even one field timestep. '
                            'Decrease number of particles and try again.')
