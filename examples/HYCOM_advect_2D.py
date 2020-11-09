@@ -11,7 +11,7 @@ U_WATER_PATH = "./HYCOM_currents/uv*2015*.nc"
 V_WATER_PATH = "./HYCOM_currents/uv*2015*.nc"
 U_WIND_PATH = "./MERRA2_wind/*2015*.nc"
 V_WIND_PATH = "./MERRA2_wind/*2015*.nc"
-SOURCEFILE_PATH = "./sourcefiles/big.nc"
+SOURCEFILE_PATH = "./sourcefiles/2015_uniform_two_releases.nc"
 OUTPUTFILE_PATH = "./outputfiles/HYCOM_2015_out.nc"
 
 ADVECTION_START = datetime(2015, 1, 1)
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         verbose=True,
         # source_file_type=SourceFileType.trashtracker,  # uncomment for trashtracker source files
-        memory_utilization=.95,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
+        memory_utilization=.4,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
     )
 
     plot_ocean_advection(out_path)
