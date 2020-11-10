@@ -12,6 +12,7 @@ import shutil
 from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
+from io_tools.write_to_outputfile import OutputWriter
 from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
@@ -73,15 +74,12 @@ def openCL_advect(current: xr.Dataset,
                                advect_time=advect_time,
                                save_every=save_every)
 
-    tmp_chunk_dir = out_path.parent / f'{datetime.datetime.utcnow().timestamp()}_tmp'
-    os.mkdir(tmp_chunk_dir)
-
     buf_time, kernel_time = 0, 0
+    writer = OutputWriter(out_path=out_path)
     p0_chunk = p0.copy()
-    chunk_paths = []
-    for advect_time_chunk, out_time_chunk, current_chunk, wind_chunk\
-            in zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks):
-        print(f'Chunk {len(chunk_paths)+1:3}/{len(current_chunks)}: '
+    for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
+            in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
+        print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
@@ -109,25 +107,11 @@ def openCL_advect(current: xr.Dataset,
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
-        chunk_path = tmp_chunk_dir / (out_path.name + f'_chunk{len(chunk_paths)+1}')
-        P_chunk.to_netcdf(path=chunk_path, mode='w')
-        chunk_paths.append(chunk_path)
+        writer.write_output_chunk(P_chunk)
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe()
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
-
-    # now we concatenate all the temp outputs.  xarray can do this in a streaming fashion.  thus by saving chunks
-    # and concatenating them here, we avoid loading all the particles into RAM at once.
-    # this would be simpler if we could just append to the final netcdf the whole time, but xarray doesn't allow this.
-    with ProgressBar():
-        print("Concatenating chunk outputs...")
-        chunk_files = xr.open_mfdataset(paths=chunk_paths, parallel=True)
-        print("Saving output to disk...")
-        chunk_files.to_netcdf(out_path)
-        chunk_files.close()
-    print("Removing temp files...")
-    shutil.rmtree(tmp_chunk_dir)
 
     return buf_time, kernel_time
 
