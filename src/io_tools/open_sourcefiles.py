@@ -14,7 +14,7 @@ class SourceFileType(Enum):
     advector = 1
 
 
-SOURCEFILE_VARIABLES = ['id', 'lon', 'lat', 'release_date']
+SOURCEFILE_VARIABLES = ['p_id', 'lon', 'lat', 'release_date']
 
 
 def datenum_to_datetimeNS64(datenum):
@@ -42,21 +42,21 @@ def open_sourcefiles(
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param variable_mapping: mapping from names in sourcefile to advector standard variable names
-            advector standard names: ('id', 'lat', 'lon', 'release_date')
+            advector standard names: ('p_id', 'lat', 'lon', 'release_date')
     :param source_file_type: specify what sourcefile we have.
     """
     if variable_mapping is None:
         variable_mapping = {}
     if source_file_type == SourceFileType.trashtracker:  # merge defaults with passed map, passed map wins conflicts
-        default_mapping = {'releaseDate': 'release_date', 'x': 'id'}
+        default_mapping = {'releaseDate': 'release_date', 'x': 'p_id'}
         variable_mapping = dict(default_mapping, **variable_mapping)
 
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
-    # If the "id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
-    if 'id' not in variable_mapping.values():
-        concat_dim = "id"
+    # If the "p_id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
+    if 'p_id' not in variable_mapping.values():
+        concat_dim = "p_id"
     else:
-        concat_dim = next(k for k, v in variable_mapping.items() if v == 'id')
+        concat_dim = next(k for k, v in variable_mapping.items() if v == 'p_id')
 
     sourcefile = xr.open_mfdataset(
         glob.glob(sourcefile_path),
@@ -70,10 +70,10 @@ def open_sourcefiles(
     dims = list(sourcefile.dims.keys())
     assert len(dims) == 1, "sourcefile has more than one dimension."
 
-    if 'id' not in dims:
+    if 'p_id' not in dims:
         sourcefile = sourcefile.to_dataframe()
     else:
-        sourcefile = sourcefile.to_dataframe().reset_index()  # move id from index to column
+        sourcefile = sourcefile.to_dataframe().reset_index()  # move p_id from index to column
 
     for var in SOURCEFILE_VARIABLES:
         assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."

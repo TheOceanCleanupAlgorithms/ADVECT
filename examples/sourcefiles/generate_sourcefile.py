@@ -31,8 +31,8 @@ def generate_sourcefile(
     p0['release_date'] = np.concatenate((np.full(num_particles//2, np.datetime64('2015-01-01T12')),
                                         np.full(num_particles//2 + num_particles % 2, np.datetime64('2015-06-01'))))
 
-    p0['id'] = np.arange(num_particles)
-    ds = xr.Dataset(p0.set_index('id'))
+    p0['p_id'] = np.arange(num_particles)
+    ds = xr.Dataset(p0.set_index('p_id'))
 
     ds.to_netcdf(out_path)
 
