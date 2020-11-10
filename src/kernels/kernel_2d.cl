@@ -10,20 +10,20 @@
 __kernel void advect(
     /* current vector field */
     __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int current_x_len,   // <= UINT_MAX + 1
+    const unsigned int current_x_len,   // 2 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int current_y_len,   // <= UINT_MAX + 1
+    const unsigned int current_y_len,   // 2 <= current_y_len <= UINT_MAX + 1
     __global const double *current_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int current_t_len,   // <= UINT_MAX + 1
+    const unsigned int current_t_len,   // 2 <= current_t_len <= UINT_MAX + 1
     __global const float *current_U,    // m / s, 32 bit to save space
     __global const float *current_V,    // m / s
     /* wind vector field */
     __global const double *wind_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int wind_x_len,   // <= UINT_MAX + 1
+    const unsigned int wind_x_len,   // 2 <= wind_x_len <= UINT_MAX + 1
     __global const double *wind_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int wind_y_len,   // <= UINT_MAX + 1
+    const unsigned int wind_y_len,   // 2 <= wind_y_len <= UINT_MAX + 1
     __global const double *wind_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int wind_t_len,   // <= UINT_MAX + 1
+    const unsigned int wind_t_len,   // 2 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,    // m / s, 32 bit to save space
     __global const float *wind_V,    // m / s
     /* particle initialization information */
