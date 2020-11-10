@@ -12,8 +12,8 @@ def open_netcdf_vectorfield(u_path: str, v_path: str, variable_mapping: Optional
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
-    U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True)
-    V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
+    U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True, chunks=500)
+    V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True, chunks=500)
     vectors = xr.merge((U, V))
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[['U', 'V']]  # drop any additional variables
