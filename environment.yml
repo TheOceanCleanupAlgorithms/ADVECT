@@ -15,6 +15,5 @@ dependencies:
   - scipy
   - tqdm
   - click
-  - nco
-  - python-wget
+  - ecco_v4_py
 prefix: /opt/miniconda3/envs/ADVECTOR
