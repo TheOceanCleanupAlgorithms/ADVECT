@@ -12,7 +12,7 @@ import numpy as np
 import pyopencl as cl
 import time
 
-KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_2d.cl')
+KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
 
 
 class AdvectionScheme(Enum):
@@ -22,7 +22,7 @@ class AdvectionScheme(Enum):
 
 
 class Kernel3D:
-    """wrapper for src/kernels/kernel_2d.cl"""
+    """wrapper for src/kernels/kernel_3d.cl"""
 
     def __init__(self,
                  context: cl.Context,
