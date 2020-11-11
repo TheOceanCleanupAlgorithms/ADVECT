@@ -5,8 +5,8 @@ import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from drivers.opencl_driver_3D import openCL_advect
-from kernel_wrappers.Kernel3D import AdvectionScheme3D
+from drivers.opencl_driver_2D import openCL_advect
+from kernel_wrappers.Kernel2D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
 from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield, open_3D_vectorfield
 
@@ -24,7 +24,7 @@ def run_advector(
     timestep: datetime.timedelta,
     num_timesteps: int,
     eddy_diffusivity: float,
-    advection_scheme: AdvectionScheme3D = AdvectionScheme3D.eulerian3d,
+    advection_scheme: AdvectionScheme = AdvectionScheme.eulerian3d,
     save_period: int = 1,
     source_file_type: SourceFileType = SourceFileType.advector,
     sourcefile_varname_map: dict = None,

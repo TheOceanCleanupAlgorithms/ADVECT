@@ -6,14 +6,12 @@ import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-import os
-import shutil
 
 from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.write_to_outputfile import OutputWriter
-from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
+from kernel_wrappers.Kernel2D import Kernel3D, AdvectionScheme
 
 
 def openCL_advect(current: xr.Dataset,
@@ -79,18 +77,22 @@ def openCL_advect(current: xr.Dataset,
     p0_chunk = p0.copy()
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
-        print(f'Chunk {i+1:3}/{len(current_chunks)}: '
+        print(f'Chunk {i + 1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
-        out_timesteps_chunk = len(out_time_chunk) - 1     #
+        out_timesteps_chunk = len(out_time_chunk) - 1  #
 
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
-                                   context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
-                                   dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
+            print(
+                f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
+            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity,
+                                   windage_coeff=windage_coeff,
+                                   context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk,
+                                   num_particles=num_particles,
+                                   dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk,
+                                   save_every=save_every,
                                    out_timesteps=out_timesteps_chunk)
         kernel.execute()
 
@@ -103,7 +105,7 @@ def openCL_advect(current: xr.Dataset,
         P_chunk = create_dataset_from_kernel(kernel=kernel,
                                              release_date=p0_chunk.release_date,
                                              advect_time=out_time_chunk)
-        
+
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
@@ -119,24 +121,31 @@ def openCL_advect(current: xr.Dataset,
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
                   context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
-                  num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
+                  num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel3D:
     """create and return the wrapper for the opencl kernel"""
-    current = current.transpose('time', 'lon', 'lat')
+    current = current.transpose('time', 'depth', 'lon', 'lat')
     wind = wind.transpose('time', 'lon', 'lat')
-    return Kernel2D(
+    current = current.isel(depth=0)
+    return Kernel3D(
             advection_scheme=advection_scheme,
             eddy_diffusivity=eddy_diffusivity,
             windage_coeff=windage_coeff,
             context=context,
             current_x=current.lon.values.astype(np.float64),
             current_y=current.lat.values.astype(np.float64),
-            current_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            current_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            current_z=current.depth.values.astype(np.float64),
+            current_t=current.time.values.astype('datetime64[s]').astype(np.float64),
+            # float64 representation of unix timestamp
+            current_U=current.U.values.astype(np.float32, copy=False).ravel(),
+            # astype will still copy if field.U is not already float32
             current_V=current.V.values.astype(np.float32, copy=False).ravel(),
+            current_W=current.W.values.astype(np.float32, copy=False).ravel(),
             wind_x=wind.lon.values.astype(np.float64),
             wind_y=wind.lat.values.astype(np.float64),
-            wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),
+            # float64 representation of unix timestamp
+            wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),
+            # astype will still copy if field.U is not already float32
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
@@ -145,12 +154,13 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             dt=dt.total_seconds(),
             ntimesteps=num_timesteps,
             save_every=save_every,
-            X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
-            Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
+            X_out=np.full((num_particles * out_timesteps), np.nan, dtype=np.float32),  # output will have this value
+            Y_out=np.full((num_particles * out_timesteps), np.nan, dtype=np.float32),
+            # unless overwritten (e.g. pre-release)
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel3D, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])

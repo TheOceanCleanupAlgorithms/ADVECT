@@ -16,18 +16,19 @@ KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_2d.cl')
 
 
 class AdvectionScheme(Enum):
-    """matching definitions in src/kernels/kernel_2d.cl"""
+    """matching definitions in src/kernels/advection_schemes.h"""
     eulerian = 0
     taylor2 = 1
+    eulerian3d = 2
 
 
-class Kernel2D:
+class Kernel3D:
     """wrapper for src/kernels/kernel_2d.cl"""
 
     def __init__(self,
                  context: cl.Context,
-                 current_x: np.ndarray, current_y: np.ndarray, current_t: np.ndarray,
-                 current_U: np.ndarray, current_V: np.ndarray,
+                 current_x: np.ndarray, current_y: np.ndarray, current_z: np.ndarray, current_t: np.ndarray,
+                 current_U: np.ndarray, current_V: np.ndarray, current_W: np.ndarray,
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
@@ -35,8 +36,8 @@ class Kernel2D:
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
-        self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
-        self.current_U, self.current_V = current_U, current_V
+        self.current_x, self.current_y, self.current_z, self.current_t = current_x, current_y, current_z, current_t
+        self.current_U, self.current_V, self.current_W, = current_U, current_V, current_W
         if windage_coeff is not None:
             self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
             self.wind_U, self.wind_V = wind_U, wind_V
