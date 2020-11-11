@@ -11,7 +11,7 @@ from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.write_to_outputfile import OutputWriter
-from kernel_wrappers.Kernel2D import Kernel3D, AdvectionScheme
+from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 
 
 def openCL_advect(current: xr.Dataset,

@@ -5,8 +5,8 @@ import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.Kernel2D import AdvectionScheme
+from drivers.opencl_driver_3D import openCL_advect
+from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
 from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield, open_3D_vectorfield
 
