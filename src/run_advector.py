@@ -5,10 +5,10 @@ import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.Kernel2D import AdvectionScheme
+from drivers.opencl_driver_3D import openCL_advect
+from kernel_wrappers.Kernel3D import AdvectionScheme3D
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
-from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
+from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield, open_3D_vectorfield
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
 DEFAULT_WINDAGE_COEFF = 0
@@ -24,7 +24,7 @@ def run_advector(
     timestep: datetime.timedelta,
     num_timesteps: int,
     eddy_diffusivity: float,
-    advection_scheme: AdvectionScheme = AdvectionScheme.taylor2,
+    advection_scheme: AdvectionScheme3D = AdvectionScheme3D.eulerian3d,
     save_period: int = 1,
     source_file_type: SourceFileType = SourceFileType.advector,
     sourcefile_varname_map: dict = None,
@@ -36,12 +36,14 @@ def run_advector(
     v_wind_path: Optional[str] = None,
     windfile_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
+    w_water_path: Optional[str] = None,
 ) -> str:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param outputfile_path: path which will be populated with the outfile.
     :param u_water_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_water_path: wildcard path to the meridional current files.  See u_path for more details.
+    :param w_water_path: wildcard path to the vertical current files.  See u_path for more details.
     :param advection_start_date: date the advection clock starts.
     :param timestep: duration of each advection timestep
     :param num_timesteps: number of timesteps
@@ -70,9 +72,14 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=source_file_type,
     )
-    currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
-    )
+    if w_water_path is not None:
+        currents = open_3D_vectorfield(
+            u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=currents_varname_map
+        )
+    else:
+        currents = open_netcdf_vectorfield(
+            u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
+        )
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
