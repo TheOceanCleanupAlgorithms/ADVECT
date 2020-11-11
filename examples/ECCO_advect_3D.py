@@ -36,6 +36,7 @@ if __name__ == '__main__':
         # windage_coeff=WINDAGE_COEFF,
         verbose=True,
         platform_and_device=(0, 2),
+        memory_utilization=.95,
     )
 
     plot_ocean_advection(out_path)

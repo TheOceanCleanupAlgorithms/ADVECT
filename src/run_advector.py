@@ -24,7 +24,7 @@ def run_advector(
     timestep: datetime.timedelta,
     num_timesteps: int,
     eddy_diffusivity: float,
-    advection_scheme: AdvectionScheme = AdvectionScheme.eulerian3d,
+    advection_scheme: AdvectionScheme = AdvectionScheme.taylor2,
     save_period: int = 1,
     source_file_type: SourceFileType = SourceFileType.advector,
     sourcefile_varname_map: dict = None,
