@@ -50,7 +50,7 @@ def run_advector(
     :param save_period: how often to write output.  Particle state will be saved every {save_period} timesteps.
     :param source_file_type: enum of what format source file is input
     :param sourcefile_varname_map: mapping from names in sourcefile to advector standard variable names
-            advector standard names: ('id', 'lat', 'lon', 'release_date')
+            advector standard names: ('p_id', 'lat', 'lon', 'release_date')
     :param currents_varname_map: mapping from names in current file to advector standard variable names
             advector standard names: ('U', 'V', 'W', 'lat', 'lon', 'time', 'depth')
     :param platform_and_device: [index of opencl platform, index of opencl device] to specify hardware for computation
