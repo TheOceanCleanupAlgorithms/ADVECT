@@ -4,7 +4,11 @@ unsigned int find_nearest_neighbor_idx(double value, __global const double *arr,
     // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
     // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
     // inside a kernel so we must perform the check in the host code.
-    return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
+    if (arr_len == 1 || spacing == 0) {  // handles singletons and protects against division by zero
+        return 0;
+    } else {
+        return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
+    }
 }
 
 vector index_vector_field(field2d field, grid_point gp, bool zero_nans) {
