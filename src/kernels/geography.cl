@@ -3,6 +3,8 @@
 // convert meters displacement to lat/lon and back(Reference: American Practical Navigator, Vol II, 1975 Edition, p 5)
 double meters_to_degrees_lon(double dx_meters, double y) {
     double rlat = y * M_PI/180;
+    if (cos(rlat) == 0)
+	return 0;
     return dx_meters / (111415.13 * cos(rlat) - 94.55 * cos(3 * rlat));
 }
 
