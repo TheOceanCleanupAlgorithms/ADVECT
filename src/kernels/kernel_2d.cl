@@ -71,26 +71,28 @@ __kernel void advect(
 
         // find nearest neighbors in grid
         grid_point neighbor = find_nearest_neighbor(p, current);
-
-        vector displacement_meters;
-        if (advection_scheme == EULERIAN) {
-            displacement_meters = eulerian_displacement(p, neighbor, current, dt);
-        } else if (advection_scheme == TAYLOR2) {
-            displacement_meters = taylor2_displacement(p, neighbor, current, dt);
+        if (is_on_land(p, current)) {
+            // do nothing; stuck forever
         } else {
-            return;  // can't throw errors but at least this way things will obviously fail
+            vector displacement_meters;
+            if (advection_scheme == EULERIAN) {
+                displacement_meters = eulerian_displacement(p, neighbor, current, dt);
+            } else if (advection_scheme == TAYLOR2) {
+                displacement_meters = taylor2_displacement(p, neighbor, current, dt);
+            } else {
+                return;  // can't throw errors but at least this way things will obviously fail
+            }
+
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
+            if (!isnan(windage_coeff)) {
+                displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
+            }
+
+            double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
+            double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
+
+            p = update_position_no_beaching(p, dx_deg, dy_deg, current);
         }
-
-        displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
-        if (!isnan(windage_coeff)) {
-            displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
-        }
-
-        double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
-        double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
-
-        p = update_position_no_beaching(p, dx_deg, dy_deg, current);
-
         p.t += dt;
         // save if necessary
         if ((timestep+1) % save_every == 0) {
