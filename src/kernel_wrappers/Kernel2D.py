@@ -169,7 +169,7 @@ class Kernel2D:
         # check particle positions valid
         assert max(self.x0) < 180
         assert min(self.x0) >= -180
-        assert max(self.y0) < 90
+        assert max(self.y0) <= 90
         assert min(self.y0) >= -90
 
         # check enum valid
