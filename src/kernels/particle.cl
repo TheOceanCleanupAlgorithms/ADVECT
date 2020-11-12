@@ -56,7 +56,7 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned 
     float float_px = (float) p.x;
     // Casting from float to double can in very rare cases transform a value like 179.999993 to 180.0.
     // So in case it happens, we make sure the new value is set to -180.
-    if (float_px >= 180) 
+    if (float_px == 180) 
         float_px = float_px - 360;
     X_out[p.id*out_timesteps + out_idx] = float_px;
     Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
