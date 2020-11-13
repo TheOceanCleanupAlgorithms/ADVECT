@@ -62,6 +62,9 @@ class Kernel2D:
         self.buf_time = 0
         self.kernel_time = 0
 
+        # debugging
+        self.error_codes = np.zeros_like(self.x0, dtype=np.ubyte)
+
     def execute(self):
         """tranfers arguments to the compute device, triggers execution, waits on result"""
         # write arguments to compute device
@@ -76,6 +79,7 @@ class Kernel2D:
               self.x0, self.y0, self.release_date))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
+        d_error_codes = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.error_codes)
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -87,7 +91,8 @@ class Kernel2D:
                  None, None, None,
                  np.float64, np.float64, np.uint32, np.uint32,
                  None, None,
-                 np.uint32, np.float64, np.float64])
+                 np.uint32, np.float64, np.float64,
+                 None])
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -103,7 +108,8 @@ class Kernel2D:
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out,
-                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff))
+                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff),
+                d_error_codes)
 
         # wait for the computation to complete
         self.queue.finish()
@@ -113,6 +119,7 @@ class Kernel2D:
         read_start = time.time()
         cl.enqueue_copy(self.queue, self.X_out, d_X_out)
         cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
+        cl.enqueue_copy(self.queue, self.error_codes, d_error_codes)
         self.buf_time += time.time() - read_start
 
     def print_memory_footprint(self):
@@ -167,10 +174,22 @@ class Kernel2D:
         assert is_uniformly_spaced(self.wind_t)
 
         # check particle positions valid
+        assert not any(np.isnan(self.x0))
         assert max(self.x0) < 180
         assert min(self.x0) >= -180
+        assert not any(np.isnan(self.y0))
         assert max(self.y0) <= 90
         assert min(self.y0) >= -90
 
         # check enum valid
         assert self.advection_scheme.value in (0, 1)
+
+    def report_errors(self, particle_ids: np.ndarray):
+        if not np.all(self.error_codes == 0):
+            error_str = f"{np.count_nonzero(self.error_codes)} particle(s) did not exit successfully."
+            for i, code in enumerate(self.error_codes[self.error_codes != 0]):
+                error_str += f"\n Particle ID {particle_ids[i]} exited with error code {code}."
+                # look to kernel_2d.cl for error code definitions
+            return error_str
+        else:
+            return ""

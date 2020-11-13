@@ -63,6 +63,7 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned 
 }
 
 grid_point find_nearest_neighbor(particle p, field2d field) {
+/* assumption: particle has non-null latitude and longitude. */
         grid_point neighbor;
         neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
         neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);

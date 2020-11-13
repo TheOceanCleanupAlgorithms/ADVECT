@@ -8,6 +8,7 @@ import xarray as xr
 import pandas as pd
 import os
 import shutil
+import warnings
 
 from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
@@ -39,7 +40,7 @@ def openCL_advect(current: xr.Dataset,
                  Dimensions: {'time', 'lon', 'lat'}
                  Variables: {'U', 'V'}
     :param out_path: path at which to save the outputfile
-    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
+    :param p0: initial positions of particles, pandas dataframe with columns ['p_id', 'lon', 'lat', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
@@ -93,6 +94,9 @@ def openCL_advect(current: xr.Dataset,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
                                    out_timesteps=out_timesteps_chunk)
         kernel.execute()
+        error_message = kernel.report_errors(p0_chunk.p_id.values)
+        if error_message:
+            warnings.warn(error_message, RuntimeWarning)
 
         buf_time += kernel.buf_time
         kernel_time += kernel.kernel_time
@@ -101,6 +105,7 @@ def openCL_advect(current: xr.Dataset,
             kernel.print_execution_time()
 
         P_chunk = create_dataset_from_kernel(kernel=kernel,
+                                             p_id=p0_chunk.p_id.values,
                                              release_date=p0_chunk.release_date,
                                              advect_time=out_time_chunk)
         
@@ -109,7 +114,7 @@ def openCL_advect(current: xr.Dataset,
 
         writer.write_output_chunk(P_chunk)
 
-        p0_chunk = P_chunk.isel(time=-1).to_dataframe()
+        p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
 
@@ -150,7 +155,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel2D, p_id: np.ndarray, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
@@ -159,7 +164,7 @@ def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advec
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
                               'release_date': (['p_id'], release_date)},
-                   coords={'p_id': np.arange(num_particles),
+                   coords={'p_id': p_id,
                            'time': advect_time[1:]}  # initial positions are not returned
                    )
     return P
