@@ -148,6 +148,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
+            Z_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),
     )
 
 
@@ -156,9 +157,11 @@ def create_dataset_from_kernel(kernel: Kernel3D, release_date: np.ndarray, advec
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
     lat = kernel.Y_out.reshape([num_particles, -1])
+    depth = kernel.Z_out.reshape([num_particles, -1])
 
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
+                              'depth': (['p_id', 'time'], depth),
                               'release_date': (['p_id'], release_date)},
                    coords={'p_id': np.arange(num_particles),
                            'time': advect_time[1:]}  # initial positions are not returned

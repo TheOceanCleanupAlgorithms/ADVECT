@@ -32,7 +32,7 @@ __kernel void advect(
     /* particle initialization information */
     __global const float *x0,         // lon, Deg E (-180 to 180)
     __global const float *y0,         // lat, Deg N (-90 to 90)
-    __global const float *z0,         // depth, m, positive up
+    __global const float *z0,         // depth, m, positive up, <= 0
     __global const double *release_date,         // unix timestamp
     /* advection time parameters */
     const double start_time,          // unix timestamp
@@ -42,6 +42,7 @@ __kernel void advect(
     /* output vectors */
     __global float *X_out,      // lon, Deg E (-180 to 180)
     __global float *Y_out,      // lat, Deg N (-90 to 90)
+    __global float *Z_out,      // depth, m, positive up
     /* physics parameters */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
@@ -103,7 +104,7 @@ __kernel void advect(
         // save if necessary
         if ((timestep+1) % save_every == 0) {
             unsigned int out_idx = (timestep+1)/save_every - 1;
-            write_p(p, X_out, Y_out, out_timesteps, out_idx);
+            write_p(p, X_out, Y_out, Z_out, out_timesteps, out_idx);
         }
     }
 }
