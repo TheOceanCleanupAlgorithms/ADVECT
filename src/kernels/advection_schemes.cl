@@ -1,7 +1,7 @@
 #include "advection_schemes.h"
 #include "geography.h"
 
-vector eulerian_displacement(particle p, field2d field, double dt) {
+vector eulerian_displacement(particle p, field3d field, double dt) {
     // find nearest neighbors in grid
     grid_point neighbor = find_nearest_neighbor(p, field);
     // find U and V nearest to particle position
@@ -14,7 +14,7 @@ vector eulerian_displacement(particle p, field2d field, double dt) {
     return displacement_meters;
 }
 
-vector taylor2_displacement(particle p, field2d field, double dt) {
+vector taylor2_displacement(particle p, field3d field, double dt) {
     grid_point gp = find_nearest_neighbor(p, field);
     // find adjacent cells
     grid_point gp_w = {.x_idx = (gp.x_idx + 1) % field.x_len, .y_idx = gp.y_idx, .t_idx = gp.t_idx};

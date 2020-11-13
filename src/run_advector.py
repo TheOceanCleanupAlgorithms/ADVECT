@@ -5,10 +5,10 @@ import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.Kernel2D import AdvectionScheme
+from drivers.opencl_driver_3D import openCL_advect
+from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
-from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
 DEFAULT_WINDAGE_COEFF = 0
@@ -20,6 +20,7 @@ def run_advector(
     outputfile_path: str,
     u_water_path: str,
     v_water_path: str,
+    w_water_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -42,6 +43,7 @@ def run_advector(
     :param outputfile_path: path which will be populated with the outfile.
     :param u_water_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_water_path: wildcard path to the meridional current files.  See u_path for more details.
+    :param w_water_path: wildcard path to the vertical current files.  See u_path for more details.
     :param advection_start_date: date the advection clock starts.
     :param timestep: duration of each advection timestep
     :param num_timesteps: number of timesteps
@@ -70,17 +72,17 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=source_file_type,
     )
-    currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
+    currents = open_3D_vectorfield(
+        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=currents_varname_map
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
-        wind = open_netcdf_vectorfield(
+        wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
         )
     else:
-        wind = empty_vectorfield()
+        wind = empty_2D_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
     openCL_advect(

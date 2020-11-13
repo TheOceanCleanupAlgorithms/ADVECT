@@ -1,8 +1,8 @@
 """
-advect on ECCO surface currents
+advect on ECCO currents
 """
 
-from kernel_wrappers.Kernel2D import AdvectionScheme
+from kernel_wrappers.Kernel3D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advection
 from run_advector import run_advector
 from datetime import datetime, timedelta
@@ -23,9 +23,10 @@ if __name__ == '__main__':
         sourcefile_path='sourcefiles/2015_uniform_two_releases.nc',
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
-        # u_wind_path='../MERRA2_wind/*2015*.nc',
-        # v_wind_path='../MERRA2_wind/*2015*.nc',
-        # wind_varname_map={'ULML': 'U', 'VLML': 'V'},
+        w_water_path='ECCO/ECCO_interp/W_2015*.nc',
+        # u_wind_path='MERRA2_wind/*2015*.nc',
+        # v_wind_path='MERRA2_wind/*2015*.nc',
+        # windfile_varname_map={'ULML': 'U', 'VLML': 'V'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
         num_timesteps=24*365,
@@ -35,6 +36,7 @@ if __name__ == '__main__':
         # windage_coeff=WINDAGE_COEFF,
         verbose=True,
         platform_and_device=(0, 2),
+        memory_utilization=.95,
     )
 
     plot_ocean_advection(out_path)
