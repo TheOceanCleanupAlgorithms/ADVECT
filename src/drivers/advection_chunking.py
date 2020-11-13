@@ -64,7 +64,7 @@ def estimate_memory_bytes(current: xr.Dataset, wind: xr.Dataset, num_particles: 
     """This estimates total memory needed for the buffers.
     There's a bit more needed for the scalar arguments, but this is tiny"""
     current_bytes = (3 * 4 * np.prod(current.U.shape) +  # three 32-bit fields
-                     8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))  # the 3 64-bit coordinate arrays
+                     8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))  # the 4 64-bit coordinate arrays
     wind_bytes = (2 * 4 * np.prod(wind.U.shape) +  # two 32-bit fields
                   8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
     output_bytes = 2 * 4 * num_particles * out_timesteps   # two 32-bit variables for each particle for each timestep

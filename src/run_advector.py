@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from drivers.opencl_driver_3D import openCL_advect
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileType, open_sourcefiles
-from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield, open_3D_vectorfield
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
 
 DEFAULT_EDDY_DIFFUSIVITY = 0
 DEFAULT_WINDAGE_COEFF = 0
@@ -20,6 +20,7 @@ def run_advector(
     outputfile_path: str,
     u_water_path: str,
     v_water_path: str,
+    w_water_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -36,7 +37,6 @@ def run_advector(
     v_wind_path: Optional[str] = None,
     windfile_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
-    w_water_path: Optional[str] = None,
 ) -> str:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
@@ -72,22 +72,17 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=source_file_type,
     )
-    if w_water_path is not None:
-        currents = open_3D_vectorfield(
-            u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=currents_varname_map
-        )
-    else:
-        currents = open_netcdf_vectorfield(
-            u_path=u_water_path, v_path=v_water_path, variable_mapping=currents_varname_map
-        )
+    currents = open_3D_vectorfield(
+        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=currents_varname_map
+    )
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
-        wind = open_netcdf_vectorfield(
+        wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=windfile_varname_map
         )
     else:
-        wind = empty_vectorfield()
+        wind = empty_2D_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
     openCL_advect(

@@ -33,7 +33,7 @@ def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping:
     return vectors
 
 
-def open_netcdf_vectorfield(u_path: str, v_path: str, variable_mapping: Optional[dict]):
+def open_2D_vectorfield(u_path: str, v_path: str, variable_mapping: Optional[dict]):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
@@ -61,7 +61,7 @@ def open_netcdf_vectorfield(u_path: str, v_path: str, variable_mapping: Optional
     return vectors
 
 
-def empty_vectorfield():
+def empty_2D_vectorfield():
     return xr.Dataset(
         data_vars={
             "U": (["lat", "lon", "time"], np.ndarray((0, 0, 0))),
