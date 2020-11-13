@@ -140,6 +140,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
+            z0=np.zeros(num_particles, dtype=np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
             start_time=start_time.timestamp(),
             dt=dt.total_seconds(),

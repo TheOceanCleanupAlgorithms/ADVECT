@@ -7,6 +7,7 @@ typedef struct particle {
     int id;
     double x;
     double y;
+    double z;
     double t;
 } particle;
 
