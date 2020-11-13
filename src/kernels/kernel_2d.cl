@@ -69,16 +69,14 @@ __kernel void advect(
             continue;
         }
 
-        // find nearest neighbors in grid
-        grid_point neighbor = find_nearest_neighbor(p, current);
         if (is_on_land(p, current)) {
             // do nothing; stuck forever
         } else {
             vector displacement_meters;
             if (advection_scheme == EULERIAN) {
-                displacement_meters = eulerian_displacement(p, neighbor, current, dt);
+                displacement_meters = eulerian_displacement(p, current, dt);
             } else if (advection_scheme == TAYLOR2) {
-                displacement_meters = taylor2_displacement(p, neighbor, current, dt);
+                displacement_meters = taylor2_displacement(p, current, dt);
             } else {
                 return;  // can't throw errors but at least this way things will obviously fail
             }
