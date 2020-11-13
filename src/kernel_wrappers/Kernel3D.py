@@ -12,22 +12,22 @@ import numpy as np
 import pyopencl as cl
 import time
 
-KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_2d.cl')
+KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
 
 
 class AdvectionScheme(Enum):
-    """matching definitions in src/kernels/kernel_2d.cl"""
+    """matching definitions in src/kernels/advection_schemes.h"""
     eulerian = 0
     taylor2 = 1
 
 
-class Kernel2D:
-    """wrapper for src/kernels/kernel_2d.cl"""
+class Kernel3D:
+    """wrapper for src/kernels/kernel_3d.cl"""
 
     def __init__(self,
                  context: cl.Context,
-                 current_x: np.ndarray, current_y: np.ndarray, current_t: np.ndarray,
-                 current_U: np.ndarray, current_V: np.ndarray,
+                 current_x: np.ndarray, current_y: np.ndarray, current_z: np.ndarray, current_t: np.ndarray,
+                 current_U: np.ndarray, current_V: np.ndarray, current_W: np.ndarray,
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
@@ -35,8 +35,8 @@ class Kernel2D:
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray, exit_code: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
-        self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
-        self.current_U, self.current_V = current_U, current_V
+        self.current_x, self.current_y, self.current_z, self.current_t = current_x, current_y, current_z, current_t
+        self.current_U, self.current_V, self.current_W, = current_U, current_V, current_W
         if windage_coeff is not None:
             self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
             self.wind_U, self.wind_V = wind_U, wind_V
@@ -69,12 +69,14 @@ class Kernel2D:
         """tranfers arguments to the compute device, triggers execution, waits on result"""
         # write arguments to compute device
         write_start = time.time()
-        d_current_x, d_current_y, d_current_t, d_current_U, d_current_V, \
+        d_current_x, d_current_y, d_current_z, d_current_t,\
+            d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-                d_x0, d_y0, d_release_date = \
+            d_x0, d_y0, d_release_date = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
-             (self.current_x, self.current_y, self.current_t, self.current_U, self.current_V,
+             (self.current_x, self.current_y, self.current_z, self.current_t,
+              self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
               self.x0, self.y0, self.release_date))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
@@ -84,8 +86,8 @@ class Kernel2D:
 
         # execute the program
         self.cl_kernel.set_scalar_arg_dtypes(
-                [None, np.uint32, None, np.uint32, None, np.uint32,
-                 None, None,
+                [None, np.uint32, None, np.uint32, None, np.uint32, None, np.uint32,
+                 None, None, None,
                  None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
                  None, None, None,
@@ -98,8 +100,9 @@ class Kernel2D:
                 self.queue, (len(self.x0),), None,
                 d_current_x, np.uint32(len(self.current_x)),
                 d_current_y, np.uint32(len(self.current_y)),
+                d_current_z, np.uint32(len(self.current_z)),
                 d_current_t, np.uint32(len(self.current_t)),
-                d_current_U, d_current_V,
+                d_current_U, d_current_V, d_current_W,
                 d_wind_x, np.uint32(len(self.wind_x)),
                 d_wind_y, np.uint32(len(self.wind_y)),
                 d_wind_t, np.uint32(len(self.wind_t)),
@@ -124,8 +127,8 @@ class Kernel2D:
 
     def print_memory_footprint(self):
         print('-----MEMORY FOOTPRINT-----')
-        current_bytes = (self.current_x.nbytes + self.current_y.nbytes + self.current_t.nbytes +
-                         self.current_U.nbytes + self.current_V.nbytes)
+        current_bytes = (self.current_x.nbytes + self.current_y.nbytes + self.current_z.nbytes + self.current_t.nbytes +
+                         self.current_U.nbytes + self.current_V.nbytes + self.current_W.nbytes)
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +

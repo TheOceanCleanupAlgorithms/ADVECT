@@ -1,8 +1,7 @@
 """
-advect on ECCO surface currents
+advect on ECCO currents
 """
 
-from kernel_wrappers.Kernel2D import AdvectionScheme
 from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advection
 from run_advector import run_advector
 from datetime import datetime, timedelta
@@ -18,24 +17,26 @@ WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that
 # windage coeff needs a good literature source.  Responsibility of user.  This one is taken from trashtracker.
 
 if __name__ == '__main__':
-    out_path = run_advector(
-        outputfile_path='outputfiles/2015_ECCO.nc',
+    out_paths = run_advector(
+        output_directory='outputfiles/2015_ECCO/',
         sourcefile_path='sourcefiles/2015_uniform_two_releases.nc',
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
-        # u_wind_path='../MERRA2_wind/*2015*.nc',
-        # v_wind_path='../MERRA2_wind/*2015*.nc',
-        # wind_varname_map={'ULML': 'U', 'VLML': 'V'},
+        w_water_path='ECCO/ECCO_interp/W_2015*.nc',
+        # u_wind_path='MERRA2_wind/*2015*.nc',
+        # v_wind_path='MERRA2_wind/*2015*.nc',
+        # windfile_varname_map={'ULML': 'U', 'VLML': 'V'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
         num_timesteps=24*365,
         save_period=24,
-        advection_scheme=AdvectionScheme.eulerian,
+        advection_scheme='eulerian',
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         # windage_coeff=WINDAGE_COEFF,
         verbose=True,
-        platform_and_device=(0, 2),
+        opencl_device=(0, 2),
+        memory_utilization=.95,
     )
 
-    plot_ocean_advection(out_path)
+    plot_ocean_advection(out_paths[0])
     # plot_ocean_trajectories(out_path)

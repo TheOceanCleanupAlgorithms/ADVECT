@@ -17,11 +17,14 @@ __kernel void advect(
     __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int current_x_len,   // 1 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int current_y_len,   // 1 <= current_y_len <= UINT_MAX + 1
+    const unsigned int current_y_len,   // 1 <= current_z_len <= UINT_MAX + 1
+    __global const double *current_z,    // depth, meters, positive up, uniform spacing
+    const unsigned int current_z_len,   // 1 <= current_y_len <= UINT_MAX + 1
     __global const double *current_t,     // time, seconds since epoch, uniform spacing
     const unsigned int current_t_len,   // 1 <= current_t_len <= UINT_MAX + 1
     __global const float *current_U,    // m / s, 32 bit to save space
     __global const float *current_V,    // m / s
+    __global const float *current_W,    // m / s
     /* wind vector field */
     __global const double *wind_x,    // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int wind_x_len,   // 1 <= wind_x_len <= UINT_MAX + 1
@@ -55,17 +58,21 @@ __kernel void advect(
 
     const unsigned int out_timesteps = ntimesteps / save_every;
 
-    field2d current = {.x = current_x, .y = current_y, .t = current_t,
-                     .x_len = current_x_len, .y_len = current_y_len, .t_len = current_t_len,
+    field3d current = {.x = current_x, .y = current_y, .z = current_z, .t = current_t,
+                     .x_len = current_x_len, .y_len = current_y_len, .z_len = current_z_len, .t_len = current_t_len,
                      .x_spacing = (current_x[current_x_len-1]-current_x[0])/current_x_len,
                      .y_spacing = (current_y[current_y_len-1]-current_y[0])/current_y_len,
+                     .z_spacing = (current_z[current_z_len-1]-current_z[0])/current_z_len,
                      .t_spacing = (current_t[current_t_len-1]-current_t[0])/current_t_len,
-                     .U = current_U, .V = current_V};
+                     .U = current_U, .V = current_V, .W = current_W};
 
-    field2d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
-                    .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
+    // turn 2d wind into 3d wind with singleton z
+    double wind_z[1] = {0.0};
+    field3d wind = {.x = wind_x, .y = wind_y, .z = (__global double *)wind_z, .t = wind_t,
+                    .x_len = wind_x_len, .y_len = wind_y_len, .z_len = 1, .t_len = wind_t_len,
                     .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
                     .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
+                    .z_spacing = 0,
                     .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
                     .U = wind_U, .V = wind_V};
 

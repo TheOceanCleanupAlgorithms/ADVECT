@@ -12,10 +12,10 @@ import datetime
 from pathlib import Path
 from typing import Optional, Tuple, List
 
-from drivers.opencl_driver_2D import openCL_advect
-from kernel_wrappers.Kernel2D import AdvectionScheme
+from drivers.opencl_driver_3D import openCL_advect
+from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
-from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
 
 
 def run_advector(
@@ -23,6 +23,7 @@ def run_advector(
     output_directory: str,
     u_water_path: str,
     v_water_path: str,
+    w_water_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -50,6 +51,7 @@ def run_advector(
     :param u_water_path: wildcard path to the zonal current files.
         See data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
+    :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
         Any particles which are scheduled to be released prior to this date will be released at this date.
     :param timestep: python timedelta object denoting the duration of each advection timestep.
@@ -87,6 +89,7 @@ def run_advector(
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
         Note: this value has a profound impact on results.
     :param verbose: whether to print detailed information about kernel execution.
+    :return: list of paths to the outputfiles
     """
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
@@ -104,17 +107,17 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=sourcefile_format_enum,
     )
-    currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map
+    currents = open_3D_vectorfield(
+        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
-        wind = open_netcdf_vectorfield(
+        wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
     else:
-        wind = empty_vectorfield()
+        wind = empty_2D_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
     out_paths = openCL_advect(
