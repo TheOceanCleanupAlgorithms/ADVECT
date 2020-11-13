@@ -10,20 +10,20 @@
 __kernel void advect(
     /* current vector field */
     __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int current_x_len,   // 2 <= current_x_len <= UINT_MAX + 1
+    const unsigned int current_x_len,   // 1 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int current_y_len,   // 2 <= current_y_len <= UINT_MAX + 1
+    const unsigned int current_y_len,   // 1 <= current_y_len <= UINT_MAX + 1
     __global const double *current_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int current_t_len,   // 2 <= current_t_len <= UINT_MAX + 1
+    const unsigned int current_t_len,   // 1 <= current_t_len <= UINT_MAX + 1
     __global const float *current_U,    // m / s, 32 bit to save space
     __global const float *current_V,    // m / s
     /* wind vector field */
     __global const double *wind_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int wind_x_len,   // 2 <= wind_x_len <= UINT_MAX + 1
+    const unsigned int wind_x_len,   // 1 <= wind_x_len <= UINT_MAX + 1
     __global const double *wind_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int wind_y_len,   // 2 <= wind_y_len <= UINT_MAX + 1
+    const unsigned int wind_y_len,   // 1 <= wind_y_len <= UINT_MAX + 1
     __global const double *wind_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int wind_t_len,   // 2 <= wind_t_len <= UINT_MAX + 1
+    const unsigned int wind_t_len,   // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,    // m / s, 32 bit to save space
     __global const float *wind_V,    // m / s
     /* particle initialization information */
@@ -47,16 +47,16 @@ __kernel void advect(
 
     field2d current = {.x = current_x, .y = current_y, .t = current_t,
                      .x_len = current_x_len, .y_len = current_y_len, .t_len = current_t_len,
-                     .x_spacing = current_x[1]-current_x[0],
-                     .y_spacing = current_y[1]-current_y[0],
-                     .t_spacing = current_t[1]-current_t[0],
+                     .x_spacing = (current_x[current_x_len-1]-current_x[0])/current_x_len,
+                     .y_spacing = (current_y[current_y_len-1]-current_y[0])/current_y_len,
+                     .t_spacing = (current_t[current_t_len-1]-current_t[0])/current_t_len,
                      .U = current_U, .V = current_V};
 
     field2d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
                     .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
-                    .x_spacing = wind_x[1]-wind_x[0],
-                    .y_spacing = wind_y[1]-wind_y[0],
-                    .t_spacing = wind_t[1]-wind_t[0],
+                    .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
+                    .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
+                    .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
                     .U = wind_U, .V = wind_V};
 
     // loop timesteps

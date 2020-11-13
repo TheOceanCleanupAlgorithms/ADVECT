@@ -41,8 +41,8 @@ class Kernel2D:
             self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
             self.wind_U, self.wind_V = wind_U, wind_V
         else:  # opencl won't pass totally empty arrays to the kernel.  Windage disabled, so array contents don't matter
-            self.wind_x, self.wind_y, self.wind_t = [np.arange(2)] * 3
-            self.wind_U, self.wind_V = [np.zeros((2, 2, 2))] * 2
+            self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
+            self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
         self.x0, self.y0, self.release_date = x0, y0, release_date
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
@@ -145,25 +145,25 @@ class Kernel2D:
         # check current field valid
         assert max(self.current_x) <= 180
         assert min(self.current_x) >= -180
-        assert 2 <= len(self.current_x) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.current_x) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_x)
         assert max(self.current_y) <= 90
         assert min(self.current_y) >= -90
-        assert 2 <= len(self.current_y) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_y)
-        assert 2 <= len(self.current_t) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_t)
 
         # check wind field valid
         assert max(self.wind_x) <= 180
         assert min(self.wind_x) >= -180
-        assert 2 <= len(self.wind_x) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.wind_x) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.wind_x)
         assert max(self.wind_y) <= 90
         assert min(self.wind_y) >= -90
-        assert 2 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.wind_y)
-        assert 2 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
+        assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.wind_t)
 
         # check particle positions valid
