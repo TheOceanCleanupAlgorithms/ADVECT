@@ -48,17 +48,21 @@ __kernel void advect(
 {
     const unsigned int out_timesteps = ntimesteps / save_every;
 
-    field2d current = {.x = current_x, .y = current_y, .t = current_t,
-                     .x_len = current_x_len, .y_len = current_y_len, .t_len = current_t_len,
+    field3d current = {.x = current_x, .y = current_y, .z = current_z, .t = current_t,
+                     .x_len = current_x_len, .y_len = current_y_len, .z_len = current_z_len, .t_len = current_t_len,
                      .x_spacing = (current_x[current_x_len-1]-current_x[0])/current_x_len,
                      .y_spacing = (current_y[current_y_len-1]-current_y[0])/current_y_len,
+                     .z_spacing = (current_z[current_z_len-1]-current_z[0])/current_z_len,
                      .t_spacing = (current_t[current_t_len-1]-current_t[0])/current_t_len,
-                     .U = current_U, .V = current_V};
+                     .U = current_U, .V = current_V, .W = current_W};
 
-    field2d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
-                    .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
+    // turn 2d wind into 3d wind with singleton z
+    double wind_z[1] = {0.0};
+    field3d wind = {.x = wind_x, .y = wind_y, .z = (__global double *)wind_z, .t = wind_t,
+                    .x_len = wind_x_len, .y_len = wind_y_len, .z_len = 1, .t_len = wind_t_len,
                     .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
                     .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
+                    .z_spacing = 0,
                     .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
                     .U = wind_U, .V = wind_V};
 

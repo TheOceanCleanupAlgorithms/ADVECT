@@ -18,7 +18,7 @@ particle constrain_lat_lon(particle p) {
 }
 
 
-particle update_position_no_beaching(particle p, double dx, double dy, field2d field) {
+particle update_position_no_beaching(particle p, double dx, double dy, field3d field) {
     /*so-called "slippery coastlines."  Try to move the particle by dx and dy, but avoid depositing it onto land.*/
     particle new_p = update_position(p, dx, dy);  // always use this to keep lat/lon properly constrained
 
@@ -62,15 +62,16 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned 
     Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
 }
 
-grid_point find_nearest_neighbor(particle p, field2d field) {
+grid_point find_nearest_neighbor(particle p, field3d field) {
         grid_point neighbor;
         neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
         neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
+        neighbor.z_idx = find_nearest_neighbor_idx(0, field.z, field.z_len, field.z_spacing);
         neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
         return neighbor;
 }
 
-bool is_on_land(particle p, field2d field) {
+bool is_on_land(particle p, field3d field) {
     /* where'er you find the vector to be nan,
        you sure as hell can bet that this is land.
         -- William Shakespeare */
