@@ -7,6 +7,8 @@
 #include "eddy_diffusion.cl"
 #include "windage.cl"
 
+enum ExitCode {SUCCESS = 0, FAILURE = 1, INVALID_ADVECTION_SCHEME = 2, NULL_LOCATION = 3};
+
 __kernel void advect(
     /* current vector field */
     __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
@@ -41,8 +43,13 @@ __kernel void advect(
     /* physics parameters */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
-    const double windage_coeff)  // if nan, disables windage
+    const double windage_coeff,  // if nan, disables windage
+    /* debugging utility */
+    __global unsigned char *exit_codes)
 {
+    int global_id = get_global_id(0);
+    exit_codes[global_id] = FAILURE;  // unless noted otherwise...
+
     const unsigned int out_timesteps = ntimesteps / save_every;
 
     field2d current = {.x = current_x, .y = current_y, .t = current_t,
@@ -60,13 +67,18 @@ __kernel void advect(
                     .U = wind_U, .V = wind_V};
 
     // loop timesteps
-    int global_id = get_global_id(0);
     particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .t = start_time};
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
             p.t += dt;
             continue;
+        }
+
+        // quit if particle has null location, this is a disallowed state
+        if (isnan(p.x) || isnan(p.y)) {
+            exit_codes[global_id] = NULL_LOCATION;
+            return;
         }
 
         if (is_on_land(p, current)) {
@@ -78,7 +90,8 @@ __kernel void advect(
             } else if (advection_scheme == TAYLOR2) {
                 displacement_meters = taylor2_displacement(p, current, dt);
             } else {
-                return;  // can't throw errors but at least this way things will obviously fail
+                exit_codes[global_id] = INVALID_ADVECTION_SCHEME;
+                return;  // complete execution
             }
 
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
@@ -106,4 +119,5 @@ __kernel void advect(
             write_p(p, X_out, Y_out, out_timesteps, out_idx);
         }
     }
+    exit_codes[global_id] = SUCCESS;
 }

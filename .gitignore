@@ -1,5 +1,8 @@
 __pycache__
 examples/MERRA2_wind/MERRA2*
 examples/HYCOM_currents/*.nc
+examples/outputfiles/*tmp
+examples/outputfiles/*.nc
+examples/sourcefiles/*.nc
 .DS_Store
 .idea

@@ -1,9 +1,12 @@
 #include "fields.h"
 
 unsigned int find_nearest_neighbor_idx(double value, __global const double *arr, const unsigned int arr_len, const double spacing) {
-    // assumption: arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
-    // also, we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.  Can't raise errors
-    // inside a kernel so we must perform the check in the host code.
+    /* assumptions:
+        -- arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
+        -- we must have arr_len - 1 <= UINT_MAX for the cast of the clamp result to behave properly.$
+            inside a kernel so we must perform the check in the host code.
+        -- value MUST be non-nan.  This function produces UNDEFINED BEHAVIOR if value is nan.
+    */
     if (arr_len == 1 || spacing == 0) {  // handles singletons and protects against division by zero
         return 0;
     } else {
