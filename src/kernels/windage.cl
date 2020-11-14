@@ -2,7 +2,7 @@
 #include "advection_schemes.h"
 
 vector windage_meters(particle p, field3d wind, double dt, double windage_coeff) {
-    if (p.z < MINIMUM_WINDAGE_DEPTH) {
+    if (p.z >= MINIMUM_WINDAGE_DEPTH) {
         vector no_displacement = {.x = 0, .y = 0};
         return no_displacement;
     }
