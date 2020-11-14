@@ -37,7 +37,7 @@ def openCL_advect(current: xr.Dataset,
                  Dimensions: {'time', 'lon', 'lat'}
                  Variables: {'U', 'V'}
     :param out_path: path at which to save the outputfile
-    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
+    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'depth', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
@@ -109,7 +109,7 @@ def openCL_advect(current: xr.Dataset,
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe()
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
+        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon', 'depth']] = p0[['lat', 'lon', 'depth']]
 
     return buf_time, kernel_time
 
@@ -140,7 +140,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
-            z0=np.zeros(num_particles, dtype=np.float32),
+            z0=p0.depth.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
             start_time=start_time.timestamp(),
             dt=dt.total_seconds(),
