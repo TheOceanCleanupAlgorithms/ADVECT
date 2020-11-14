@@ -90,6 +90,14 @@ __kernel void advect(
             double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
 
             p = update_position_no_beaching(p, dx_deg, dy_deg, current);
+
+            // If, for some reason, the particle latitude goes completely out of [-90, 90],
+            // Send it in the middle of the Sahara at a location dedicated for particles gone wrong.
+            // TODO: When error codes are implemented, add one for this kind of situation
+            if (fabs(p.y) > 90) {
+                p.x = INVALID_POSITION_LON;
+                p.y = INVALID_POSITION_LAT;
+            }
         }
         p.t += dt;
         // save if necessary
