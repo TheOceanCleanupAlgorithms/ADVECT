@@ -7,7 +7,7 @@ from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advectio
 from run_advector import run_advector
 from datetime import datetime, timedelta
 
-EDDY_DIFFUSIVITY = 1800  # m^2 / s
+EDDY_DIFFUSIVITY = 0  # 1800  # m^2 / s
 ''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
   This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
   Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
