@@ -6,8 +6,6 @@ import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-import os
-import shutil
 
 from typing import Tuple, Optional
 from dask.diagnostics import ProgressBar
@@ -28,7 +26,7 @@ def openCL_advect(current: xr.Dataset,
                   eddy_diffusivity: float,
                   windage_coeff: Optional[float],
                   memory_utilization: float,
-                  platform_and_device: Tuple[int] = None,
+                  platform_and_device: Tuple[str] = None,
                   verbose=False) -> Tuple[float, float]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.

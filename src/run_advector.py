@@ -29,7 +29,7 @@ def run_advector(
     source_file_type: SourceFileType = SourceFileType.advector,
     sourcefile_varname_map: dict = None,
     currents_varname_map: Optional[dict] = None,
-    platform_and_device: Tuple[int, ...] = None,
+    platform_and_device: Tuple[str, ...] = None,
     verbose: bool = False,
     memory_utilization: float = 0.5,
     u_wind_path: Optional[str] = None,
