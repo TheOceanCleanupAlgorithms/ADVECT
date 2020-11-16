@@ -67,7 +67,7 @@ def estimate_memory_bytes(current: xr.Dataset, wind: xr.Dataset, num_particles: 
                      8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))  # the 4 64-bit coordinate arrays
     wind_bytes = (2 * 4 * np.prod(wind.U.shape) +  # two 32-bit fields
                   8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
-    output_bytes = (2 * 4 * num_particles * out_timesteps +  # two 32-bit variables for each particle for each timestep
+    output_bytes = (3 * 4 * num_particles * out_timesteps +  # three 32-bit variables for each particle for each timestep
                     1 * num_particles)  # one byte holding error code for each particle
-    p0_bytes = 2 * 4 * num_particles  # two 32-bit variables for each particle
+    p0_bytes = 3 * 4 * num_particles  # three 32-bit variables for each particle
     return (current_bytes+wind_bytes), output_bytes, p0_bytes

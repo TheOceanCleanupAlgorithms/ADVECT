@@ -52,7 +52,7 @@ particle update_position(particle p, double dx, double dy) {
     return constrain_lat_lon(p);
 }
 
-void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned int out_timesteps, unsigned int out_idx) {
+void write_p(particle p, __global float *X_out, __global float *Y_out, __global float *Z_out, unsigned int out_timesteps, unsigned int out_idx) {
     float float_px = (float) p.x;
     // Casting from float to double can in very rare cases transform a value like 179.999993 to 180.0.
     // So in case it happens, we make sure the new value is set to -180.
@@ -60,6 +60,7 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, unsigned 
         float_px = float_px - 360;
     X_out[p.id*out_timesteps + out_idx] = float_px;
     Y_out[p.id*out_timesteps + out_idx] = (float) p.y;
+    Z_out[p.id*out_timesteps + out_idx] = (float) p.z;
 }
 
 grid_point find_nearest_neighbor(particle p, field3d field) {
@@ -67,7 +68,7 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
         grid_point neighbor;
         neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
         neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
-        neighbor.z_idx = find_nearest_neighbor_idx(0, field.z, field.z_len, field.z_spacing);
+        neighbor.z_idx = find_nearest_neighbor_idx(p.z, field.z, field.z_len, field.z_spacing);
         neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
         return neighbor;
 }

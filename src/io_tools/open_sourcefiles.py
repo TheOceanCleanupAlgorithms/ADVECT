@@ -14,7 +14,7 @@ class SourceFileFormat(Enum):
     advector = 1
 
 
-SOURCEFILE_VARIABLES = ['p_id', 'lon', 'lat', 'release_date']
+SOURCEFILE_VARIABLES = ['p_id', 'lon', 'lat', 'depth', 'release_date']
 
 
 def datenum_to_datetimeNS64(datenum):
@@ -42,7 +42,7 @@ def open_sourcefiles(
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param variable_mapping: mapping from names in sourcefile to advector standard variable names
-            advector standard names: ('p_id', 'lat', 'lon', 'release_date')
+            advector standard names: ('p_id', 'lat', 'lon', 'depth', 'release_date')
     :param source_file_type: specify what sourcefile we have.
     """
     if variable_mapping is None:
