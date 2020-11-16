@@ -37,6 +37,11 @@ class OutputWriter:
             lat.units = "Degrees North"
             lat[:] = chunk.lat.values
 
+            depth = ds.createVariable("depth", chunk.depth.dtype, ("p_id", "time"))
+            depth.units = "meters"
+            depth.positive = "up"
+            depth[:] = chunk.depth.values
+
             release_date = ds.createVariable("release_date", np.float64, ("p_id",))
             release_date.units = "seconds since 1970-01-01 00:00:00.0"
             release_date.calendar = "gregorian"
@@ -53,3 +58,6 @@ class OutputWriter:
 
             lat = ds.variables['lat']
             lat[:, start_t:] = chunk.lat.values
+
+            depth = ds.variables['depth']
+            depth[:, start_t:] = chunk.depth.values

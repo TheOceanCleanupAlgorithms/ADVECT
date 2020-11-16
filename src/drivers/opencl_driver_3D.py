@@ -37,7 +37,7 @@ def openCL_advect(current: xr.Dataset,
                  Dimensions: {'time', 'lon', 'lat'}
                  Variables: {'U', 'V'}
     :param out_path: path at which to save the outputfile
-    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
+    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'depth', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
@@ -109,7 +109,7 @@ def openCL_advect(current: xr.Dataset,
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe()
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
+        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon', 'depth']] = p0[['lat', 'lon', 'depth']]
 
     return buf_time, kernel_time
 
@@ -140,6 +140,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
+            z0=p0.depth.values.astype(np.float32),
             release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
             start_time=start_time.timestamp(),
             dt=dt.total_seconds(),
@@ -147,6 +148,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
+            Z_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),
     )
 
 
@@ -155,9 +157,11 @@ def create_dataset_from_kernel(kernel: Kernel3D, release_date: np.ndarray, advec
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
     lat = kernel.Y_out.reshape([num_particles, -1])
+    depth = kernel.Z_out.reshape([num_particles, -1])
 
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
+                              'depth': (['p_id', 'time'], depth),
                               'release_date': (['p_id'], release_date)},
                    coords={'p_id': np.arange(num_particles),
                            'time': advect_time[1:]}  # initial positions are not returned

@@ -30,10 +30,11 @@ class Kernel3D:
                  current_U: np.ndarray, current_V: np.ndarray, current_W: np.ndarray,
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
-                 x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
+                 x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
-                 X_out: np.ndarray, Y_out: np.ndarray):
+                 X_out: np.ndarray, Y_out: np.ndarray, Z_out: np.ndarray,
+                 ):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_z, self.current_t = current_x, current_y, current_z, current_t
         self.current_U, self.current_V, self.current_W, = current_U, current_V, current_W
@@ -44,9 +45,9 @@ class Kernel3D:
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
-        self.x0, self.y0, self.release_date = x0, y0, release_date
+        self.x0, self.y0, self.z0, self.release_date = x0, y0, z0, release_date
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
-        self.X_out, self.Y_out = X_out, Y_out
+        self.X_out, self.Y_out, self.Z_out = X_out, Y_out, Z_out
         self.advection_scheme = advection_scheme
         self.eddy_diffusivity = eddy_diffusivity
         self.windage_coeff = windage_coeff
@@ -69,15 +70,16 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_release_date = \
+            d_x0, d_y0, d_z0, d_release_date = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.release_date))
+              self.x0, self.y0, self.z0, self.release_date))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
+        d_Z_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Z_out)
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -86,9 +88,9 @@ class Kernel3D:
                  None, None, None,
                  None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
-                 None, None, None,
+                 None, None, None, None,
                  np.float64, np.float64, np.uint32, np.uint32,
-                 None, None,
+                 None, None, None,
                  np.uint32, np.float64, np.float64])
         execution_start = time.time()
         self.cl_kernel(
@@ -102,10 +104,10 @@ class Kernel3D:
                 d_wind_y, np.uint32(len(self.wind_y)),
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
-                d_x0, d_y0, d_release_date,
+                d_x0, d_y0, d_z0, d_release_date,
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
-                d_X_out, d_Y_out,
+                d_X_out, d_Y_out, d_Z_out,
                 np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff))
 
         # wait for the computation to complete
@@ -116,6 +118,7 @@ class Kernel3D:
         read_start = time.time()
         cl.enqueue_copy(self.queue, self.X_out, d_X_out)
         cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
+        cl.enqueue_copy(self.queue, self.Z_out, d_Z_out)
         self.buf_time += time.time() - read_start
 
     def print_memory_footprint(self):
@@ -125,7 +128,7 @@ class Kernel3D:
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
-                          self.X_out.nbytes + self.Y_out.nbytes)
+                          self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
         print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
@@ -174,6 +177,7 @@ class Kernel3D:
         assert min(self.x0) >= -180
         assert max(self.y0) <= 90
         assert min(self.y0) >= -90
+        assert max(self.z0) <= 0
 
         # check enum valid
         assert self.advection_scheme.value in (0, 1)

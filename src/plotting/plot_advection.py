@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 import xarray as xr
+from matplotlib.colors import Normalize
 
 
 def plot_advection(P, time, field, streamfunc=True, ax=None):
@@ -49,14 +50,16 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
     # invisible line forces map to at least cover the specified area, regardless of particle tracks
     ax.plot(np.linspace(*lon_range), np.linspace(*lat_range), alpha=0)
 
-    dot, = ax.plot(P.isel(time=0).lon, P.isel(time=0).lat, '.', color='tab:blue')  # , transform=ccrs.Geodetic())
-
+    # initialize the scatter plot with dummy data.
+    dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=plt.get_cmap('winter'),
+                     s=5, norm=Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
+    cbar = plt.colorbar(mappable=dot, ax=ax)
     for i in range(len(P.time)):
-        dot.set_xdata(P.isel(time=i).lon)
-        dot.set_ydata(P.isel(time=i).lat)
+        dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
+        dot.set_array(P.isel(time=i).depth.values)
         ax.set_title(P.time.values[i])
         ax.set_ylim(-90, 90)
-        plt.pause(.01)
+        plt.pause(.005)
 
 
 @click.command()
