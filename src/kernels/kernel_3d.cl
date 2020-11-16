@@ -13,7 +13,7 @@ __kernel void advect(
     const unsigned int current_x_len,   // 1 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
     const unsigned int current_y_len,   // 1 <= current_z_len <= UINT_MAX + 1
-    __global const double *current_z,    // depth, meters, positive up, uniform spacing
+    __global const double *current_z,    // depth, meters, positive up
     const unsigned int current_z_len,   // 1 <= current_y_len <= UINT_MAX + 1
     __global const double *current_t,     // time, seconds since epoch, uniform spacing
     const unsigned int current_t_len,   // 1 <= current_t_len <= UINT_MAX + 1
@@ -54,7 +54,6 @@ __kernel void advect(
                      .x_len = current_x_len, .y_len = current_y_len, .z_len = current_z_len, .t_len = current_t_len,
                      .x_spacing = (current_x[current_x_len-1]-current_x[0])/current_x_len,
                      .y_spacing = (current_y[current_y_len-1]-current_y[0])/current_y_len,
-                     .z_spacing = (current_z[current_z_len-1]-current_z[0])/current_z_len,
                      .t_spacing = (current_t[current_t_len-1]-current_t[0])/current_t_len,
                      .U = current_U, .V = current_V, .W = current_W};
 
@@ -72,6 +71,11 @@ __kernel void advect(
     int global_id = get_global_id(0);
     particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
+
+    if (p.id == 0 || p.id == 4000) {
+        grid_point neighbor = find_nearest_neighbor(p, current);
+        printf("p.id = %d\np.z = %f\nneighbor.z_idx = %d\nneighbor.z = %f\n", p.id, p.z, neighbor.z_idx, current_z[neighbor.z_idx]);
+    }
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
             p.t += dt;
