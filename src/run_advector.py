@@ -3,7 +3,7 @@ Top-level entry point.  Must be called from a python script; see examples/HYCOM_
 """
 import datetime
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
@@ -17,7 +17,7 @@ DEFAULT_SAVE_PERIOD = 1
 
 def run_advector(
     sourcefile_path: str,
-    outputfile_path: str,
+    output_directory: str,
     u_water_path: str,
     v_water_path: str,
     advection_start_date: datetime.datetime,
@@ -36,10 +36,10 @@ def run_advector(
     v_wind_path: Optional[str] = None,
     windfile_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
-) -> str:
+) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
-    :param outputfile_path: path which will be populated with the outfile.
+    :param output_directory: directory which will be populated with the outfiles.
     :param u_water_path: wildcard path to the zonal current files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_water_path: wildcard path to the meridional current files.  See u_path for more details.
     :param advection_start_date: date the advection clock starts.
@@ -63,7 +63,7 @@ def run_advector(
     :param windfile_varname_map mapping from names in current file to advector standard variable names
             advector standard names: ('U', 'V', 'lat', 'lon', 'time')
     :param windage_coeff: float in [0, 1], fraction of wind speed that is transferred to particle
-    :return: absolute path to the particle outputfile
+    :return: list of paths to the outputfiles
     """
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
@@ -83,10 +83,10 @@ def run_advector(
         wind = empty_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
-    openCL_advect(
+    out_paths = openCL_advect(
         current=currents,
         wind=wind,
-        out_path=Path(outputfile_path),
+        out_dir=Path(output_directory),
         p0=p0,
         start_time=advection_start_date,
         dt=timestep,
@@ -100,4 +100,4 @@ def run_advector(
         memory_utilization=memory_utilization,
     )
 
-    return outputfile_path
+    return [str(p) for p in out_paths]

@@ -48,7 +48,7 @@ def open_sourcefiles(
     if variable_mapping is None:
         variable_mapping = {}
     if source_file_type == SourceFileType.trashtracker:  # merge defaults with passed map, passed map wins conflicts
-        default_mapping = {'releaseDate': 'release_date', 'x': 'p_id'}
+        default_mapping = {'releaseDate': 'release_date', 'x': 'p_id', 'id': 'p_id'}
         variable_mapping = dict(default_mapping, **variable_mapping)
 
     # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
