@@ -61,7 +61,7 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
 
     dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
                      s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
-    cbar = plt.colorbar(mappable=dot, ax=ax)
+    cbar = plt.colorbar(mappable=dot, ax=ax, fraction=0.0235, pad=0.04)
     cbar.ax.set_ylabel('Depth (m)')
 
     FFMpegWriter = manimation.writers['ffmpeg']
