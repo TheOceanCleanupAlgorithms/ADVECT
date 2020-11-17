@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 import xarray as xr
-from matplotlib.colors import Normalize
 import matplotlib.cm as cm
 import matplotlib.colors as mcol
 
@@ -56,7 +55,7 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
 
     dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
-                     s=5, norm=Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
+                     s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
     cbar = plt.colorbar(mappable=dot, ax=ax)
     cbar.ax.set_ylabel('Depth (m)')
     for i in range(len(P.time)):
