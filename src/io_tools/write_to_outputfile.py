@@ -7,7 +7,7 @@ import numpy as np
 class OutputWriter:
     def __init__(self, out_path: Path):
         if not out_path.is_dir():
-            out_path.mkdir(out_path)
+            out_path.mkdir()
 
         self.folder_path = out_path
         self.current_year = None
@@ -18,8 +18,8 @@ class OutputWriter:
         self.current_path = self.folder_path.joinpath(f"parts_{year}.nc")
 
     def write_output_chunk(self, chunk: xr.Dataset):
-        beginning_year = chunk.time.dt[0].year
-        end_year = chunk.time.dt[-1].year
+        beginning_year = chunk.time.dt.year.values[0]
+        end_year = chunk.time.dt.year.values[-1]
 
         for year in range(beginning_year, end_year + 1):
             chunk_year = chunk.isel({"time": chunk.time.dt.year == year})
@@ -53,17 +53,13 @@ class OutputWriter:
             release_date = ds.createVariable("release_date", np.float64, ("p_id",))
             release_date.units = "seconds since 1970-01-01 00:00:00.0"
             release_date.calendar = "gregorian"
-            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(
-                np.float64
-            )
+            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
     def _append_chunk(self, chunk: xr.Dataset):
         with nc.Dataset(self.current_path, mode="a") as ds:
             time = ds.variables["time"]
             start_t = len(time)
-            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(
-                np.float64
-            )
+            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
 
             lon = ds.variables["lon"]
             lon[:, start_t:] = chunk.lon.values
