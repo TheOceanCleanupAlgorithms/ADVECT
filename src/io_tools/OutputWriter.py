@@ -1,21 +1,21 @@
 from pathlib import Path
 import xarray as xr
-import netCDF4 as nc
+import netCDF4
 import numpy as np
 
 
 class OutputWriter:
-    def __init__(self, out_path: Path):
-        if not out_path.is_dir():
-            out_path.mkdir()
+    def __init__(self, out_dir: Path):
+        if not out_dir.is_dir():
+            out_dir.mkdir()
 
-        self.folder_path = out_path
+        self.folder_path = out_dir
         self.current_year = None
-        self.current_path = None
+        self.paths = []
 
     def _set_current_year(self, year: int):
         self.current_year = year
-        self.current_path = self.folder_path.joinpath(f"parts_{year}.nc")
+        self.paths.append(self.folder_path / f"parts_{year}.nc")
 
     def write_output_chunk(self, chunk: xr.Dataset):
         beginning_year = chunk.time.dt.year.values[0]
@@ -30,7 +30,7 @@ class OutputWriter:
                 self._append_chunk(chunk_year)
 
     def _write_first_chunk(self, chunk: xr.Dataset):
-        with nc.Dataset(self.current_path, mode="w") as ds:
+        with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
             ds.createDimension("time", None)  # unlimited dimension
             ds.createDimension("p_id", len(chunk.p_id))
 
@@ -56,7 +56,7 @@ class OutputWriter:
             release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
     def _append_chunk(self, chunk: xr.Dataset):
-        with nc.Dataset(self.current_path, mode="a") as ds:
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             time = ds.variables["time"]
             start_t = len(time)
             time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
