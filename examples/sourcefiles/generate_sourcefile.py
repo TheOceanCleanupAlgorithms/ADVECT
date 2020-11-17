@@ -30,8 +30,7 @@ def generate_sourcefile(
                       columns=['lon', 'lat'])
     p0['release_date'] = np.concatenate((np.full(num_particles//2, np.datetime64('2015-01-01T12')),
                                         np.full(num_particles//2 + num_particles % 2, np.datetime64('2015-06-01'))))
-    p0['depth'] = np.concatenate((np.full(num_particles//2, -500),
-                                  np.full(num_particles//2 + num_particles % 2, 0)))
+    p0['depth'] = np.random.choice([0, -1000], len(p0))
 
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))

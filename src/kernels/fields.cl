@@ -14,6 +14,23 @@ unsigned int find_nearest_neighbor_idx(double value, __global const double *arr,
     }
 }
 
+unsigned int find_nearest_neighbor_idx_non_uniform(double value, __global const double *arr, const unsigned int arr_len) {
+    // we must have arr_len - 1 <= UINT_MAX for index to be representable as an unsigned int.
+    // currently a naive search.  if we assume sorted, we can implement a binary search.
+    // however, given the nature of the ADVECTOR, fastest is likely to store neighbor grid_point on particle, and do an outward
+    // search, since particles don't move much between timesteps, esp. in depth.  Most of the time would be 3 loop iterations.
+    unsigned int neighbor_idx = 0;
+    double min_distance = INFINITY;
+    for (unsigned int i = 0; i < arr_len; i++) {
+        double distance = fabs(arr[i] - value);
+        if (distance < min_distance) {
+            neighbor_idx = i;
+            min_distance = distance;
+        }
+    }
+    return neighbor_idx;
+}
+
 vector index_vector_field(field3d field, grid_point gp, bool zero_nans) {
     /*
     assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1]
