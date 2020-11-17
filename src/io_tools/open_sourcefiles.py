@@ -59,7 +59,7 @@ def open_sourcefiles(
         concat_dim = next(k for k, v in variable_mapping.items() if v == 'p_id')
 
     sourcefile = xr.open_mfdataset(
-        glob.glob(sourcefile_path),
+        sorted(glob.glob(sourcefile_path)),
         parallel=True,
         combine="nested",
         concat_dim=concat_dim
