@@ -15,7 +15,7 @@ class OutputWriter:
 
     def _set_current_year(self, year: int):
         self.current_year = year
-        self.paths.append(self.folder_path / f"parts_{year}.nc")
+        self.paths.append(self.folder_path / f"advector_output_{year}.nc")
 
     def write_output_chunk(self, chunk: xr.Dataset):
         beginning_year = chunk.time.dt.year.values[0]
