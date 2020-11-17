@@ -157,6 +157,7 @@ class Kernel3D:
         assert min(self.current_y) >= -90
         assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_y)
+        assert max(self.current_z) <= 0
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_t)
 

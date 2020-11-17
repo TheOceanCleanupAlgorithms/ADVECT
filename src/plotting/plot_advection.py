@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 import xarray as xr
-from matplotlib.colors import Normalize
+import matplotlib.cm as cm
+import matplotlib.colors as mcol
 
 
 def plot_advection(P, time, field, streamfunc=True, ax=None):
@@ -51,9 +52,12 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
     ax.plot(np.linspace(*lon_range), np.linspace(*lat_range), alpha=0)
 
     # initialize the scatter plot with dummy data.
-    dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=plt.get_cmap('winter'),
-                     s=5, norm=Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
+    trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
+
+    dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
+                     s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
     cbar = plt.colorbar(mappable=dot, ax=ax)
+    cbar.ax.set_ylabel('Depth (m)')
     for i in range(len(P.time)):
         dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
         dot.set_array(P.isel(time=i).depth.values)
