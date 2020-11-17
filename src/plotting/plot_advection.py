@@ -60,7 +60,7 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
 
 
 @click.command()
-@click.argument("output_directory", type=click.Path(exists=True, dir_okay=False, readable=True))
+@click.argument("outputfile_path", type=click.Path(exists=True, dir_okay=False, readable=True))
 def plot_ocean_advection_CLI(outputfile_path: str):
     plot_ocean_advection(outputfile_path)
 
