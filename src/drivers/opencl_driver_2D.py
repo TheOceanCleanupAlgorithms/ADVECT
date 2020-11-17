@@ -6,19 +6,17 @@ import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-import os
-import shutil
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
-from io_tools.write_to_outputfile import OutputWriter
+from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
 
 def openCL_advect(current: xr.Dataset,
                   wind: xr.Dataset,
-                  out_path: Path,
+                  out_dir: Path,
                   p0: pd.DataFrame,
                   start_time: datetime.datetime,
                   dt: datetime.timedelta,
@@ -29,7 +27,7 @@ def openCL_advect(current: xr.Dataset,
                   windage_coeff: Optional[float],
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
-                  verbose=False) -> Tuple[float, float]:
+                  verbose=False) -> List[Path]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
@@ -38,7 +36,7 @@ def openCL_advect(current: xr.Dataset,
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
                  Dimensions: {'time', 'lon', 'lat'}
                  Variables: {'U', 'V'}
-    :param out_path: path at which to save the outputfile
+    :param out_dir: directory in which to save the outputfiles
     :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
@@ -50,8 +48,7 @@ def openCL_advect(current: xr.Dataset,
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
-    :return: (buffer_seconds, kernel_seconds): (time it took to transfer memory to/from device,
-                                                time it took to execute kernel on device)
+    :return: list of outputfile paths
     """
     num_particles = len(p0)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
@@ -75,7 +72,7 @@ def openCL_advect(current: xr.Dataset,
                                save_every=save_every)
 
     buf_time, kernel_time = 0, 0
-    writer = OutputWriter(out_path=out_path)
+    writer = OutputWriter(out_dir=out_dir)
     p0_chunk = p0.copy()
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
@@ -113,7 +110,7 @@ def openCL_advect(current: xr.Dataset,
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
 
-    return buf_time, kernel_time
+    return writer.paths
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,

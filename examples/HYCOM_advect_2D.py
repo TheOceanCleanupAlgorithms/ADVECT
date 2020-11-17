@@ -12,7 +12,7 @@ V_WATER_PATH = "./HYCOM_currents/uv*2015*.nc"
 U_WIND_PATH = "./MERRA2_wind/*2015*.nc"
 V_WIND_PATH = "./MERRA2_wind/*2015*.nc"
 SOURCEFILE_PATH = "./sourcefiles/2015_uniform_two_releases.nc"
-OUTPUTFILE_PATH = "./outputfiles/HYCOM_2015_out.nc"
+OUTPUT_FOLDER = "./outputfiles/HYCOM_2015/"
 
 ADVECTION_START = datetime(2015, 1, 1)
 ADVECTION_END = datetime(2016, 1, 1)
@@ -22,8 +22,8 @@ WINDAGE_COEFF = .005  # fraction of wind speed transferred to particle, user det
 
 
 if __name__ == '__main__':
-    out_path = run_advector(
-        outputfile_path=OUTPUTFILE_PATH,
+    out_paths = run_advector(
+        output_directory=OUTPUT_FOLDER,
         sourcefile_path=SOURCEFILE_PATH,
         u_water_path=U_WATER_PATH,
         v_water_path=V_WATER_PATH,
@@ -42,5 +42,6 @@ if __name__ == '__main__':
         memory_utilization=.4,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
     )
 
-    plot_ocean_advection(out_path)
-    plot_ocean_trajectories(out_path)
+    for path in out_paths:
+        plot_ocean_advection(path)
+        plot_ocean_trajectories(path)
