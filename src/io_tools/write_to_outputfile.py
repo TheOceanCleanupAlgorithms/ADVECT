@@ -2,8 +2,6 @@ from pathlib import Path
 import xarray as xr
 import netCDF4 as nc
 import numpy as np
-import os
-import pandas as pd
 
 
 class OutputWriter:
@@ -55,13 +53,17 @@ class OutputWriter:
             release_date = ds.createVariable("release_date", np.float64, ("p_id",))
             release_date.units = "seconds since 1970-01-01 00:00:00.0"
             release_date.calendar = "gregorian"
-            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
+            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
     def _append_chunk(self, chunk: xr.Dataset):
         with nc.Dataset(self.current_path, mode="a") as ds:
             time = ds.variables["time"]
             start_t = len(time)
-            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
+            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
             lon = ds.variables["lon"]
             lon[:, start_t:] = chunk.lon.values
