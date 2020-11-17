@@ -2,15 +2,16 @@
 #include "geography.h"
 
 vector eulerian_displacement(particle p, field3d field, double dt) {
-    // find nearest neighbors in grid
+    // find nearest neighbor in grid
     grid_point neighbor = find_nearest_neighbor(p, field);
-    // find U and V nearest to particle position
-    vector uv = index_vector_field(field, neighbor, true);
+    // find vector nearest particle position
+    vector V = index_vector_field(field, neighbor, true);
 
     //////////// advect particle using euler forward advection scheme
     // meters displacement
-    vector displacement_meters = {.x = uv.x * dt,
-                                  .y = uv.y * dt};
+    vector displacement_meters = {.x = V.x * dt,
+                                  .y = V.y * dt,
+                                  .z = V.z * dt};
     return displacement_meters;
 }
 
@@ -68,5 +69,6 @@ vector taylor2_displacement(particle p, field3d field, double dt) {
     displacement_meters.x = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
     displacement_meters.y = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (ux*vy * pow(dt, 2)) / 4);
 
+    displacement_meters.z = 0;  // until this gets updated, it does no vertical movement.
     return displacement_meters;
 }

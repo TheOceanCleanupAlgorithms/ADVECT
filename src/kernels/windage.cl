@@ -9,5 +9,6 @@ vector windage_meters(particle p, field3d wind, double dt, double windage_coeff)
     vector wind_displacement_meters = eulerian_displacement(p, wind, dt);
     wind_displacement_meters.x *= windage_coeff;
     wind_displacement_meters.y *= windage_coeff;
+    wind_displacement_meters.z = 0;
     return wind_displacement_meters;
 }
