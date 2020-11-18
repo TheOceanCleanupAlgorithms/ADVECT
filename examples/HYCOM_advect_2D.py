@@ -3,7 +3,6 @@ advect on HYCOM surface currents
 """
 from run_advector import run_advector
 from plotting.plot_advection import plot_ocean_advection, plot_ocean_trajectories
-from io_tools.open_sourcefiles import SourceFileType
 from datetime import datetime, timedelta
 
 
@@ -27,10 +26,10 @@ if __name__ == '__main__':
         sourcefile_path=SOURCEFILE_PATH,
         u_water_path=U_WATER_PATH,
         v_water_path=V_WATER_PATH,
-        currents_varname_map={'water_u': 'U', 'water_v': 'V'},
+        water_varname_map={'water_u': 'U', 'water_v': 'V'},
         # u_wind_path=U_WIND_PATH,      # uncomment these if you wish to enable windage
         # v_wind_path=V_WIND_PATH,
-        # windfile_varname_map={'ULML': 'U', 'VLML': 'V'},
+        # wind_varname_map={'ULML': 'U', 'VLML': 'V'},
         # windage_coeff=WINDAGE_COEFF,
         advection_start_date=ADVECTION_START,
         timestep=timedelta(hours=1),
@@ -38,7 +37,7 @@ if __name__ == '__main__':
         save_period=24,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         verbose=True,
-        # source_file_type=SourceFileType.trashtracker,  # uncomment for trashtracker source files
+        # sourcefile_format="trashtracker",  # uncomment for trashtracker source files
         memory_utilization=.4,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
     )
 
