@@ -6,13 +6,13 @@ Source files contain the initial state of particles, and are encoded as netcdf d
 ### Advector Sourcefiles
 Advector sourcefiles adhere to the following dataset structure:
 
-Dimensions
+#### Dimensions
 
 | Name | Data Type | Description |
 | --- | --- | --- |
 | p_id | integer | indexes particles |
 
-Variables
+#### Variables
 
 | Name | Dimensions | Data Type | Description |
 | --- | --- | --- | --- |
@@ -24,13 +24,13 @@ Note: other variables may be present, they will likely be ignored.  Undefined be
 ### TrashTracker Sourcefiles
 Trashtracker sourcefiles adhere to the following dataset structure:
 
-Dimensions
+#### Dimensions
 
 | Name | Data Type | Description |
 | --- | --- | --- |
 | x | integer | indexes particles |
 
-Variables
+#### Variables
 
 | Name | Dimensions | Data Type | Description |
 | --- | --- | --- | --- |
@@ -42,14 +42,14 @@ Variables
 ## Outputfiles
 Outputfiles contain the state of particles along some timeseries.  They are essentially Advector-format sourcefiles with an additional time dimension.  They adhere to the following specifications:
 
-Dimensions
+#### Dimensions
 
 | Name | Data Type | Description |
 | --- | --- | --- |
 | p_id | integer | indexes particles |
 | time | integer | indexes timeseries |
 
-Variables
+#### Variables
 
 | Name | Dimensions | Data Type | Description |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ Variables
 | release_date | (p_id) | int64 (CF-compliant datetime format) | timestamp after which particle entered simulation |
 | exit_code | (p_id) | uint8 | relays information about any non-fatal errors encountered during kernel execution. See below. |
 
-Exit Codes
+#### Exit Codes
 
 | Code | Semantic Name | Description |
 | --- | --- | --- |
@@ -72,14 +72,14 @@ Exit Codes
 ### 2D Vector Fields (Sea Surface Current, Surface Wind)
 By virtue of representing similar physical quantities, Sea Surface Current and Surface Wind share the specifications of a generic geospatial 2D Vector Field.  They are encoded as netcdf datasets, and must adhere to the following specifications:
 
-####Dimensions
+#### Dimensions
 | Name | Data Type | Description |
 | --- | --- | --- |
 | lon | integer | indexes longitude |
 | lat | integer | indexes latitude |
 | time | integer | indexes time |
 
-####Variables
+#### Variables
 | Name | Dimensions | Data Type | Description |
 | --- | --- | --- | --- |
 | lon | (lon) | numeric | longitude coordinate of field, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
