@@ -2,7 +2,7 @@
 This is the ADVECTOR entry-point.
 To use, create a python script within this repo, import this file, and execute.  E.g.
     from run_advector import run_advector
-    run_advector(args)
+    run_advector(...)
 See examples/HYCOM_advect_2d.py for an example usage.
 See function docstring below for detailed descriptions of all arguments.
 See src/data_specifications.md for detailed description of data format requirements.
@@ -44,8 +44,8 @@ def run_advector(
     :param sourcefile_path: path to the particle sourcefile netcdf file.
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
         See data_specifications.md for data requirements.
-    :param output_directory: directroy which will be populated with the outfiles.
-        If path already exists, it will be overwritten.
+    :param output_directory: directory which will be populated with the outfiles.
+        Existing files in this directory may be overwritten.
         See data_specifications.md for outputfile format details.
     :param u_water_path: wildcard path to the zonal current files.
         See data_specifications.md for data requirements.
@@ -56,12 +56,13 @@ def run_advector(
     :param num_timesteps: length of the advection timeseries.
     :param eddy_diffusivity: (m^2 / s) controls the scale of each particle's random walk.  0 (default) has no effect.
         Note: since eddy diffusivity parameterizes ocean mechanics at smaller scales than the current files resolve,
-            the value chosen should reflect the resolution of the current files.  Further, eddy diffusivity in the real
-            ocean varies widely in space and time, and this should be taken into account when selecting a value.
+            the value chosen should reflect the resolution of the current files.  Further, though eddy diffusivity in
+            the real ocean varies widely in space and time, ADVECTOR uses one value everywhere, and the value should be
+            selected with this in mind.
     :param advection_scheme: one of {"taylor2", "eulerian"}.
         "taylor2" is a second-order advection scheme as described in Black/Gay 1990 which improves adherence to circular
             streamlines compared to a first-order scheme.  This is the default.
-        "eulerian" is the first-order Euler method.
+        "eulerian" is the forward Euler method.
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
     :param sourcefile_format: one of {"advector", "trashtracker"}.  See data_specifications.md for more details.
@@ -79,14 +80,13 @@ def run_advector(
             will allow the program to send a maximum of 1.9GB to the GPU at once.
         In general, set this as high as you can without running out of memory.
     :param u_wind_path: wildcard path to zonal surface wind files; see 'u_water_path'.
-        Wind is optional.  Simply omit this argument in order to disable circulation due to wind.
+        Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional surface wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_coeff: fraction of wind speed that is transferred to particle.
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
-        Note: this value is a open research question, and likely depends on quantities not considered in ADVECTOR, like
-            size/shape/buoyacy of particles, sea state, etc.  It has profound impact on results; choose it wisely.
-    :param verbose: whether or not to print detailed information about kernel execution.  Default False.
+        Note: this value has a profound impact on results.
+    :param verbose: whether to print detailed information about kernel execution.
     """
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
