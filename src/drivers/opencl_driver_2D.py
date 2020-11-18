@@ -171,7 +171,8 @@ def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: pd.DataFrame, a
 def create_logger(log_path: Path):
     """this sets up logging such that logs with level WARNING go to log_path,
         logs with level ERROR or greater go to log_path and stdout."""
-    logging.basicConfig(filename=str(log_path), filemode='w', level=logging.WARNING)
+    logging.basicConfig(filename=str(log_path), filemode='w', level=logging.WARNING,
+                        format="%(asctime)s %(message)s")
     console = logging.StreamHandler()
     console.setLevel(logging.ERROR)
     logging.getLogger('').addHandler(console)
