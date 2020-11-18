@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-import kernel_wrappers.opencl_specification_constants as cl_const
+import kernel_wrappers.kernel_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time
@@ -33,7 +33,7 @@ class Kernel2D:
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
-                 X_out: np.ndarray, Y_out: np.ndarray):
+                 X_out: np.ndarray, Y_out: np.ndarray, exit_code: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
         self.current_U, self.current_V = current_U, current_V
@@ -62,6 +62,9 @@ class Kernel2D:
         self.buf_time = 0
         self.kernel_time = 0
 
+        # debugging
+        self.exit_code = exit_code
+
     def execute(self):
         """tranfers arguments to the compute device, triggers execution, waits on result"""
         # write arguments to compute device
@@ -76,6 +79,7 @@ class Kernel2D:
               self.x0, self.y0, self.release_date))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
+        d_exit_codes = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.exit_code)
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -87,7 +91,8 @@ class Kernel2D:
                  None, None, None,
                  np.float64, np.float64, np.uint32, np.uint32,
                  None, None,
-                 np.uint32, np.float64, np.float64])
+                 np.uint32, np.float64, np.float64,
+                 None])
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -103,7 +108,8 @@ class Kernel2D:
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out,
-                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff))
+                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff),
+                d_exit_codes)
 
         # wait for the computation to complete
         self.queue.finish()
@@ -113,6 +119,7 @@ class Kernel2D:
         read_start = time.time()
         cl.enqueue_copy(self.queue, self.X_out, d_X_out)
         cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
+        cl.enqueue_copy(self.queue, self.exit_code, d_exit_codes)
         self.buf_time += time.time() - read_start
 
     def print_memory_footprint(self):
@@ -122,7 +129,7 @@ class Kernel2D:
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
-                          self.X_out.nbytes + self.Y_out.nbytes)
+                          self.X_out.nbytes + self.Y_out.nbytes + self.exit_code.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
         print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
@@ -167,10 +174,10 @@ class Kernel2D:
         assert is_uniformly_spaced(self.wind_t)
 
         # check particle positions valid
-        assert max(self.x0) < 180
-        assert min(self.x0) >= -180
-        assert max(self.y0) <= 90
-        assert min(self.y0) >= -90
+        assert np.nanmax(self.x0) < 180
+        assert np.nanmin(self.x0) >= -180
+        assert np.nanmax(self.y0) <= 90
+        assert np.nanmin(self.y0) >= -90
 
         # check enum valid
         assert self.advection_scheme.value in (0, 1)

@@ -1,5 +1,6 @@
 import datetime
 import gc
+import logging
 from pathlib import Path
 
 import pyopencl as cl
@@ -37,7 +38,7 @@ def openCL_advect(current: xr.Dataset,
                  Dimensions: {'time', 'lon', 'lat'}
                  Variables: {'U', 'V'}
     :param out_dir: directory in which to save the outputfiles
-    :param p0: initial positions of particles, pandas dataframe with columns ['lon', 'lat', 'release_date']
+    :param p0: initial positions of particles, pandas dataframe with columns ['p_id', 'lon', 'lat', 'release_date']
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
@@ -73,7 +74,9 @@ def openCL_advect(current: xr.Dataset,
 
     buf_time, kernel_time = 0, 0
     writer = OutputWriter(out_dir=out_dir)
+    create_logger(out_dir / "warnings.log")
     p0_chunk = p0.copy()
+    p0_chunk['exit_code'] = np.zeros(len(p0_chunk))
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
@@ -98,15 +101,16 @@ def openCL_advect(current: xr.Dataset,
             kernel.print_execution_time()
 
         P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                             release_date=p0_chunk.release_date,
+                                             previous_chunk=p0_chunk,
                                              advect_time=out_time_chunk)
+        handle_errors(chunk=P_chunk, chunk_num=i + 1)
         
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
         writer.write_output_chunk(P_chunk)
 
-        p0_chunk = P_chunk.isel(time=-1).to_dataframe()
+        p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
 
@@ -144,10 +148,11 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
+            exit_code=p0.exit_code.values.astype(np.byte),
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: pd.DataFrame, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
@@ -155,8 +160,29 @@ def create_dataset_from_kernel(kernel: Kernel2D, release_date: np.ndarray, advec
 
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
-                              'release_date': (['p_id'], release_date)},
-                   coords={'p_id': np.arange(num_particles),
+                              'release_date': (['p_id'], previous_chunk.release_date.values),
+                              'exit_code': (['p_id'], kernel.exit_code)},
+                   coords={'p_id': previous_chunk.p_id.values,
                            'time': advect_time[1:]}  # initial positions are not returned
                    )
     return P
+
+
+def create_logger(log_path: Path):
+    """this sets up logging such that logs with level WARNING go to log_path,
+        logs with level ERROR or greater go to log_path and stdout."""
+    logging.basicConfig(filename=str(log_path), filemode='w', level=logging.WARNING,
+                        format="%(asctime)s %(message)s")
+    console = logging.StreamHandler()
+    console.setLevel(logging.ERROR)
+    logging.getLogger('').addHandler(console)
+
+
+def handle_errors(chunk: xr.Dataset, chunk_num: int):
+    if not np.all(chunk.exit_code == 0):
+        logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully.")
+        for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
+            logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
+    if np.any(chunk.exit_code < 0):
+        raise ValueError(f"Fatal error encountered, error code(s) "
+                         f"{np.unique(chunk.exit_code[chunk.exit_code < 0])}; aborting")

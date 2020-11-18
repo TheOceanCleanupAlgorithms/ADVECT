@@ -8,7 +8,7 @@ import xarray as xr
 import pandas as pd
 
 
-class SourceFileType(Enum):
+class SourceFileFormat(Enum):
     """Allows to handle different type of source files."""
     trashtracker = 0
     advector = 1
@@ -37,7 +37,7 @@ def datenum_to_datetimeNS64(datenum):
 def open_sourcefiles(
     sourcefile_path: str,
     variable_mapping: Optional[dict],
-    source_file_type: SourceFileType,
+    source_file_type: SourceFileFormat,
 ) -> pd.DataFrame:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
@@ -47,7 +47,7 @@ def open_sourcefiles(
     """
     if variable_mapping is None:
         variable_mapping = {}
-    if source_file_type == SourceFileType.trashtracker:  # merge defaults with passed map, passed map wins conflicts
+    if source_file_type == SourceFileFormat.trashtracker:  # merge defaults with passed map, passed map wins conflicts
         default_mapping = {'releaseDate': 'release_date', 'x': 'p_id', 'id': 'p_id'}
         variable_mapping = dict(default_mapping, **variable_mapping)
 
@@ -78,7 +78,7 @@ def open_sourcefiles(
     for var in SOURCEFILE_VARIABLES:
         assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."
 
-    if source_file_type == SourceFileType.trashtracker:
+    if source_file_type == SourceFileFormat.trashtracker:
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
         sourcefile['lon'] = ((sourcefile.lon + 180) % 360) - 180  # enforce [-180, 180] longitude
 

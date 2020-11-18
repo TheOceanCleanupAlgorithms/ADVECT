@@ -1,9 +1,10 @@
-# ADVECTOR
+# ADVECTOR V0.0
 The emerging interest in vertical dynamics and a constant trend towards increased spatial and temporal resolution necessitates a fully distributed, computationally efficient solution to the problem of modeling marine litter transport at sea.  As such, this software aims to be not just computationally efficient, but fully distributed as well, in order to take full advantage of massively parallel hardware architectures such as GPUs and CPU clusters.  The OpenCL paradigm accomplishes both of these goals.
 
-## Features and Timeline
-### V0: Sea Surface Advection
-Version 0 aims to be functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global dispersion studies, it will use a 2D, second-order advection scheme, and will include sea-surface-current advection, eddy diffusion, windage, "slippery" coastline handling (prevents beaching), and delayed particle release.
+## Current Release:
+### V0.0: Sea Surface Advection
+Version 0.0 is functionally equivalent to the TrashTracker model developed by Laurent Lebreton.  Intended for global or regional dispersion studies, it includes 2D first- and second-order advection schemes for sea-surface-current advection, eddy diffusion, windage, "slippery" coastline handling (prohibiting beaching), and delayed particle release.
+##Under Development:
 ### V1.0: 3D Advection (Buoyancy Driven)
 Version 1 will consider depth, and will require vertical current as an input.  It will use a 3D second-order advection scheme and will support buoyancy-driven vertical movement.
 ### V1.1: Elaborate Vertical Transport Mechanisms
