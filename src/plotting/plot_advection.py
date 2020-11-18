@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import click
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,9 +5,6 @@ import cartopy.crs as ccrs
 import xarray as xr
 import matplotlib.cm as cm
 import matplotlib.colors as mcol
-import matplotlib.animation as manimation
-from tqdm import tqdm
-import subprocess
 
 
 def plot_advection(P, time, field, streamfunc=True, ax=None):
@@ -61,24 +56,14 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
 
     dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
                      s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=P.depth.max()))
-    cbar = plt.colorbar(mappable=dot, ax=ax, fraction=0.0235, pad=0.04)
+    cbar = plt.colorbar(mappable=dot, ax=ax)
     cbar.ax.set_ylabel('Depth (m)')
-
-    FFMpegWriter = manimation.writers['ffmpeg']
-    writer = FFMpegWriter(fps=30)
-    outfile = Path(outputfile_path).with_suffix('.mp4')
-    print("Creating Movie...")
-    with writer.saving(fig, outfile=outfile, dpi=150):
-        for i in tqdm(range(len(P.time))):
-            dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
-            dot.set_array(P.isel(time=i).depth.values)
-            ax.set_title(P.time.values[i])
-            ax.set_ylim(-90, 90)
-            writer.grab_frame()
-
-    plt.close()
-    print("Opening Movie...")
-    subprocess.call(['open', outfile])  # this won't work except on mac.
+    for i in range(len(P.time)):
+        dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
+        dot.set_array(P.isel(time=i).depth.values)
+        ax.set_title(P.time.values[i])
+        ax.set_ylim(-90, 90)
+        plt.pause(.005)
 
 
 @click.command()
