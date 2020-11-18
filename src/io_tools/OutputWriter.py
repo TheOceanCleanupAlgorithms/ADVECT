@@ -55,6 +55,11 @@ class OutputWriter:
             release_date.calendar = "gregorian"
             release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
+            exit_code = ds.createVariable("exit_code", np.ubyte, ("p_id",))
+            for meaning, code in {'SUCCESS': 0, 'FAILURE': 1, 'INVALID_ADVECTION_SCHEME': 2, 'NULL_LOCATION': 3}.items():
+                setattr(exit_code, str(code), meaning)
+            exit_code[:] = chunk.exit_code.values
+
     def _append_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             time = ds.variables["time"]
@@ -66,3 +71,7 @@ class OutputWriter:
 
             lat = ds.variables["lat"]
             lat[:, start_t:] = chunk.lat.values
+
+            exit_code = ds.variables["exit_code"]
+            # overwrite with most recent codes; by design, nonzero codes cannot change
+            exit_code[:] = chunk.exit_code.values

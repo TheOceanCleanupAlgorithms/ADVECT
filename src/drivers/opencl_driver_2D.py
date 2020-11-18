@@ -102,8 +102,7 @@ def openCL_advect(current: xr.Dataset,
             kernel.print_execution_time()
 
         P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                             p_id=p0_chunk.p_id.values,
-                                             release_date=p0_chunk.release_date,
+                                             previous_chunk=p0_chunk,
                                              advect_time=out_time_chunk)
         
         del kernel  # important for releasing memory for the next iteration
@@ -152,7 +151,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, p_id: np.ndarray, release_date: np.ndarray, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: xr.Dataset, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
@@ -160,8 +159,9 @@ def create_dataset_from_kernel(kernel: Kernel2D, p_id: np.ndarray, release_date:
 
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
-                              'release_date': (['p_id'], release_date)},
-                   coords={'p_id': p_id,
+                              'release_date': (['p_id'], previous_chunk.release_date.values),
+                              'exit_code': (['p_id'], kernel.exit_codes)},
+                   coords={'p_id': previous_chunk.p_id.values,
                            'time': advect_time[1:]}  # initial positions are not returned
                    )
     return P
