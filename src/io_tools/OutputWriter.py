@@ -3,6 +3,8 @@ import xarray as xr
 import netCDF4
 import numpy as np
 
+from kernel_wrappers.kernel_constants import EXIT_CODES
+
 
 class OutputWriter:
     def __init__(self, out_dir: Path):
@@ -56,9 +58,10 @@ class OutputWriter:
             release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
             exit_code = ds.createVariable("exit_code", np.ubyte, ("p_id",))
-            for meaning, code in {'SUCCESS': 0, 'FAILURE': 1, 'INVALID_ADVECTION_SCHEME': 2,
-                                  'NULL_LOCATION': 3, 'INVALID_LATITUDE': 4}.items():
-                setattr(exit_code, str(code), meaning)
+            exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
+                                    "kernel must be terminated.  Their semantic meaning is provided in the " \
+                                    "'code_to_meaning' attribute of this variable."
+            exit_code.code_to_meaning = str({code: meaning for meaning, code in EXIT_CODES.items()})
             exit_code[:] = chunk.exit_code.values
 
     def _append_chunk(self, chunk: xr.Dataset):

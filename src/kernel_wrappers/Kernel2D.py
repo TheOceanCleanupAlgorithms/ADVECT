@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-import kernel_wrappers.opencl_specification_constants as cl_const
+import kernel_wrappers.kernel_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time

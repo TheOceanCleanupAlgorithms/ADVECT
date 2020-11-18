@@ -8,6 +8,7 @@
 #include "windage.cl"
 
 enum ExitCode {SUCCESS = 0, FAILURE = 1, INVALID_ADVECTION_SCHEME = 2, NULL_LOCATION = 3, INVALID_LATITUDE = 4};
+// if you change these codes, update in src/kernel_wrappers/ExitCodes.py
 
 __kernel void advect(
     /* current vector field */
