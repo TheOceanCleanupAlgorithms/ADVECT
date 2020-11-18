@@ -28,9 +28,10 @@ def generate_sourcefile(
     ocean_points = np.array([X[~land], Y[~land]]).T
     p0 = pd.DataFrame(data=[ocean_points[i] for i in np.random.randint(0, len(ocean_points), size=num_particles)],
                       columns=['lon', 'lat'])
-    p0['release_date'] = np.concatenate((np.full(num_particles//2, np.datetime64('2015-01-01T12')),
-                                        np.full(num_particles//2 + num_particles % 2, np.datetime64('2015-06-01'))))
-    p0['depth'] = np.random.choice([0, -1000], len(p0))
+    p0['release_date'] = np.datetime64('2015-01-01T12')
+    #                     np.concatenate((np.full(num_particles//2, np.datetime64('2015-01-01T12')),
+    #                                    np.full(num_particles//2 + num_particles % 2, np.datetime64('2015-06-01'))))
+    p0['depth'] = 0
 
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))

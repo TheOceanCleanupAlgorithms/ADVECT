@@ -24,7 +24,7 @@ def plot_ocean_trajectories(outputfile_path: str):
     plt.show()
 
 
-def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90), save: bool=False):
+def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90), save: bool = False):
     P = xr.open_dataset(outputfile_path)
     # plot le advection
     proj = ccrs.PlateCarree()
