@@ -183,4 +183,3 @@ def report_errors(chunk: xr.Dataset, chunk_num: int):
         logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully.")
         for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
             logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
-            # look to kernel_2d.cl for error code definitions
