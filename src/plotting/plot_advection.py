@@ -76,6 +76,7 @@ def plot_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=
             ax.set_ylim(-90, 90)
             writer.grab_frame()
 
+    plt.close()
     print("Opening Movie...")
     subprocess.call(['open', outfile])  # this won't work except on mac.
 

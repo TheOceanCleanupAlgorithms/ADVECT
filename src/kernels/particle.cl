@@ -31,8 +31,8 @@ particle update_position_no_beaching(particle p, double dx, double dy, double dz
     if (!is_on_land(new_p, field)) return new_p;
 
     // particle will beach.  We don't want this, but we do want to try to move the particle in at least one direction.
-    particle p_dx = update_position(p, dx, 0, 0);  // only move in x direction
-    particle p_dy = update_position(p, 0, dy, 0);  // only move in y direction
+    particle p_dx = update_position(p, dx, 0, dz);  // only move in x direction
+    particle p_dy = update_position(p, 0, dy, dz);  // only move in y direction
     bool is_sea_x = !is_on_land(p_dx, field);
     bool is_sea_y = !is_on_land(p_dy, field);
 
@@ -48,7 +48,7 @@ particle update_position_no_beaching(particle p, double dx, double dy, double dz
         return p_dy;
     } else {                    // we can't move in x or y; this is like being in a corner, surrounded by land
         return p;               // this also handles the case where particle's vertical movement has put it into seafloor.
-    }                           // this vertical behavior should be improved in a future update.
+    }                           // TODO this vertical behavior should be improved in a future update.
 }
 
 particle update_position(particle p, double dx, double dy, double dz) {
