@@ -73,7 +73,6 @@ __kernel void advect(
                     .x_len = wind_x_len, .y_len = wind_y_len, .z_len = 1, .t_len = wind_t_len,
                     .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
                     .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
-                    .z_spacing = 0,
                     .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
                     .U = wind_U, .V = wind_V};
 

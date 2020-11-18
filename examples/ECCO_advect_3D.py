@@ -2,7 +2,7 @@
 advect on ECCO currents
 """
 
-from plotting.plot_advection import plot_ocean_trajectories, plot_ocean_advection
+from plotting.plot_advection import animate_ocean_advection
 from run_advector import run_advector
 from datetime import datetime, timedelta
 
@@ -38,5 +38,5 @@ if __name__ == '__main__':
         memory_utilization=.95,
     )
 
-    plot_ocean_advection(out_paths[0])
-    # plot_ocean_trajectories(out_path)
+    for out_path in out_paths:
+        animate_ocean_advection(out_path, save=False)
