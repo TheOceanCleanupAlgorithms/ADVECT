@@ -4,7 +4,7 @@ import netCDF4
 import numpy as np
 
 from kernel_wrappers.kernel_constants import EXIT_CODES
-
+from _version import __version__
 
 class OutputWriter:
     def __init__(self, out_dir: Path):
@@ -33,6 +33,10 @@ class OutputWriter:
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
+            ds.title = "Trajectories of Floating Marine Debris"
+            ds.institution = "The Ocean Cleanup"
+            ds.source = f"ADVECTOR Version {__version__}"
+
             ds.createDimension("time", None)  # unlimited dimension
             ds.createDimension("p_id", len(chunk.p_id))
 
