@@ -7,7 +7,9 @@
 #include "eddy_diffusion.cl"
 #include "windage.cl"
 
-enum ExitCode {SUCCESS = 0, FAILURE = 1, INVALID_ADVECTION_SCHEME = 2, NULL_LOCATION = 3, INVALID_LATITUDE = 4};
+enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1};
+// positive codes are considered non-fatal, and are reported in outputfiles;
+// negative codes are considered fatal, cause host-program termination, and are reserved for internal use.
 // if you change these codes, update in src/kernel_wrappers/kernel_constants.py
 
 __kernel void advect(
@@ -46,7 +48,7 @@ __kernel void advect(
     const double eddy_diffusivity,
     const double windage_coeff,  // if nan, disables windage
     /* debugging utility */
-    __global unsigned char *exit_code)
+    __global char *exit_code)
 {
     int global_id = get_global_id(0);
     if (exit_code[global_id] != SUCCESS) return;  // this indicates an error has already occured on this particle; quit
@@ -92,7 +94,7 @@ __kernel void advect(
                 displacement_meters = taylor2_displacement(p, current, dt);
             } else {
                 exit_code[global_id] = INVALID_ADVECTION_SCHEME;
-                return;  // complete execution
+                return;
             }
 
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));

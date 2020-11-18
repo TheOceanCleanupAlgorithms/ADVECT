@@ -8,7 +8,7 @@ UINT_MAX = 0xffffffff
 
 # these match the definitions in kernel_2d.cl.
 EXIT_CODES = {'SUCCESS': 0,
-              'FAILURE': 1,
-              'INVALID_ADVECTION_SCHEME': 2,
-              'NULL_LOCATION': 3,
-              'INVALID_LATITUDE': 4}
+              'NULL_LOCATION': 1,
+              'INVALID_LATITUDE': 2,
+              'INVALID_ADVECTION_SCHEME': -1,
+              }

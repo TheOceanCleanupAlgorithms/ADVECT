@@ -103,12 +103,12 @@ def openCL_advect(current: xr.Dataset,
         P_chunk = create_dataset_from_kernel(kernel=kernel,
                                              previous_chunk=p0_chunk,
                                              advect_time=out_time_chunk)
+        handle_errors(chunk=P_chunk, chunk_num=i + 1)
         
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
         writer.write_output_chunk(P_chunk)
-        report_errors(chunk=P_chunk, chunk_num=i+1)
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
@@ -148,7 +148,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
-            exit_code=p0.exit_code.values.astype(np.ubyte),
+            exit_code=p0.exit_code.values.astype(np.byte),
     )
 
 
@@ -178,8 +178,11 @@ def create_logger(log_path: Path):
     logging.getLogger('').addHandler(console)
 
 
-def report_errors(chunk: xr.Dataset, chunk_num: int):
+def handle_errors(chunk: xr.Dataset, chunk_num: int):
     if not np.all(chunk.exit_code == 0):
         logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully.")
         for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
             logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
+    if np.any(chunk.exit_code < 0):
+        raise ValueError(f"Fatal error encountered, error code(s) "
+                         f"{np.unique(chunk.exit_code[chunk.exit_code < 0])}; aborting")
