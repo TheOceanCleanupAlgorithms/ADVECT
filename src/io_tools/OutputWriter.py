@@ -56,7 +56,8 @@ class OutputWriter:
             release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
             exit_code = ds.createVariable("exit_code", np.ubyte, ("p_id",))
-            for meaning, code in {'SUCCESS': 0, 'FAILURE': 1, 'INVALID_ADVECTION_SCHEME': 2, 'NULL_LOCATION': 3}.items():
+            for meaning, code in {'SUCCESS': 0, 'FAILURE': 1, 'INVALID_ADVECTION_SCHEME': 2,
+                                  'NULL_LOCATION': 3, 'INVALID_LATITUDE': 4}.items():
                 setattr(exit_code, str(code), meaning)
             exit_code[:] = chunk.exit_code.values
 

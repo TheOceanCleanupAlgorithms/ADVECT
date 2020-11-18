@@ -7,7 +7,7 @@
 #include "eddy_diffusion.cl"
 #include "windage.cl"
 
-enum ExitCode {SUCCESS = 0, FAILURE = 1, INVALID_ADVECTION_SCHEME = 2, NULL_LOCATION = 3};
+enum ExitCode {SUCCESS = 0, FAILURE = 1, INVALID_ADVECTION_SCHEME = 2, NULL_LOCATION = 3, INVALID_LATITUDE = 4};
 
 __kernel void advect(
     /* current vector field */
@@ -104,12 +104,10 @@ __kernel void advect(
 
             p = update_position_no_beaching(p, dx_deg, dy_deg, current);
 
-            // If, for some reason, the particle latitude goes completely out of [-90, 90],
-            // Send it in the middle of the Sahara at a location dedicated for particles gone wrong.
-            // TODO: When error codes are implemented, add one for this kind of situation
+            // If, for some reason, the particle latitude goes completely out of [-90, 90], note the error and exit.
             if (fabs(p.y) > 90) {
-                p.x = INVALID_POSITION_LON;
-                p.y = INVALID_POSITION_LAT;
+                exit_code[global_id] = INVALID_LATITUDE;
+                return;
             }
         }
         p.t += dt;
