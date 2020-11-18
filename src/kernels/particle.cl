@@ -31,21 +31,21 @@ particle update_position_no_beaching(particle p, double dx, double dy, double dz
     if (!is_on_land(new_p, field)) return new_p;
 
     // particle will beach.  We don't want this, but we do want to try to move the particle in at least one direction.
-    particle p_dx = update_position(p, dx, 0, dz);  // only move in x direction
-    particle p_dy = update_position(p, 0, dy, dz);  // only move in y direction
-    bool is_sea_x = !is_on_land(p_dx, field);
-    bool is_sea_y = !is_on_land(p_dy, field);
+    particle p_no_dy = update_position(p, dx, 0, dz);  // remove y component of displacement
+    particle p_no_dx = update_position(p, 0, dy, dz);  // remove x component of displacement
+    bool is_sea_x = !is_on_land(p_no_dy, field);
+    bool is_sea_y = !is_on_land(p_no_dx, field);
 
     if (is_sea_x && is_sea_y) {  // could move in x OR y.  This is like being at a peninsula.
         if (degrees_lon_to_meters(dx, p.y) > degrees_lat_to_meters(dy, p.y)) {
-            return p_dx;            // we choose which way to go based on which vector component is stronger.
+            return p_no_dy;            // we choose which way to go based on which vector component is stronger.
         } else {
-            return p_dy;
+            return p_no_dx;
         }
     } else if (is_sea_x) {      // we can only move in x; this is like being against a horizontal coastline
-        return p_dx;
+        return p_no_dy;
     } else if (is_sea_y) {      // we can only move in y; this is like being against a vertical coastline
-        return p_dy;
+        return p_no_dx;
     } else {                    // we can't move in x or y; this is like being in a corner, surrounded by land
         return p;               // this also handles the case where particle's vertical movement has put it into seafloor.
     }                           // TODO this vertical behavior should be improved in a future update.
