@@ -6,6 +6,7 @@ import numpy as np
 from kernel_wrappers.kernel_constants import EXIT_CODES
 from _version import __version__
 
+
 class OutputWriter:
     def __init__(self, out_dir: Path):
         if not out_dir.is_dir():
