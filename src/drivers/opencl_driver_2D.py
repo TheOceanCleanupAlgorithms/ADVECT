@@ -1,12 +1,12 @@
 import datetime
 import gc
+import logging
 from pathlib import Path
 
 import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-import warnings
 
 from typing import Tuple, Optional, List
 from dask.diagnostics import ProgressBar
@@ -74,6 +74,7 @@ def openCL_advect(current: xr.Dataset,
 
     buf_time, kernel_time = 0, 0
     writer = OutputWriter(out_dir=out_dir)
+    create_logger(out_dir / "warnings.log")
     p0_chunk = p0.copy()
     p0_chunk['exit_code'] = np.zeros(len(p0_chunk))
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
@@ -92,9 +93,6 @@ def openCL_advect(current: xr.Dataset,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
                                    out_timesteps=out_timesteps_chunk)
         kernel.execute()
-        error_message = kernel.report_errors(p0_chunk.p_id.values)
-        if error_message:
-            warnings.warn(error_message, RuntimeWarning)
 
         buf_time += kernel.buf_time
         kernel_time += kernel.kernel_time
@@ -110,6 +108,7 @@ def openCL_advect(current: xr.Dataset,
         gc.collect()
 
         writer.write_output_chunk(P_chunk)
+        report_errors(chunk=P_chunk, chunk_num=i+1)
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
@@ -153,7 +152,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: xr.Dataset, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: pd.DataFrame, advect_time: pd.DatetimeIndex) -> xr.Dataset:
     """assumes kernel has been run"""
     num_particles = len(kernel.x0)
     lon = kernel.X_out.reshape([num_particles, -1])
@@ -167,3 +166,20 @@ def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: xr.Dataset, adv
                            'time': advect_time[1:]}  # initial positions are not returned
                    )
     return P
+
+
+def create_logger(log_path: Path):
+    """this sets up logging such that logs with level WARNING go to log_path,
+        logs with level ERROR or greater go to log_path and stdout."""
+    logging.basicConfig(filename=str(log_path), filemode='w', level=logging.WARNING)
+    console = logging.StreamHandler()
+    console.setLevel(logging.ERROR)
+    logging.getLogger('').addHandler(console)
+
+
+def report_errors(chunk: xr.Dataset, chunk_num: int):
+    if not np.all(chunk.exit_code == 0):
+        logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully.")
+        for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
+            logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
+            # look to kernel_2d.cl for error code definitions

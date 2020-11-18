@@ -181,13 +181,3 @@ class Kernel2D:
 
         # check enum valid
         assert self.advection_scheme.value in (0, 1)
-
-    def report_errors(self, particle_ids: np.ndarray):
-        if not np.all(self.exit_code == 0):
-            error_str = f"{np.count_nonzero(self.exit_code)} particle(s) did not exit successfully."
-            for i, code in enumerate(self.exit_code[self.exit_code != 0]):
-                error_str += f"\n Particle ID {particle_ids[i]} exited with error code {code}."
-                # look to kernel_2d.cl for error code definitions
-            return error_str
-        else:
-            return ""
