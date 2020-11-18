@@ -75,6 +75,7 @@ def openCL_advect(current: xr.Dataset,
     buf_time, kernel_time = 0, 0
     writer = OutputWriter(out_dir=out_dir)
     p0_chunk = p0.copy()
+    p0_chunk['exit_code'] = np.zeros(len(p0_chunk))
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
@@ -148,6 +149,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             save_every=save_every,
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
+            exit_code=p0.exit_code.values.astype(np.ubyte),
     )
 
 
@@ -160,7 +162,7 @@ def create_dataset_from_kernel(kernel: Kernel2D, previous_chunk: xr.Dataset, adv
     P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
                               'lat': (['p_id', 'time'], lat),
                               'release_date': (['p_id'], previous_chunk.release_date.values),
-                              'exit_code': (['p_id'], kernel.exit_codes)},
+                              'exit_code': (['p_id'], kernel.exit_code)},
                    coords={'p_id': previous_chunk.p_id.values,
                            'time': advect_time[1:]}  # initial positions are not returned
                    )

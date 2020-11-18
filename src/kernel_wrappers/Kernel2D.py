@@ -33,7 +33,7 @@ class Kernel2D:
                  x0: np.ndarray, y0: np.ndarray, release_date: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
-                 X_out: np.ndarray, Y_out: np.ndarray):
+                 X_out: np.ndarray, Y_out: np.ndarray, exit_code: np.ndarray):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_t = current_x, current_y, current_t
         self.current_U, self.current_V = current_U, current_V
@@ -63,7 +63,7 @@ class Kernel2D:
         self.kernel_time = 0
 
         # debugging
-        self.exit_codes = np.zeros_like(self.x0, dtype=np.ubyte)
+        self.exit_code = exit_code
 
     def execute(self):
         """tranfers arguments to the compute device, triggers execution, waits on result"""
@@ -79,7 +79,7 @@ class Kernel2D:
               self.x0, self.y0, self.release_date))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
-        d_exit_codes = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.exit_codes)
+        d_exit_codes = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.exit_code)
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -119,7 +119,7 @@ class Kernel2D:
         read_start = time.time()
         cl.enqueue_copy(self.queue, self.X_out, d_X_out)
         cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
-        cl.enqueue_copy(self.queue, self.exit_codes, d_exit_codes)
+        cl.enqueue_copy(self.queue, self.exit_code, d_exit_codes)
         self.buf_time += time.time() - read_start
 
     def print_memory_footprint(self):
@@ -129,7 +129,7 @@ class Kernel2D:
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
-                          self.X_out.nbytes + self.Y_out.nbytes + self.exit_codes.nbytes)
+                          self.X_out.nbytes + self.Y_out.nbytes + self.exit_code.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
         print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
@@ -183,9 +183,9 @@ class Kernel2D:
         assert self.advection_scheme.value in (0, 1)
 
     def report_errors(self, particle_ids: np.ndarray):
-        if not np.all(self.exit_codes == 0):
-            error_str = f"{np.count_nonzero(self.exit_codes)} particle(s) did not exit successfully."
-            for i, code in enumerate(self.exit_codes[self.exit_codes != 0]):
+        if not np.all(self.exit_code == 0):
+            error_str = f"{np.count_nonzero(self.exit_code)} particle(s) did not exit successfully."
+            for i, code in enumerate(self.exit_code[self.exit_code != 0]):
                 error_str += f"\n Particle ID {particle_ids[i]} exited with error code {code}."
                 # look to kernel_2d.cl for error code definitions
             return error_str

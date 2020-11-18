@@ -45,10 +45,10 @@ __kernel void advect(
     const double eddy_diffusivity,
     const double windage_coeff,  // if nan, disables windage
     /* debugging utility */
-    __global unsigned char *exit_codes)
+    __global unsigned char *exit_code)
 {
     int global_id = get_global_id(0);
-    exit_codes[global_id] = FAILURE;  // unless noted otherwise...
+    if (exit_code[global_id] != SUCCESS) return;  // this indicates an error has already occured on this particle; quit
 
     const unsigned int out_timesteps = ntimesteps / save_every;
 
@@ -77,7 +77,7 @@ __kernel void advect(
 
         // quit if particle has null location, this is a disallowed state
         if (isnan(p.x) || isnan(p.y)) {
-            exit_codes[global_id] = NULL_LOCATION;
+            exit_code[global_id] = NULL_LOCATION;
             return;
         }
 
@@ -90,7 +90,7 @@ __kernel void advect(
             } else if (advection_scheme == TAYLOR2) {
                 displacement_meters = taylor2_displacement(p, current, dt);
             } else {
-                exit_codes[global_id] = INVALID_ADVECTION_SCHEME;
+                exit_code[global_id] = INVALID_ADVECTION_SCHEME;
                 return;  // complete execution
             }
 
@@ -119,5 +119,5 @@ __kernel void advect(
             write_p(p, X_out, Y_out, out_timesteps, out_idx);
         }
     }
-    exit_codes[global_id] = SUCCESS;
+    exit_code[global_id] = SUCCESS;
 }
