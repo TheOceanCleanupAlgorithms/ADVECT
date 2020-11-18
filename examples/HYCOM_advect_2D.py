@@ -14,7 +14,7 @@ SOURCEFILE_PATH = "./sourcefiles/2015_uniform_two_releases.nc"
 OUTPUT_FOLDER = "./outputfiles/HYCOM_2015/"
 
 ADVECTION_START = datetime(2015, 1, 1)
-ADVECTION_END = datetime(2015, 2, 1)
+ADVECTION_END = datetime(2016, 1, 1)
 
 EDDY_DIFFUSIVITY = 0  # m^2 / s, user determined
 WINDAGE_COEFF = .005  # fraction of wind speed transferred to particle, user determined
