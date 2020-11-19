@@ -15,7 +15,7 @@ from typing import Optional, Tuple, List
 from drivers.opencl_driver_3D import openCL_advect
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
-from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield, open_bathymetry
 
 
 def run_advector(
@@ -120,9 +120,12 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
+    bathymetry = open_bathymetry()
+
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
+        bathymetry=bathymetry,
         out_dir=Path(output_directory),
         p0=p0,
         start_time=advection_start_date,

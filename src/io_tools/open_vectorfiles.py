@@ -5,6 +5,8 @@ import glob
 import dask
 import numpy as np
 
+from resources.fetch_etopo1 import fetch_etopo1
+
 
 def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
     """
@@ -69,3 +71,12 @@ def empty_2D_vectorfield():
         },
         coords={"lon": [], "lat": [], "time": []},
     )
+
+
+def open_bathymetry() -> xr.Dataset:
+    etopo1_path = fetch_etopo1()
+    etopo1 = xr.open_dataset(etopo1_path)
+    etopo1['z'] = etopo1.z.astype(np.float32)
+    etopo1 = etopo1.rename({'x': 'lon', 'y': 'lat'})
+
+    return etopo1

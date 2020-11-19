@@ -18,6 +18,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 
 def openCL_advect(current: xr.Dataset,
                   wind: xr.Dataset,
+                  bathymetry: xr.Dataset,
                   out_dir: Path,
                   p0: xr.Dataset,
                   start_time: datetime.datetime,
@@ -34,6 +35,7 @@ def openCL_advect(current: xr.Dataset,
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
+    :param bathymetry: xarray Dataset storing bathymetry.
     :param out_dir: directory in which to save the outputfiles
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
