@@ -28,13 +28,13 @@ particle update_position_no_beaching(particle p, double dx, double dy, double dz
     particle new_p = update_position(p, dx, dy, dz);  // always use this to keep lat/lon/depth properly constrained
 
     // simple case
-    if (!is_on_land(new_p, field)) return new_p;
+    if (in_ocean(new_p, field)) return new_p;
 
     // particle will beach.  We don't want this, but we do want to try to move the particle in at least one direction.
     particle p_no_dy = update_position(p, dx, 0, dz);  // remove y component of displacement
     particle p_no_dx = update_position(p, 0, dy, dz);  // remove x component of displacement
-    bool is_sea_x = !is_on_land(p_no_dy, field);
-    bool is_sea_y = !is_on_land(p_no_dx, field);
+    bool is_sea_x = in_ocean(p_no_dy, field);
+    bool is_sea_y = in_ocean(p_no_dx, field);
 
     if (is_sea_x && is_sea_y) {  // could move in x OR y.  This is like being at a peninsula.
         if (degrees_lon_to_meters(dx, p.y) > degrees_lat_to_meters(dy, p.y)) {
@@ -79,11 +79,11 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
         return neighbor;
 }
 
-bool is_on_land(particle p, field3d field) {
-    /* where'er you find the vector to be nan,
-       you sure as hell can bet that this is land.
+bool in_ocean(particle p, field3d field) {
+    /* where'er you find the vector nan to be,
+       you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
     grid_point gp = find_nearest_neighbor(p, field);
     vector V = index_vector_field(field, gp, false);
-    return (isnan(V.x) || isnan(V.y) || isnan(V.z));
+    return !(isnan(V.x) || isnan(V.y) || isnan(V.z));
 }

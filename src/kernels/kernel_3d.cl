@@ -91,7 +91,7 @@ __kernel void advect(
             return;
         }
 
-        if (is_on_land(p, current)) {
+        if (!in_ocean(p, current)) {
             // do nothing; stuck forever
         } else {
             vector displacement_meters;
