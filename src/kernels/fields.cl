@@ -39,7 +39,7 @@ vector index_vector_field(field3d field, grid_point gp, bool zero_nans) {
     size_t flat_index = (((gp.t_idx*field.z_len) + gp.z_idx)*field.x_len + gp.x_idx)*field.y_len + gp.y_idx;
     vector V = {.x = field.U ? field.U[flat_index] : NAN, // these ternary expressions serve to stop indexing into
                 .y = field.V ? field.V[flat_index] : NAN, // an undefined variable
-                .z = field.W ? field.V[flat_index] : NAN};
+                .z = field.W ? field.W[flat_index] : NAN};
     if (zero_nans) {
         if (isnan(V.x)) V.x = 0;
         if (isnan(V.y)) V.y = 0;
