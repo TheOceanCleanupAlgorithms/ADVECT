@@ -36,9 +36,10 @@ vector index_vector_field(field3d field, grid_point gp, bool zero_nans) {
     assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1]
     optional: if zero_nans, any nans encountered will be replaced with zero.  useful for advection schemes.
     */
-    vector V = {.x = field.U[(((gp.t_idx*field.z_len) + gp.z_idx)*field.x_len + gp.x_idx)*field.y_len + gp.y_idx],
-                .y = field.V[(((gp.t_idx*field.z_len) + gp.z_idx)*field.x_len + gp.x_idx)*field.y_len + gp.y_idx],
-                .z = field.W[(((gp.t_idx*field.z_len) + gp.z_idx)*field.x_len + gp.x_idx)*field.y_len + gp.y_idx]};
+    size_t flat_index = (((gp.t_idx*field.z_len) + gp.z_idx)*field.x_len + gp.x_idx)*field.y_len + gp.y_idx;
+    vector V = {.x = field.U ? field.U[flat_index] : NAN, // these ternary expressions serve to stop indexing into
+                .y = field.V ? field.V[flat_index] : NAN, // an undefined variable
+                .z = field.W ? field.V[flat_index] : NAN};
     if (zero_nans) {
         if (isnan(V.x)) V.x = 0;
         if (isnan(V.y)) V.y = 0;
