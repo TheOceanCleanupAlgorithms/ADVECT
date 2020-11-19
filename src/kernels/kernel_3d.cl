@@ -104,7 +104,7 @@ __kernel void advect(
                 return;
             }
 
-            displacement_meters = add(displacement_meters, eddy_diffusion_meters(dt, &rstate, eddy_diffusivity));
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
             if (!isnan(windage_coeff)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
             }
