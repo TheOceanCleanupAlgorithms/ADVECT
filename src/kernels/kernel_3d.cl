@@ -74,7 +74,7 @@ __kernel void advect(
                     .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
                     .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
                     .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
-                    .U = wind_U, .V = wind_V};
+                    .U = wind_U, .V = wind_V, .W = 0};
 
     // loop timesteps
     particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
