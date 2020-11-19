@@ -17,4 +17,5 @@ dependencies:
   - click
   - ecco_v4_py
   - pytest
+  - python-wget
 prefix: /opt/miniconda3/envs/ADVECTOR
