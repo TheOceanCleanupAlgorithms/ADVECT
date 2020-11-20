@@ -8,7 +8,6 @@ typedef struct vector {
 } vector;
 
 vector add(vector a, vector b);
-double magnitude(vector v);
-vector * resolve_and_sort(vector v);
+void resolve_and_sort(vector v, vector result[3]);
 
 #endif // VECTOR
