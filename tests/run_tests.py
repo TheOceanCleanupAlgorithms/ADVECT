@@ -1,8 +1,5 @@
 import glob
-import importlib
 import os
-
-from config import ROOT_DIR
 
 tests = glob.glob(f'./**/*_test.py', recursive=True)
 

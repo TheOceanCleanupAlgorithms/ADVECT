@@ -1,14 +1,11 @@
 #include "vector.h"
 
-void * swap(void * arr, size_t i, size_t j);
-
 vector add(vector a, vector b) {
     vector res = {.x = a.x + b.x,
                   .y = a.y + b.y,
                   .z = a.z + b.z};
     return res;
 }
-
 
 void resolve_and_sort(vector v, vector result[3]) {
     /* Split v into 3 vectors, one for each dimension.  Return these sorted by magnitude.
