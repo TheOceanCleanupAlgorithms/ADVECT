@@ -28,3 +28,10 @@ vector index_vector_field(field2d field, grid_point gp, bool zero_nans) {
     return v;
 }
 
+double calculate_spacing(__global const double *arr, const unsigned int arr_len) {
+    if (arr_len > 1) {
+        return (arr[arr_len-1] - arr[0]) / (arr_len - 1);
+    } else {
+        return 0;
+    }
+}

@@ -57,16 +57,16 @@ __kernel void advect(
 
     field2d current = {.x = current_x, .y = current_y, .t = current_t,
                      .x_len = current_x_len, .y_len = current_y_len, .t_len = current_t_len,
-                     .x_spacing = (current_x[current_x_len-1]-current_x[0])/current_x_len,
-                     .y_spacing = (current_y[current_y_len-1]-current_y[0])/current_y_len,
-                     .t_spacing = (current_t[current_t_len-1]-current_t[0])/current_t_len,
+                     .x_spacing = calculate_spacing(current_x, current_x_len),
+                     .y_spacing = calculate_spacing(current_y, current_y_len),
+                     .t_spacing = calculate_spacing(current_t, current_t_len),
                      .U = current_U, .V = current_V};
 
     field2d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
                     .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
-                    .x_spacing = (wind_x[wind_x_len-1]-wind_x[0])/wind_x_len,
-                    .y_spacing = (wind_y[wind_y_len-1]-wind_y[0])/wind_y_len,
-                    .t_spacing = (wind_t[wind_t_len-1]-wind_t[0])/wind_t_len,
+                    .x_spacing = calculate_spacing(wind_x, wind_x_len),
+                    .y_spacing = calculate_spacing(wind_y, wind_y_len),
+                    .t_spacing = calculate_spacing(wind_t, wind_t_len),
                     .U = wind_U, .V = wind_V};
 
     // loop timesteps
