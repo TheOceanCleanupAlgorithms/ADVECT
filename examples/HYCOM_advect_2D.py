@@ -1,6 +1,7 @@
 """
 advect on HYCOM surface currents
 """
+import glob
 from run_advector import run_advector
 from plotting.plot_advection import plot_ocean_advection, plot_ocean_trajectories
 from datetime import datetime, timedelta
@@ -43,4 +44,4 @@ if __name__ == '__main__':
 
     for path in out_paths:
         plot_ocean_advection(path)
-        plot_ocean_trajectories(path)
+        plot_ocean_trajectories(path, glob.glob(U_WATER_PATH)[0], {'water_u': 'U'})
