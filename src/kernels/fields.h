@@ -20,5 +20,6 @@ typedef struct grid_point {
 vector index_vector_field(field3d field, grid_point gp, bool zero_nans);
 unsigned int find_nearest_neighbor_idx(double value, __global const double *arr, const unsigned int arr_len, const double spacing);
 unsigned int find_nearest_neighbor_idx_non_uniform(double value, __global const double *arr, const unsigned int arr_len);
+double calculate_spacing(__global const double *arr, const unsigned int arr_len);
 
 #endif // FIELDS

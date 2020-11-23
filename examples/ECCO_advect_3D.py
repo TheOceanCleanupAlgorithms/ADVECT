@@ -28,7 +28,7 @@ if __name__ == '__main__':
         wind_varname_map={'ULML': 'U', 'VLML': 'V'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
-        num_timesteps=24*365,
+        num_timesteps=24*100,
         save_period=24,
         advection_scheme='eulerian',
         eddy_diffusivity=EDDY_DIFFUSIVITY,
