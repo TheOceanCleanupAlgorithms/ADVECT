@@ -7,7 +7,7 @@ unsigned int find_nearest_neighbor_idx(double value, __global const double *arr,
             inside a kernel so we must perform the check in the host code.
         -- value MUST be non-nan.  This function produces UNDEFINED BEHAVIOR if value is nan.
     */
-    if (arr_len == 1 || spacing == 0) {  // handles singletons and protects against division by zero
+    if (arr_len == 1 || isnan(spacing) || spacing == 0) {  // handles singletons and protects against division by zero
         return 0;
     } else {
         return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
@@ -28,3 +28,10 @@ vector index_vector_field(field2d field, grid_point gp, bool zero_nans) {
     return v;
 }
 
+double calculate_spacing(__global const double *arr, const unsigned int arr_len) {
+    if (arr_len > 1) {
+        return (arr[arr_len-1] - arr[0]) / (arr_len - 1);
+    } else {
+        return NAN;
+    }
+}
