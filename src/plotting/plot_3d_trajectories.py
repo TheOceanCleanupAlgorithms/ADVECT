@@ -67,9 +67,31 @@ def plot_3d_trajectories(
     ax.set_zlabel('Depth (m)')
 
 
-#  view near tierra del fuego
+# cape horn
 plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
                      current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
                      lon_range=(-80, -60),
                      lat_range=(-60, -44),
-                     depth_range=(-800, 0))
+                     depth_range=(-800, -50))
+'''
+# zanzibar
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
+                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
+                     lon_range=(35, 50),
+                     lat_range=(-10, 10),
+                     depth_range=(-150, 0))
+
+# greenland
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
+                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
+                     lon_range=(-60, -35),
+                     lat_range=(55, 70),
+                     depth_range=(-1000, 0))
+
+# nz
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
+                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
+                     lon_range=(160, 180),
+                     lat_range=(-50, -30),
+                     depth_range=(-500, -10))
+'''

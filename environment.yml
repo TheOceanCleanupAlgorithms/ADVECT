@@ -16,4 +16,5 @@ dependencies:
   - tqdm
   - click
   - ecco_v4_py
+  - pytest
 prefix: /opt/miniconda3/envs/ADVECTOR

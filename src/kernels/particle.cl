@@ -23,38 +23,45 @@ particle constrain_coordinates(particle p) {
 }
 
 
-particle update_position_no_beaching(particle p, double dx, double dy, double dz, field3d field) {
+particle update_position_no_beaching(particle p, vector displacement_meters, field3d field) {
     /*so-called "slippery coastlines."  Try to move the particle by dx and dy, but avoid depositing it onto land.*/
-    particle new_p = update_position(p, dx, dy, dz);  // always use this to keep lat/lon/depth properly constrained
+    particle new_p = update_position(p, displacement_meters);  // always use this to keep lat/lon/depth properly constrained
 
     // simple case
-    if (!is_on_land(new_p, field)) return new_p;
+    if (in_ocean(new_p, field)) return new_p;
 
-    // particle will beach.  We don't want this, but we do want to try to move the particle in at least one direction.
-    particle p_no_dy = update_position(p, dx, 0, dz);  // remove y component of displacement
-    particle p_no_dx = update_position(p, 0, dy, dz);  // remove x component of displacement
-    bool is_sea_x = !is_on_land(p_no_dy, field);
-    bool is_sea_y = !is_on_land(p_no_dx, field);
+    // displacement will move particle out of ocean (aka, onto shoreline, or into bathymetry).
+    // We don't want this, so we'll modify displacement (but as little as possible)
 
-    if (is_sea_x && is_sea_y) {  // could move in x OR y.  This is like being at a peninsula.
-        if (degrees_lon_to_meters(dx, p.y) > degrees_lat_to_meters(dy, p.y)) {
-            return p_no_dy;            // we choose which way to go based on which vector component is stronger.
-        } else {
-            return p_no_dx;
-        }
-    } else if (is_sea_x) {      // we can only move in x; this is like being against a horizontal coastline
-        return p_no_dy;
-    } else if (is_sea_y) {      // we can only move in y; this is like being against a vertical coastline
-        return p_no_dx;
-    } else {                    // we can't move in x or y; this is like being in a corner, surrounded by land
-        return p;               // this also handles the case where particle's vertical movement has put it into seafloor.
-    }                           // TODO this vertical behavior should be improved in a future update.
+    // split displacement into components and sort them
+    vector ordered_components[3];
+    resolve_and_sort(displacement_meters, ordered_components);
+
+    particle candidates[6];
+    // remove a single component, smallest to largest
+    candidates[0] = update_position(p, add(ordered_components[1], ordered_components[2]));
+    candidates[1] = update_position(p, add(ordered_components[0], ordered_components[2]));
+    candidates[2] = update_position(p, add(ordered_components[0], ordered_components[1]));
+    // remove two components, smallest to largest
+    candidates[3] = update_position(p, ordered_components[2]);
+    candidates[4] = update_position(p, ordered_components[1]);
+    candidates[5] = update_position(p, ordered_components[0]);
+
+    for (int i=0; i<6; i++) {
+        if (in_ocean(candidates[i], field)) return candidates[i];
+    }
+
+    // don't move particle at all
+    return p;
 }
 
-particle update_position(particle p, double dx, double dy, double dz) {
-    p.x = p.x + dx;
-    p.y = p.y + dy;
-    p.z = p.z + dz;
+particle update_position(particle p, vector displacement_meters) {
+    double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
+    double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
+
+    p.x = p.x + dx_deg;
+    p.y = p.y + dy_deg;
+    p.z = p.z + displacement_meters.z;
     return constrain_coordinates(p);
 }
 
@@ -79,11 +86,11 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
         return neighbor;
 }
 
-bool is_on_land(particle p, field3d field) {
-    /* where'er you find the vector to be nan,
-       you sure as hell can bet that this is land.
+bool in_ocean(particle p, field3d field) {
+    /* where'er you find the vector nan to be,
+       you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
     grid_point gp = find_nearest_neighbor(p, field);
     vector V = index_vector_field(field, gp, false);
-    return (isnan(V.x) || isnan(V.y) || isnan(V.z));
+    return !(isnan(V.x) || isnan(V.y) || isnan(V.z));
 }

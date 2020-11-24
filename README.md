@@ -28,3 +28,7 @@ Update 1.2 will expand the consideration of coastal processes beyond simple beac
 5. Run example advection
 
     Once you're all set up according to `examples/README.txt`, you can execute `python examples/HYCOM_advect_2d.py`
+
+### Tests
+
+To run tests, run `python -m pytest` from the project root.

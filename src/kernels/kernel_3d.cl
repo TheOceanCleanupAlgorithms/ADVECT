@@ -91,7 +91,7 @@ __kernel void advect(
             return;
         }
 
-        if (is_on_land(p, current)) {
+        if (!in_ocean(p, current)) {
             // do nothing; stuck forever
         } else {
             vector displacement_meters;
@@ -109,10 +109,7 @@ __kernel void advect(
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
             }
 
-            double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
-            double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
-
-            p = update_position_no_beaching(p, dx_deg, dy_deg, displacement_meters.z, current);
+            p = update_position_no_beaching(p, displacement_meters, current);
 
             // If, for some reason, the particle latitude goes completely out of [-90, 90], note the error and exit.
             if (fabs(p.y) > 90) {
