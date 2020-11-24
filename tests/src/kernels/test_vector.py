@@ -6,7 +6,7 @@ import numpy as np
 from config import ROOT_DIR
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
-KERNEL_SOURCE = Path(__file__).parent / "vector_test.cl"
+KERNEL_SOURCE = Path(__file__).parent / "test_vector.cl"
 # setup
 ctx = cl.create_some_context(answers=[0, 2])
 queue = cl.CommandQueue(ctx)
@@ -54,7 +54,7 @@ def resolve_and_sort(x, y, z) -> np.ndarray:
     return np.stack((x_out, y_out, z_out)).T
 
 
-def resolve_sort_test():
+def test_resolve_sort():
     #  test sorted, backward sorted, pos/neg, mixed
     result = resolve_and_sort(1, 2, 3)
     np.testing.assert_allclose(result, [[1, 0, 0], [0, 2, 0], [0, 0, 3]])
@@ -73,7 +73,3 @@ def resolve_sort_test():
 
     result = resolve_and_sort(357.6,  -29.7, -203.0)
     np.testing.assert_allclose(result, [[0, -29.7, 0], [0, 0, -203.0], [357.6, 0, 0]])
-
-
-if __name__ == '__main__':
-    resolve_sort_test()
