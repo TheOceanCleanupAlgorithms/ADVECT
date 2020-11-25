@@ -6,6 +6,7 @@
 #include "advection_schemes.cl"
 #include "eddy_diffusion.cl"
 #include "windage.cl"
+#include "derivatives.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1};
 // positive codes are considered non-fatal, and are reported in outputfiles;
@@ -47,9 +48,14 @@ __kernel void advect(
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
     const double windage_coeff,  // if nan, disables windage
+    // const double acceleration_coeff, // if nan, don't take into account
+    // const double current_derivative_coeff, // if nan, don't take into account
     /* debugging utility */
     __global char *exit_code)
 {
+    const double acceleration_coeff = -10000;
+    const double current_derivative_coeff = 10000;
+
     int global_id = get_global_id(0);
     if (exit_code[global_id] != SUCCESS) return;  // this indicates an error has already occured on this particle; quit
 
@@ -69,9 +75,13 @@ __kernel void advect(
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
                     .U = wind_U, .V = wind_V};
 
-    // loop timesteps
+    // Initial setup
     particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .t = start_time};
+    vector previous_speed = {.x = 0, .y = 0};
+    vector second_previous_speed = {.x = 0, .y = 0};
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
+    
+    // loop timesteps
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
             p.t += dt;
@@ -101,11 +111,24 @@ __kernel void advect(
             if (!isnan(windage_coeff)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
             }
+            if (!isnan(current_derivative_coeff)) {
+                displacement_meters = add(displacement_meters, field_derivative_meters(p, current, dt, current_derivative_coeff));
+            }
+            if (!isnan(acceleration_coeff) && timestep >= 2) {
+                displacement_meters = add(
+                    displacement_meters,
+                    particle_acceleration_meters(previous_speed, second_previous_speed, dt, acceleration_coeff)
+                );
+            }
 
             double dx_deg = meters_to_degrees_lon(displacement_meters.x, p.y);
             double dy_deg = meters_to_degrees_lat(displacement_meters.y, p.y);
 
             p = update_position_no_beaching(p, dx_deg, dy_deg, current);
+
+            second_previous_speed = previous_speed;
+            previous_speed.x = displacement_meters.x / dt;
+            previous_speed.y = displacement_meters.y / dt;
 
             // If, for some reason, the particle latitude goes completely out of [-90, 90], note the error and exit.
             if (fabs(p.y) > 90) {
