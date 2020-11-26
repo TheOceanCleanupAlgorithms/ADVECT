@@ -1,4 +1,11 @@
 """
+Load ADVECTOR as a module
+"""
+import sys
+sys.path.insert(1, './src/')
+
+
+"""
 advect on HYCOM surface currents
 """
 import glob
@@ -7,11 +14,11 @@ from plotting.plot_advection import plot_ocean_advection, plot_ocean_trajectorie
 from datetime import datetime, timedelta
 
 
-U_WATER_PATH = "./HYCOM_currents/uv*2015*.nc"
-V_WATER_PATH = "./HYCOM_currents/uv*2015*.nc"
+U_WATER_PATH = "./examples/HYCOM_currents/uv*2015*.nc"
+V_WATER_PATH = "./examples/HYCOM_currents/uv*2015*.nc"
 U_WIND_PATH = "./MERRA2_wind/*2015*.nc"
 V_WIND_PATH = "./MERRA2_wind/*2015*.nc"
-SOURCEFILE_PATH = "./sourcefiles/2015_uniform_two_releases.nc"
+SOURCEFILE_PATH = "./sourcefiles/parts_source_201[45].nc"
 OUTPUT_FOLDER = "./outputfiles/HYCOM_2015/"
 
 ADVECTION_START = datetime(2015, 1, 1)
@@ -38,8 +45,8 @@ if __name__ == '__main__':
         save_period=24,
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         verbose=True,
-        # sourcefile_format="trashtracker",  # uncomment for trashtracker source files
-        memory_utilization=.4,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
+        sourcefile_format="trashtracker",  # uncomment for trashtracker source files
+        memory_utilization=.2,  # decrease if RAM overloaded.  Can be close to 1 on dedicated compute device (e.g. GPU)
     )
 
     for path in out_paths:
