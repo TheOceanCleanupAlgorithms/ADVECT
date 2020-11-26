@@ -39,6 +39,8 @@ __kernel void advect(
     __global const float *y0,         // lat, Deg N (-90 to 90)
     __global const float *z0,         // depth, m, positive up, <= 0
     __global const double *release_date,         // unix timestamp
+    __global const float *radius,      // particle radius, m
+    __global const float *density,     // particle density, kg m^-3
     /* advection time parameters */
     const double start_time,          // unix timestamp
     const double dt,             // seconds

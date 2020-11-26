@@ -31,6 +31,7 @@ class Kernel3D:
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
+                 density: np.ndarray, radius: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray, Z_out: np.ndarray,
@@ -47,6 +48,7 @@ class Kernel3D:
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
         self.x0, self.y0, self.z0, self.release_date = x0, y0, z0, release_date
+        self.radius, self.density = radius, density
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
         self.X_out, self.Y_out, self.Z_out = X_out, Y_out, Z_out
         self.advection_scheme = advection_scheme
@@ -74,13 +76,13 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date = \
+            d_x0, d_y0, d_z0, d_release_date, d_density, d_radius = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date))
+              self.x0, self.y0, self.z0, self.release_date, self.density, self.radius))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
         d_Z_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Z_out)
@@ -93,7 +95,7 @@ class Kernel3D:
                  None, None, None,
                  None, np.uint32, None, np.uint32, None, np.uint32,
                  None, None,
-                 None, None, None, None,
+                 None, None, None, None, None, None,
                  np.float64, np.float64, np.uint32, np.uint32,
                  None, None, None,
                  np.uint32, np.float64, np.float64,
@@ -110,7 +112,7 @@ class Kernel3D:
                 d_wind_y, np.uint32(len(self.wind_y)),
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
-                d_x0, d_y0, d_z0, d_release_date,
+                d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out, d_Z_out,
