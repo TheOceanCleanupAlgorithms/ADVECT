@@ -10,5 +10,6 @@ UINT_MAX = 0xffffffff
 EXIT_CODES = {'SUCCESS': 0,
               'NULL_LOCATION': 1,
               'INVALID_LATITUDE': 2,
+              'PARTICLE_TOO_LARGE': 3,
               'INVALID_ADVECTION_SCHEME': -1,
               }

@@ -9,6 +9,8 @@ typedef struct particle {
     double y;
     double z;
     double t;
+    double r;    // radius
+    double rho;  // density
 } particle;
 
 particle constrain_coordinates(particle p);
