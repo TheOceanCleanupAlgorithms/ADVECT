@@ -31,7 +31,7 @@ class Kernel3D:
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
-                 density: np.ndarray, radius: np.ndarray,
+                 radius: np.ndarray, density: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray, Z_out: np.ndarray,
@@ -76,13 +76,13 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date, d_density, d_radius = \
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date, self.density, self.radius))
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
         d_Z_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Z_out)
