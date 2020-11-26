@@ -18,7 +18,7 @@ from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 def openCL_advect(current: xr.Dataset,
                   wind: xr.Dataset,
                   out_dir: Path,
-                  p0: pd.DataFrame,
+                  p0: xr.Dataset,
                   start_time: datetime.datetime,
                   dt: datetime.timedelta,
                   num_timesteps: int,
@@ -32,13 +32,9 @@ def openCL_advect(current: xr.Dataset,
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
-                     Dimensions: {'time', 'lon', 'lat'}
-                     Variables: {'U', 'V'}
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
-                 Dimensions: {'time', 'lon', 'lat'}
-                 Variables: {'U', 'V'}
     :param out_dir: directory in which to save the outputfiles
-    :param p0: initial positions of particles, pandas dataframe with columns ['p_id', 'lon', 'lat', 'depth', 'release_date']
+    :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
@@ -51,7 +47,7 @@ def openCL_advect(current: xr.Dataset,
     :param verbose: determines whether to print buffer sizes and timing results
     :return: list of outputfile paths
     """
-    num_particles = len(p0)
+    num_particles = len(p0.p_id)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
     current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
     wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
@@ -75,8 +71,7 @@ def openCL_advect(current: xr.Dataset,
     buf_time, kernel_time = 0, 0
     writer = OutputWriter(out_dir=out_dir)
     create_logger(out_dir / "warnings.log")
-    p0_chunk = p0.copy()
-    p0_chunk['exit_code'] = np.zeros(len(p0_chunk))
+    p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
     for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
@@ -101,7 +96,7 @@ def openCL_advect(current: xr.Dataset,
             kernel.print_execution_time()
 
         P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                             previous_chunk=p0_chunk,
+                                             chunk_init_state=p0_chunk,
                                              advect_time=out_time_chunk)
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
 
@@ -110,15 +105,17 @@ def openCL_advect(current: xr.Dataset,
 
         writer.write_output_chunk(P_chunk)
 
-        p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
+        p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon', 'depth']] = p0[['lat', 'lon', 'depth']]
+        unreleased = p0_chunk.release_date > advect_time_chunk[-1]
+        for var in ['lat', 'lon', 'depth']:
+            p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
     return writer.paths
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
-                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: pd.DataFrame,
+                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel3D:
     """create and return the wrapper for the opencl kernel"""
@@ -144,7 +141,9 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             z0=p0.depth.values.astype(np.float32),
-            release_date=p0['release_date'].values.astype('datetime64[s]').astype(np.float64),
+            release_date=p0.release_date.values.astype('datetime64[s]').astype(np.float64),
+            radius=p0.radius.values.astype(np.float64),
+            density=p0.density.values.astype(np.float64),
             start_time=start_time.timestamp(),
             dt=dt.total_seconds(),
             ntimesteps=num_timesteps,
@@ -152,25 +151,24 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
             Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
             Z_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),
-            exit_code = p0.exit_code.values.astype(np.byte),
+            exit_code=p0.exit_code.values.astype(np.byte),
     )
 
 
-def create_dataset_from_kernel(kernel: Kernel3D, previous_chunk: pd.DataFrame, advect_time: pd.DatetimeIndex) -> xr.Dataset:
+def create_dataset_from_kernel(
+    kernel: Kernel3D, chunk_init_state: xr.Dataset, advect_time: pd.DatetimeIndex
+) -> xr.Dataset:
     """assumes kernel has been run"""
-    num_particles = len(kernel.x0)
-    lon = kernel.X_out.reshape([num_particles, -1])
-    lat = kernel.Y_out.reshape([num_particles, -1])
-    depth = kernel.Z_out.reshape([num_particles, -1])
+    P = chunk_init_state.assign_coords({"time": advect_time[1:]})  # add a time dimension
 
-    P = xr.Dataset(data_vars={'lon': (['p_id', 'time'], lon),
-                              'lat': (['p_id', 'time'], lat),
-                              'depth': (['p_id', 'time'], depth),
-                              'release_date': (['p_id'], previous_chunk.release_date.values),
-                              'exit_code': (['p_id'], kernel.exit_code)},
-                   coords={'p_id': previous_chunk.p_id.values,
-                           'time': advect_time[1:]}  # initial positions are not returned
-                   )
+    P = P.assign(  # overwrite with new data
+        {
+            "lon": (["p_id", "time"], kernel.X_out.reshape([len(P.p_id), -1])),
+            "lat": (["p_id", "time"], kernel.Y_out.reshape([len(P.p_id), -1])),
+            "depth": (["p_id", "time"], kernel.Z_out.reshape([len(P.p_id), -1])),
+            "exit_code": (["p_id"], kernel.exit_code),
+        }
+    )
     return P
 
 

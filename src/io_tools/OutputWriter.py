@@ -38,16 +38,31 @@ class OutputWriter:
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
 
-            ds.createDimension("time", None)  # unlimited dimension
             ds.createDimension("p_id", len(chunk.p_id))
+            ds.createDimension("time", None)  # unlimited dimension
 
+            # Variables that don't change between chunks
+            p_id = ds.createVariable("p_id", chunk.p_id.dtype, ("p_id",))
+            p_id[:] = chunk.p_id.values
+
+            release_date = ds.createVariable("release_date", np.float64, ("p_id",))
+            release_date.units = "seconds since 1970-01-01 00:00:00.0"
+            release_date.calendar = "gregorian"
+            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
+
+            radius = ds.createVariable("radius", np.float64, ("p_id",))
+            radius.units = "meters"
+            radius[:] = chunk.radius.values.astype(np.float64)
+
+            density = ds.createVariable("density", np.float64, ("p_id",))
+            density.units = "kg m^-3"
+            density[:] = chunk.density.values.astype(np.float64)
+
+            # Variables that expand/change between chunks
             time = ds.createVariable("time", np.float64, ("time",))
             time.units = "seconds since 1970-01-01 00:00:00.0"
             time.calendar = "gregorian"
             time[:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
-
-            p_id = ds.createVariable("p_id", chunk.p_id.dtype, ("p_id",))
-            p_id[:] = chunk.p_id.values
 
             lon = ds.createVariable("lon", chunk.lon.dtype, ("p_id", "time"))
             lon.units = "Degrees East"
@@ -61,11 +76,6 @@ class OutputWriter:
             depth.units = "meters"
             depth.positive = "up"
             depth[:] = chunk.depth.values
-
-            release_date = ds.createVariable("release_date", np.float64, ("p_id",))
-            release_date.units = "seconds since 1970-01-01 00:00:00.0"
-            release_date.calendar = "gregorian"
-            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
             exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
             exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \

@@ -14,7 +14,7 @@ class SourceFileFormat(Enum):
     advector = 1
 
 
-SOURCEFILE_VARIABLES = ['p_id', 'lon', 'lat', 'depth', 'release_date']
+SOURCEFILE_VARIABLES = {'p_id', 'lon', 'lat', 'depth', 'radius', 'density', 'release_date'}
 
 
 def datenum_to_datetimeNS64(datenum):
@@ -38,7 +38,7 @@ def open_sourcefiles(
     sourcefile_path: str,
     variable_mapping: Optional[dict],
     source_file_type: SourceFileFormat,
-) -> pd.DataFrame:
+) -> xr.Dataset:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
     :param variable_mapping: mapping from names in sourcefile to advector standard variable names
@@ -70,16 +70,13 @@ def open_sourcefiles(
     dims = list(sourcefile.dims.keys())
     assert len(dims) == 1, "sourcefile has more than one dimension."
 
-    if 'p_id' not in dims:
-        sourcefile = sourcefile.to_dataframe()
-    else:
-        sourcefile = sourcefile.to_dataframe().reset_index()  # move p_id from index to column
-
     for var in SOURCEFILE_VARIABLES:
-        assert var in sourcefile.columns, f"missing variable '{var}'.  If differently named, pass in mapping."
+        assert var in sourcefile.variables, f"missing variable '{var}'.  If differently named, pass in mapping."
 
     if source_file_type == SourceFileFormat.trashtracker:
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
         sourcefile['lon'] = ((sourcefile.lon + 180) % 360) - 180  # enforce [-180, 180] longitude
+
+    sourcefile.load()  # persist into RAM
 
     return sourcefile

@@ -19,7 +19,7 @@ WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that
 if __name__ == '__main__':
     out_paths = run_advector(
         output_directory='outputfiles/2015_ECCO/',
-        sourcefile_path='sourcefiles/2015_uniform_two_releases.nc',
+        sourcefile_path='sourcefiles/2015_uniform_surface.nc',
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
         w_water_path='ECCO/ECCO_interp/W_2015*.nc',
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         wind_varname_map={'ULML': 'U', 'VLML': 'V'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
-        num_timesteps=24*100,
+        num_timesteps=24*365,
         save_period=24,
         advection_scheme='eulerian',
         eddy_diffusivity=EDDY_DIFFUSIVITY,

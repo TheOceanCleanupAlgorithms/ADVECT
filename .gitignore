@@ -6,3 +6,5 @@ examples/sourcefiles/*.nc
 examples/HYCOM_currents
 .DS_Store
 .idea
+examples/ECCO/ECCO_interp
+examples/ECCO/ECCO_native
