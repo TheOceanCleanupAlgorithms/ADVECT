@@ -14,7 +14,7 @@ class SourceFileFormat(Enum):
     advector = 1
 
 
-SOURCEFILE_VARIABLES = ['p_id', 'lon', 'lat', 'depth', 'radius', 'density', 'release_date']
+SOURCEFILE_VARIABLES = {'p_id', 'lon', 'lat', 'depth', 'radius', 'density', 'release_date'}
 
 
 def datenum_to_datetimeNS64(datenum):

@@ -96,7 +96,7 @@ def openCL_advect(current: xr.Dataset,
             kernel.print_execution_time()
 
         P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                             previous_chunk=p0_chunk,
+                                             chunk_init_state=p0_chunk,
                                              advect_time=out_time_chunk)
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
 
@@ -105,7 +105,7 @@ def openCL_advect(current: xr.Dataset,
 
         writer.write_output_chunk(P_chunk)
 
-        p0_chunk = P_chunk.isel(time=-1)  # move p_id from index to column
+        p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         unreleased = p0_chunk.release_date > advect_time_chunk[-1]
         for var in ['lat', 'lon', 'depth']:
@@ -156,10 +156,10 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
 
 
 def create_dataset_from_kernel(
-    kernel: Kernel3D, previous_chunk: xr.Dataset, advect_time: pd.DatetimeIndex
+    kernel: Kernel3D, chunk_init_state: xr.Dataset, advect_time: pd.DatetimeIndex
 ) -> xr.Dataset:
     """assumes kernel has been run"""
-    P = previous_chunk.assign_coords({"time": advect_time[1:]})  # add a time dimension
+    P = chunk_init_state.assign_coords({"time": advect_time[1:]})  # add a time dimension
 
     P = P.assign(  # overwrite with new data
         {
