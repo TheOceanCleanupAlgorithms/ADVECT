@@ -6,6 +6,7 @@ from typing import Optional
 
 import xarray as xr
 import pandas as pd
+import numpy as np
 
 
 class SourceFileFormat(Enum):
@@ -81,5 +82,8 @@ def open_sourcefiles(
     if source_file_type == SourceFileFormat.trashtracker:
         sourcefile['release_date'] = pd.to_datetime(sourcefile['release_date'].apply(datenum_to_datetimeNS64))
         sourcefile['lon'] = ((sourcefile.lon + 180) % 360) - 180  # enforce [-180, 180] longitude
+    
+    if not sourcefile['p_id'].is_unique:
+        sourcefile['p_id'] = np.arange(len(sourcefile['p_id']))
 
     return sourcefile
