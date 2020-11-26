@@ -11,9 +11,8 @@ vector buoyancy_transport(particle p, double dt) {
     */
     vector displacement_meters = {.x = 0, .y = 0, .z = 0};
 
-    double D_star = fabs(p.rho - DENSITY_SEAWATER) * ACC_GRAVITY * pow(2*p.r, 3) /
-                    (DENSITY_SEAWATER * pow(KINEMATIC_VISCOSITY_SEAWATER, 2));
-
+    double D_star = fabs((p.rho - DENSITY_SEAWATER) * ACC_GRAVITY * pow(2*p.r, 3) /
+                    (DENSITY_SEAWATER * pow(KINEMATIC_VISCOSITY_SEAWATER, 2)));
 
     double W_star;  // dimensionless settling velocity
     if (D_star < .05) {
