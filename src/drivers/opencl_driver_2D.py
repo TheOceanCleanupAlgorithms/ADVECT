@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from drivers.particles_chunking import chunk_particles
@@ -29,7 +29,7 @@ def openCL_advect(current: xr.Dataset,
                   eddy_diffusivity: float,
                   windage_coeff: Optional[float],
                   memory_utilization: float,
-                  opencl_devices: Union[List[Tuple[int]], None] = None,
+                  platform_and_device: Tuple[int] = None,
                   verbose=False) -> List[Path]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
@@ -49,25 +49,24 @@ def openCL_advect(current: xr.Dataset,
     :param eddy_diffusivity: constant, scales random walk, model dependent value
     :param windage_coeff: constant in [0, 1], fraction of windspeed applied to particle
     :param memory_utilization: fraction of the opencl device memory available for buffers
-    :param opencl_device: indices of platform/device to execute program.  None initiates interactive mode.
+    :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
     :return: list of outputfile paths
     """
-    # choose the device(s) we're running on
-    if opencl_devices is None:
-        contexts = [cl.create_some_context(interactive=True)]
-    else:
-        contexts = [cl.create_some_context(answers=list(device)) 
-                    for device in opencl_devices]
-
-    num_kernels = len(contexts)
+    num_kernels = 1
     max_num_particles_per_kernel = (len(p0) // num_kernels) + (0 if len(p0) % num_kernels == 0 else 1)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
     current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
     wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
 
+    # choose the device/platform we're running on
+    if platform_and_device is None:
+        context = cl.create_some_context(interactive=True)
+    else:
+        context = cl.create_some_context(answers=list(platform_and_device))
+
     # get the minimum RAM available on the specified compute devices.
-    available_RAM = min(device.global_mem_size for device in contexts[0].devices) * memory_utilization
+    available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
     advect_time_chunks, out_time_chunks, current_chunks, wind_chunks = \
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
@@ -100,7 +99,7 @@ def openCL_advect(current: xr.Dataset,
                 num_particles = len(p0_subchunk)
 
                 kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
-                                    context=contexts[kernel_idx], current=current_chunk, wind=wind_chunk, p0=p0_subchunk,
+                                    context=context, current=current_chunk, wind=wind_chunk, p0=p0_subchunk,
                                     num_particles=num_particles, dt=dt, start_time=advect_time_chunk[0],
                                     num_timesteps=num_timesteps_chunk, save_every=save_every, out_timesteps=out_timesteps_chunk)
                 kernels.append(kernel)

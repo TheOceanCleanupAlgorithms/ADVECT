@@ -10,7 +10,7 @@ See src/data_specifications.md for detailed description of data format requireme
 
 import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
@@ -32,7 +32,7 @@ def run_advector(
     sourcefile_format: str = 'advector',
     sourcefile_varname_map: Optional[dict] = None,
     water_varname_map: Optional[dict] = None,
-    opencl_devices: Union[List[Tuple[int]], None] = None,
+    opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
@@ -69,7 +69,7 @@ def run_advector(
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
         data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
-    :param opencl_devices: specifies hardware for computation.  If None (default), the user will receive a series of
+    :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
     :param memory_utilization: this defines what percentage of the opencl device memory will be assumed usable.
@@ -129,7 +129,7 @@ def run_advector(
         advection_scheme=scheme_enum,
         eddy_diffusivity=eddy_diffusivity,
         windage_coeff=windage_coeff,
-        opencl_devices=opencl_devices,
+        platform_and_device=opencl_device,
         verbose=verbose,
         memory_utilization=memory_utilization,
     )
