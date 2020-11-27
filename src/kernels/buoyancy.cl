@@ -31,7 +31,7 @@ vector buoyancy_transport(particle p, double dt) {
     }
 
     // Dietrich 1982, eq. 5 rearranged
-    double settling_velocity = cbrt((W_star * (DENSITY_SEAWATER - p.rho) * ACC_GRAVITY * KINEMATIC_VISCOSITY_SEAWATER) / p.rho);
+    double settling_velocity = cbrt((W_star * (DENSITY_SEAWATER - p.rho) * ACC_GRAVITY * KINEMATIC_VISCOSITY_SEAWATER) / DENSITY_SEAWATER);
     displacement_meters.z = -settling_velocity * dt;
     return displacement_meters;
 }
