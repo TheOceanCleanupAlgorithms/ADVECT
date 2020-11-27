@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 import pyopencl as cl
-import multiprocessing as mp
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -12,7 +11,6 @@ import pandas as pd
 from typing import Tuple, Optional, List
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
-from drivers.particles_chunking import chunk_particles
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel2D import Kernel2D, AdvectionScheme
 
@@ -53,8 +51,7 @@ def openCL_advect(current: xr.Dataset,
     :param verbose: determines whether to print buffer sizes and timing results
     :return: list of outputfile paths
     """
-    num_kernels = 1
-    max_num_particles_per_kernel = (len(p0) // num_kernels) + (0 if len(p0) % num_kernels == 0 else 1)
+    num_particles = len(p0)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
     current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
     wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
@@ -71,7 +68,7 @@ def openCL_advect(current: xr.Dataset,
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
                                wind=wind,
-                               num_particles=max_num_particles_per_kernel,
+                               num_particles=num_particles,
                                advect_time=advect_time,
                                save_every=save_every)
 
@@ -88,44 +85,28 @@ def openCL_advect(current: xr.Dataset,
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
 
-        p0_subchunks = chunk_particles(num_kernels, p0_chunk)
-        kernels = []
-
-        # create the kernel wrapper objects, pass them arguments
+        # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            for kernel_idx in range(num_kernels):
-                print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
-                p0_subchunk = p0_subchunks[kernel_idx]
-                num_particles = len(p0_subchunk)
+            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
+            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
+                                   context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
+                                   dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
+                                   out_timesteps=out_timesteps_chunk)
+        kernel.execute()
 
-                kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
-                                    context=context, current=current_chunk, wind=wind_chunk, p0=p0_subchunk,
-                                    num_particles=num_particles, dt=dt, start_time=advect_time_chunk[0],
-                                    num_timesteps=num_timesteps_chunk, save_every=save_every, out_timesteps=out_timesteps_chunk)
-                kernels.append(kernel)
+        buf_time += kernel.buf_time
+        kernel_time += kernel.kernel_time
+        if verbose:
+            kernel.print_memory_footprint()
+            kernel.print_execution_time()
 
-        def execute_kernel_and_assemble_output(kernel, p0_subchunk):
-            kernel.execute()
-
-            if verbose:
-                kernel.print_memory_footprint()
-                kernel.print_execution_time()
-
-            P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                                previous_chunk=p0_subchunk,
-                                                advect_time=out_time_chunk)
-            handle_errors(chunk=P_chunk, chunk_num=i + 1)
-            
-            del kernel  # important for releasing memory for the next iteration
-
-            return P_chunk
-
-        with mp.pool.ThreadPool(num_kernels) as tp:
-            P_subchunks = tp.starmap(execute_kernel_and_assemble_output, zip(kernels, p0_subchunks))
-
+        P_chunk = create_dataset_from_kernel(kernel=kernel,
+                                             previous_chunk=p0_chunk,
+                                             advect_time=out_time_chunk)
+        handle_errors(chunk=P_chunk, chunk_num=i + 1)
+        
+        del kernel  # important for releasing memory for the next iteration
         gc.collect()
-
-        P_chunk = xr.merge(P_subchunks)
 
         writer.write_output_chunk(P_chunk)
 
