@@ -1,37 +1,45 @@
 #include "buoyancy.h"
 #include "physical_constants.h"
 
-vector buoyancy_transport(particle p, double dt) {
-    /* calculate displacement of particle due to density differential between particle and seawater.
-       Assumes particle is always at terminal velocity appropriate for its buoyancy/radius.
-       Terminal velocity given by method in Dietrich 1982
+double estimate_w_terminal(particle p);
+
+particle update_w_terminal(particle p) {
+    /* Update the terminal velocity on a particle.
+       Uses p.w_terminal as a characteristic velocity for calculating drag coefficient
+       Calling this function repeatedly will converge to the particle's true terminal velocity.
        Density and kinematic viscosity of seawater are considered constant.
-
-       If return vector's z component is NAN, this indicates failure due to particle radius being too large.
+       If particle does not yet posses terminal velocity state, set p.w_terminal = NAN.
     */
-    vector displacement_meters = {.x = 0, .y = 0, .z = 0};
 
-    double D_star = fabs((p.rho - DENSITY_SEAWATER) * ACC_GRAVITY * pow(2*p.r, 3) /
-                    (DENSITY_SEAWATER * pow(KINEMATIC_VISCOSITY_SEAWATER, 2)));
-
-    double W_star;  // dimensionless settling velocity
-    if (D_star < .05) {
-        // Dietrich 1982, eq. 8
-        W_star = pow(D_star, 2) / 5832;
-    } else if (D_star <= 5e9) {
-        // Dietrich 1982, eq. 9
-        W_star = pow(10, -3.76715 +
-                          1.92944 *     log10(D_star) -
-                          0.09815 * pow(log10(D_star), 2) -
-                          0.00575 * pow(log10(D_star), 3) +
-                          0.00056 * pow(log10(D_star), 4));
-    } else {
-        displacement_meters.z = NAN;  // flag failure
-        return displacement_meters;
+    if (DENSITY_SEAWATER == p.rho) {  // neutrally buoyant, this all doesn't apply.
+        p.w_terminal = 0;
+        return p;
     }
 
-    // Dietrich 1982, eq. 5 rearranged
-    double settling_velocity = cbrt((W_star * (DENSITY_SEAWATER - p.rho) * ACC_GRAVITY * KINEMATIC_VISCOSITY_SEAWATER) / p.rho);
-    displacement_meters.z = -settling_velocity * dt;
-    return displacement_meters;
+    if (isnan(p.w_terminal) || p.w_terminal == 0) {  // this indicates we need to guess an initial state
+        p.w_terminal = estimate_w_terminal(p);
+    }
+
+    double V_p = 4/3 * PI * pow(p.r, 3);  // volume of particle
+    double A_p = PI * pow(p.r, 2);  // cross sectional area
+
+    double F_b = -(DENSITY_SEAWATER * V_p * ACC_GRAVITY);  // buoyancy force
+    double F_g = p.rho * V_p * ACC_GRAVITY;  // force due to gravity
+    // we know forces balance (because we assume terminal velocity) thus
+    double F_d = -(F_b + F_g);  // drag force
+
+    // drag coefficient
+    if (isnan(p.w_terminal) || p.w_terminal == 0) {  // indicates we need to guess an initial state
+        C_D = .5;
+    } else {
+        C_D = 2 * F_d / (DENSITY_SEAWATER * pow(p.w_terminal, 2) * A_p);
+    }
+
+    double terminal_velocity = sqrt((2 * ACC_GRAVITY * p.r) / (3 * C_d) * (p.rho - DENSITY_SEAWATER)/DENSITY_SEAWATER);
+
+    p.w_terminal = settling_velocity;
+}
+
+double estimate_w_terminal(particle p) {
+    return 0;
 }

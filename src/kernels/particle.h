@@ -11,6 +11,7 @@ typedef struct particle {
     double t;
     double r;    // radius
     double rho;  // density
+    double w_terminal;  // terminal velocity of particle
 } particle;
 
 particle constrain_coordinates(particle p);

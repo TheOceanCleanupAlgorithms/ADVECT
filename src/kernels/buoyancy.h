@@ -4,6 +4,6 @@
 #include "vector.h"
 #include "particle.h"
 
-vector buoyancy_transport(particle p, double dt);
+particle update_w_terminal(particle p);
 
 #endif // BUOYANCY

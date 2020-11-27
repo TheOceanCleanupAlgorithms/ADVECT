@@ -82,7 +82,9 @@ __kernel void advect(
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
-                  .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
+                  .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time,
+                  .w_terminal = NAN};  // unknown
+
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
@@ -109,12 +111,7 @@ __kernel void advect(
                 return;
             }
 
-            vector buoyancy_transport_meters = buoyancy_transport(p, dt);
-            if (isnan(buoyancy_transport_meters.z)) {
-                exit_code[global_id] = PARTICLE_TOO_LARGE;
-                return;
-            }
-            displacement_meters = add(displacement_meters, buoyancy_transport_meters);
+            displacement_meters.z += buoyancy_displacement(bstate, dt);  // move according to buoyancy forces
 
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
             if (!isnan(windage_coeff)) {
@@ -122,6 +119,7 @@ __kernel void advect(
             }
 
             p = update_position_no_beaching(p, displacement_meters, current);
+            bstate = update_buoyancy_state(p, bstate, dt);
 
             // If, for some reason, the particle latitude goes completely out of [-90, 90], note the error and exit.
             if (fabs(p.y) > 90) {
