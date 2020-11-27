@@ -7,8 +7,9 @@ accessible to the python runtime.
 UINT_MAX = 0xffffffff
 
 # these match the definitions in kernel_2d.cl.
-EXIT_CODES = {'SUCCESS': 0,
-              'NULL_LOCATION': 1,
-              'INVALID_LATITUDE': 2,
-              'INVALID_ADVECTION_SCHEME': -1,
+EXIT_CODES = {0: 'SUCCESS',
+              1: 'NULL_LOCATION',
+              2: 'INVALID_LATITUDE',
+              3: 'PARTICLE_TOO_LARGE',
+              -1: 'INVALID_ADVECTION_SCHEME',
               }

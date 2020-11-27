@@ -6,8 +6,10 @@
 #include "advection_schemes.cl"
 #include "eddy_diffusion.cl"
 #include "windage.cl"
+#include "buoyancy.cl"
 
-enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1};
+enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
+               INVALID_ADVECTION_SCHEME = -1};
 // positive codes are considered non-fatal, and are reported in outputfiles;
 // negative codes are considered fatal, cause host-program termination, and are reserved for internal use.
 // if you change these codes, update in src/kernel_wrappers/kernel_constants.py
@@ -79,7 +81,8 @@ __kernel void advect(
                     .U = wind_U, .V = wind_V, .W = 0};
 
     // loop timesteps
-    particle p = {.id = global_id, .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
+    particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
+                  .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
     for (unsigned int timestep=0; timestep<ntimesteps; timestep++) {
         if (p.t < release_date[p.id]) {  // wait until the particle is released to start advecting and writing output
@@ -105,6 +108,13 @@ __kernel void advect(
                 exit_code[global_id] = INVALID_ADVECTION_SCHEME;
                 return;
             }
+
+            vector buoyancy_transport_meters = buoyancy_transport(p, dt);
+            if (isnan(buoyancy_transport_meters.z)) {
+                exit_code[global_id] = PARTICLE_TOO_LARGE;
+                return;
+            }
+            displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
             if (!isnan(windage_coeff)) {

@@ -81,7 +81,7 @@ class OutputWriter:
             exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
                                     "kernel must be terminated.  Their semantic meaning is provided in the " \
                                     "'code_to_meaning' attribute of this variable."
-            exit_code.code_to_meaning = str({code: meaning for meaning, code in EXIT_CODES.items() if code >= 0})
+            exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
             exit_code[:] = chunk.exit_code.values
 
     def _append_chunk(self, chunk: xr.Dataset):

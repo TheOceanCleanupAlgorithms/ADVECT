@@ -13,6 +13,7 @@ from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
+from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def openCL_advect(current: xr.Dataset,
@@ -184,7 +185,9 @@ def create_logger(log_path: Path):
 
 def handle_errors(chunk: xr.Dataset, chunk_num: int):
     if not np.all(chunk.exit_code == 0):
-        logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully.")
+        bad_codes = np.unique(chunk.exit_code[chunk.exit_code != 0])
+        logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
+                      f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in bad_codes]}")
         for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
             logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
     if np.any(chunk.exit_code < 0):
