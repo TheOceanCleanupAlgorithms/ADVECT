@@ -94,23 +94,16 @@ def openCL_advect(current: xr.Dataset,
 
         # create the kernel wrapper objects, pass them arguments
         with ProgressBar():
-            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
-            cached_current_U = current_chunk.U.values
-            cached_current_V = current_chunk.V.values
-
-            print(f'  Creating kernel(s)')
             for kernel_idx in range(num_kernels):
+                print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
                 p0_subchunk = p0_subchunks[kernel_idx]
                 num_particles = len(p0_subchunk)
 
                 kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
-                                    context=contexts[kernel_idx], current=current_chunk, cached_current_U=cached_current_U,
-                                    cached_current_V=cached_current_V, wind=wind_chunk, p0=p0_subchunk,
+                                    context=contexts[kernel_idx], current=current_chunk, wind=wind_chunk, p0=p0_subchunk,
                                     num_particles=num_particles, dt=dt, start_time=advect_time_chunk[0],
                                     num_timesteps=num_timesteps_chunk, save_every=save_every, out_timesteps=out_timesteps_chunk)
                 kernels.append(kernel)
-            
-        print(f'  Executing kernel(s)')
 
         def execute_kernel_and_assemble_output(kernel, p0_subchunk):
             kernel.execute()
@@ -145,8 +138,7 @@ def openCL_advect(current: xr.Dataset,
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
-                  context: cl.Context, current: xr.Dataset, cached_current_U: np.ndarray,
-                  cached_current_V: np.ndarray, wind: xr.Dataset, p0: pd.DataFrame,
+                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: pd.DataFrame,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel2D:
     """create and return the wrapper for the opencl kernel"""
@@ -160,8 +152,8 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             current_x=current.lon.values.astype(np.float64),
             current_y=current.lat.values.astype(np.float64),
             current_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            current_U=cached_current_U.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
-            current_V=cached_current_V.astype(np.float32, copy=False).ravel(),
+            current_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
+            current_V=current.V.values.astype(np.float32, copy=False).ravel(),
             wind_x=wind.lon.values.astype(np.float64),
             wind_y=wind.lat.values.astype(np.float64),
             wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
