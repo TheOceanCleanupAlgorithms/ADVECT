@@ -67,6 +67,7 @@ def openCL_advect(current: xr.Dataset,
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
                                wind=wind,
+                               bathymetry=bathymetry,
                                num_particles=num_particles,
                                advect_time=advect_time,
                                save_every=save_every)
