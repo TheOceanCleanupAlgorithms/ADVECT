@@ -36,6 +36,12 @@ __kernel void advect(
     const unsigned int wind_t_len,   // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,    // m / s, 32 bit to save space
     __global const float *wind_V,    // m / s
+    /* bathymetry vector field */
+    __global const double *bathymetry_x,    // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int bathymetry_x_len,   // 1 <= bathymetry_x_len <= UINT_MAX + 1
+    __global const double *bathymetry_y,    // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int bathymetry_y_len,   // 1 <= bathymetry_y_len <= UINT_MAX + 1
+    __global const float *bathymetry_Z,    // m, 32 bit to save space
     /* particle initialization information */
     __global const float *x0,         // lon, Deg E (-180 to 180)
     __global const float *y0,         // lat, Deg N (-90 to 90)

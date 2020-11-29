@@ -90,7 +90,7 @@ def openCL_advect(current: xr.Dataset,
             kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_coeff=windage_coeff,
                                    context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
                                    dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
-                                   out_timesteps=out_timesteps_chunk)
+                                   out_timesteps=out_timesteps_chunk, bathymetry=bathymetry)
         kernel.execute()
 
         buf_time += kernel.buf_time
@@ -119,7 +119,8 @@ def openCL_advect(current: xr.Dataset,
 
 
 def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: float,
-                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
+                  context: cl.Context, p0: xr.Dataset,
+                  current: xr.Dataset, wind: xr.Dataset, bathymetry: xr.Dataset,
                   num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
                   num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel3D:
     """create and return the wrapper for the opencl kernel"""
@@ -142,6 +143,9 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
             wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
+            bathymetry_x=bathymetry.lon.values.astype(np.float64),
+            bathymetry_y=bathymetry.lat.values.astype(np.float64),
+            bathymetry_Z=bathymetry.elevation.values.astype(np.float32),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             z0=p0.depth.values.astype(np.float32),

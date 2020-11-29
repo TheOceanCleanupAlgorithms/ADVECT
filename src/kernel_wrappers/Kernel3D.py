@@ -30,6 +30,7 @@ class Kernel3D:
                  current_U: np.ndarray, current_V: np.ndarray, current_W: np.ndarray,
                  wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
                  wind_U: np.ndarray, wind_V: np.ndarray,
+                 bathymetry_x: np.ndarray, bathymetry_y: np.ndarray, bathymetry_Z: np.ndarray,
                  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
                  radius: np.ndarray, density: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
@@ -47,6 +48,7 @@ class Kernel3D:
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
+        self.bathymetry_x, self.bathymetry_y, self.bathymetry_Z = bathymetry_x, bathymetry_y, bathymetry_Z
         self.x0, self.y0, self.z0, self.release_date = x0, y0, z0, release_date
         self.radius, self.density = radius, density
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
@@ -76,12 +78,14 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
+            d_bathymetry_x, d_bathymetry_y, d_bathymetry_Z, \
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_density = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
+              self.bathymetry_x, self.bathymetry_y, self.bathymetry_Z,
               self.x0, self.y0, self.z0, self.release_date, self.radius, self.density))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
@@ -91,15 +95,16 @@ class Kernel3D:
 
         # execute the program
         self.cl_kernel.set_scalar_arg_dtypes(
-                [None, np.uint32, None, np.uint32, None, np.uint32, None, np.uint32,
+                [None, np.uint32, None, np.uint32, None, np.uint32, None, np.uint32,  # current
                  None, None, None,
-                 None, np.uint32, None, np.uint32, None, np.uint32,
+                 None, np.uint32, None, np.uint32, None, np.uint32,  # wind
                  None, None,
-                 None, None, None, None, None, None,
-                 np.float64, np.float64, np.uint32, np.uint32,
-                 None, None, None,
-                 np.uint32, np.float64, np.float64,
-                 None])
+                 None, np.uint32, None, np.uint32, None,  # bathymetry
+                 None, None, None, None, None, None,  # particle state
+                 np.float64, np.float64, np.uint32, np.uint32,  # advection time parameters
+                 None, None, None,  # output
+                 np.uint32, np.float64, np.float64,  # physics parameters
+                 None])  # exit codes
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -112,6 +117,9 @@ class Kernel3D:
                 d_wind_y, np.uint32(len(self.wind_y)),
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
+                d_bathymetry_x, np.uint32(len(self.bathymetry_x)),
+                d_bathymetry_y, np.uint32(len(self.bathymetry_y)),
+                d_bathymetry_Z,
                 d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
