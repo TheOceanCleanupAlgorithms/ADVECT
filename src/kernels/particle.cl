@@ -23,12 +23,12 @@ particle constrain_coordinates(particle p) {
 }
 
 
-particle update_position_no_beaching(particle p, vector displacement_meters, field3d field) {
+particle update_position_no_beaching(particle p, vector displacement_meters, bathymetry bathy) {
     /*so-called "slippery coastlines."  Try to move the particle by dx and dy, but avoid depositing it onto land.*/
     particle new_p = update_position(p, displacement_meters);  // always use this to keep lat/lon/depth properly constrained
 
     // simple case
-    if (in_ocean(new_p, field)) return new_p;
+    if (in_ocean(new_p, bathy)) return new_p;
 
     // displacement will move particle out of ocean (aka, onto shoreline, or into bathymetry).
     // We don't want this, so we'll modify displacement (but as little as possible)
@@ -48,7 +48,7 @@ particle update_position_no_beaching(particle p, vector displacement_meters, fie
     candidates[5] = update_position(p, ordered_components[0]);
 
     for (int i=0; i<6; i++) {
-        if (in_ocean(candidates[i], field)) return candidates[i];
+        if (in_ocean(candidates[i], bathy)) return candidates[i];
     }
 
     // don't move particle at all
@@ -86,11 +86,7 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
         return neighbor;
 }
 
-bool in_ocean(particle p, field3d field) {
-    /* where'er you find the vector nan to be,
-       you sure as heck can bet this ain't the sea.
-        -- William Shakespeare */
-    grid_point gp = find_nearest_neighbor(p, field);
-    vector V = index_vector_field(field, gp, false);
-    return !(isnan(V.x) || isnan(V.y) || isnan(V.z));
+bool in_ocean(particle p, bathymetry bathy) {
+    vector location = {.x = p.x, .y = p.y, .z = p.z};
+    return location_is_in_ocean(location, bathy);
 }

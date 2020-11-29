@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 
 
-ETOPO_PATH = Path(__file__).parent / "ETOPO1_BEDROCK_GRID.nc"
+ETOPO_PATH = Path(__file__).parent / "ETOPO1_ICE_SURFACE_GRID.nc"
 ETOPO_URL = (
     "https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO1/data/"
-    "bedrock/grid_registered/netcdf/ETOPO1_Bed_g_gmt4.grd.gz"
+    "ice_surface/grid_registered/netcdf/ETOPO1_Ice_g_gmt4.grd.gz"
 )
 
 
@@ -18,7 +18,10 @@ def fetch_etopo1() -> Path:
     if not ETOPO_PATH.exists():
         print("Downloading ETOPO1...")
         zipped = ETOPO_PATH.with_suffix(".gz")
-        wget.download(ETOPO_URL, str(zipped))
+
+        def bar_custom(current, total, width=80):
+            print("Downloading: %d%% [%d / %d] bytes" % (current / total * 100, current, total), end='\r')
+        wget.download(ETOPO_URL, str(zipped), bar=bar_custom)
 
         print("\nUnzipping ETOPO1...")
         with gzip.open(zipped, "rb") as f_in:

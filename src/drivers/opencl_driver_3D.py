@@ -126,6 +126,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
     """create and return the wrapper for the opencl kernel"""
     current = current.transpose('time', 'depth', 'lon', 'lat')
     wind = wind.transpose('time', 'lon', 'lat')
+    bathymetry = bathymetry.transpose('lat', 'lon')
     return Kernel3D(
             advection_scheme=advection_scheme,
             eddy_diffusivity=eddy_diffusivity,
@@ -145,7 +146,7 @@ def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, wi
             wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
             bathymetry_x=bathymetry.lon.values.astype(np.float64),
             bathymetry_y=bathymetry.lat.values.astype(np.float64),
-            bathymetry_Z=bathymetry.elevation.values.astype(np.float32),
+            bathymetry_Z=bathymetry.elevation.values.astype(np.float32, copy=False).ravel(),
             x0=p0.lon.values.astype(np.float32),
             y0=p0.lat.values.astype(np.float32),
             z0=p0.depth.values.astype(np.float32),

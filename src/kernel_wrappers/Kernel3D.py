@@ -147,10 +147,12 @@ class Kernel3D:
                       self.wind_U.nbytes + self.wind_V.nbytes)
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
+        bathymetry_bytes = (self.bathymetry_x.nbytes + self.bathymetry_y.nbytes + self.bathymetry_Z.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
         print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
-        print(f'Total:              {(current_bytes + wind_bytes + particle_bytes) / 1e6:10.3f} MB')
+        print(f'Bathymetry        : {bathymetry_bytes / 1e6:10.3f} MB')
+        print(f'Total:              {(current_bytes + wind_bytes + particle_bytes + bathymetry_bytes) / 1e6:10.3f} MB')
         print('')
 
     def print_execution_time(self):

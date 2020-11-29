@@ -7,6 +7,7 @@
 #include "eddy_diffusion.cl"
 #include "windage.cl"
 #include "buoyancy.cl"
+#include "bathymetry.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
@@ -86,6 +87,12 @@ __kernel void advect(
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
                     .U = wind_U, .V = wind_V, .W = 0};
 
+    bathymetry bathy = {.x = bathymetry_x, .y = bathymetry_y,
+                        .x_len = bathymetry_x_len, .y_len = bathymetry_y_len,
+                        .x_spacing = calculate_spacing(bathymetry_x, bathymetry_x_len),
+                        .y_spacing = calculate_spacing(bathymetry_y, bathymetry_y_len),
+                        .Z = bathymetry_Z};
+
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
                   .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
@@ -102,7 +109,7 @@ __kernel void advect(
             return;
         }
 
-        if (!in_ocean(p, current)) {
+        if (!in_ocean(p, bathy)) {
             // do nothing; stuck forever
         } else {
             vector displacement_meters;
@@ -127,7 +134,7 @@ __kernel void advect(
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
             }
 
-            p = update_position_no_beaching(p, displacement_meters, current);
+            p = update_position_no_beaching(p, displacement_meters, bathy);
 
             // If, for some reason, the particle latitude goes completely out of [-90, 90], note the error and exit.
             if (fabs(p.y) > 90) {
