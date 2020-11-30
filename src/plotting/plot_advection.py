@@ -10,23 +10,19 @@ import matplotlib.colors as mcol
 import matplotlib.animation as manimation
 from tqdm import tqdm
 import subprocess
+from resources.fetch_etopo1 import fetch_etopo1
 
 
-def plot_ocean_trajectories(outputfile_path: str, current_path: str, current_varname_map: dict = None):
+def plot_ocean_trajectories(outputfile_path: str):
     fig, ax = plt.subplots(figsize=[14, 8])
 
     # show current data grid
-    grid = xr.open_dataset(current_path).rename(current_varname_map).U.squeeze().isnull()
-    if 'depth' in grid.dims:
-        grid = grid.sel(depth=0, method='nearest')
-    if grid.lon.max() > 180:
-        grid['lon'] = ((grid.lon + 180) % 360) - 180
-        grid = grid.sortby('lon')
-    xspacing = np.diff(grid.lon).mean()
-    yspacing = np.diff(grid.lat).mean()
-    lon_edges = np.append((grid.lon - xspacing/2), grid.lon[-1]+xspacing/2)
-    lat_edges = np.append((grid.lat - yspacing/2), grid.lat[-1]+yspacing/2)
-    plt.pcolormesh(lon_edges, lat_edges, ~grid, cmap='gray')
+    bathy = xr.open_dataset(fetch_etopo1()).rename({'x': 'lon', 'y': 'lat', 'z': 'elevation'})
+    xspacing = np.diff(bathy.lon).mean()
+    yspacing = np.diff(bathy.lat).mean()
+    ax.imshow(bathy.elevation <= 0, origin='lower', cmap='gray',
+              extent=(bathy.lon.min()-xspacing/2, bathy.lon.max()+xspacing/2,
+                      bathy.lat.min()-yspacing/2, bathy.lat.max()+yspacing/2))
 
     # plot trajectories
     P = xr.open_dataset(outputfile_path)
@@ -49,7 +45,7 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
 
     dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
-                     s=5, norm=mcol.Normalize(vmin=-100, vmax=0))
+                     s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=0))
     cbar = plt.colorbar(mappable=dot, ax=ax)
     cbar.ax.set_ylabel('Depth (m)')
 
@@ -89,14 +85,11 @@ def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot):
 
 @click.command()
 @click.argument("outputfile_path", type=click.Path(exists=True, dir_okay=False, readable=True))
-@click.argument("current_path", type=click.Path(), default="")
 @click.option("-s", "--save_to_disk", is_flag=True)
 @click.option("-t", "--trajectories", is_flag=True)
-def plot_ocean_advection_CLI(outputfile_path: str, current_path: str,
-                             save_to_disk: bool, trajectories: bool):
+def plot_ocean_advection_CLI(outputfile_path: str, save_to_disk: bool, trajectories: bool):
     if trajectories:
-        assert current_path, "current path needed for land grid"
-        plot_ocean_trajectories(outputfile_path, current_path)
+        plot_ocean_trajectories(outputfile_path)
     else:
         animate_ocean_advection(outputfile_path, save=save_to_disk)
 
