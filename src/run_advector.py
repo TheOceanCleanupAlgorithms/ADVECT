@@ -10,9 +10,14 @@ See src/data_specifications.md for detailed description of data format requireme
 
 import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List
+import sys
+from typing import Optional, Tuple, List, Union
+import multiprocessing as mp
+
+import pandas as pd
 
 from drivers.opencl_driver_2D import openCL_advect
+from io_tools.particles_chunking import chunk_particles
 from kernel_wrappers.Kernel2D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
 from io_tools.open_vectorfiles import open_netcdf_vectorfield, empty_vectorfield
@@ -32,7 +37,7 @@ def run_advector(
     sourcefile_format: str = 'advector',
     sourcefile_varname_map: Optional[dict] = None,
     water_varname_map: Optional[dict] = None,
-    opencl_device: Tuple[int, ...] = None,
+    opencl_devices: Union[List[Tuple[int]], None] = None,
     memory_utilization: float = 0.5,
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
@@ -104,9 +109,73 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=sourcefile_format_enum,
     )
+
+    num_devices = len(opencl_devices) if type(opencl_devices) is list else 1
+
+    with mp.pool.Pool(num_devices) as p:
+        p0_device_chunks = chunk_particles(num_devices, p0)
+
+        args = []
+
+        for device_idx in range(num_devices):
+            opencl_device = opencl_devices[device_idx] if type(opencl_devices) is list else None
+            p0_device_chunk = p0_device_chunks[device_idx]
+
+            args += [(
+                opencl_device,
+                p0_device_chunk,
+                output_directory + f'_{device_idx}',
+                u_water_path,
+                v_water_path,
+                advection_start_date,
+                timestep,
+                num_timesteps,
+                eddy_diffusivity,
+                scheme_enum,
+                save_period,
+                water_varname_map,
+                memory_utilization,
+                u_wind_path,
+                v_wind_path,
+                wind_varname_map,
+                windage_coeff,
+                verbose
+            )]
+
+        out_paths = p.starmap(_run_advector_process, args) if num_devices > 1 else _run_advector_process(*args[0])
+            
+
+    return [str(p) for p in out_paths]
+
+def _run_advector_process(
+    opencl_device: Union[Tuple[int], None],
+    p0: pd.DataFrame,
+    output_directory: str,
+    u_water_path: str,
+    v_water_path: str,
+    advection_start_date: datetime.datetime,
+    timestep: datetime.timedelta,
+    num_timesteps: int,
+    eddy_diffusivity: float = 0,
+    scheme_enum: AdvectionScheme = AdvectionScheme.taylor2,
+    save_period: int = 1,
+    water_varname_map: Optional[dict] = None,
+    memory_utilization: float = 0.5,
+    u_wind_path: Optional[str] = None,
+    v_wind_path: Optional[str] = None,
+    wind_varname_map: Optional[dict] = None,
+    windage_coeff: Optional[float] = None,
+    verbose: bool = False
+):
+    print(f"Starting ADVECTOR process for output in {output_directory}...")
+    sys.stdout.flush()
+
     currents = open_netcdf_vectorfield(
         u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map
     )
+
+    print(opencl_device)
+    sys.stdout.flush()
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
@@ -117,7 +186,7 @@ def run_advector(
         wind = empty_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
-    out_paths = openCL_advect(
+    return openCL_advect(
         current=currents,
         wind=wind,
         out_dir=Path(output_directory),
@@ -133,5 +202,3 @@ def run_advector(
         verbose=verbose,
         memory_utilization=memory_utilization,
     )
-
-    return [str(p) for p in out_paths]

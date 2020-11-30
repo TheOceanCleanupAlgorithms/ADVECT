@@ -2,6 +2,7 @@ import datetime
 import gc
 import logging
 from pathlib import Path
+import sys
 
 import pyopencl as cl
 import numpy as np
@@ -81,6 +82,8 @@ def openCL_advect(current: xr.Dataset,
             in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
+        
+        sys.stdout.flush()
 
         num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
         out_timesteps_chunk = len(out_time_chunk) - 1     #
