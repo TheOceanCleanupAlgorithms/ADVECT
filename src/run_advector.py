@@ -102,17 +102,19 @@ def run_advector(
         raise ValueError(f"Invalid argument sourcefile_format; must be one of "
                          f"{set(fmt.name for fmt in SourceFileFormat)}.")
 
+    print('Opening Sourcefiles...')
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
         source_file_type=sourcefile_format_enum,
     )
+    print('Opening Current Files...')
     currents = open_3D_vectorfield(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
-
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
+        print('Opening Wind Files...')
         wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
@@ -120,8 +122,10 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_coeff = None  # this is how we flag windage=off
 
+    print('Opening Bathymetry Files...')
     bathymetry = open_bathymetry()
 
+    print('Running advection...')
     out_paths = openCL_advect(
         current=currents,
         wind=wind,

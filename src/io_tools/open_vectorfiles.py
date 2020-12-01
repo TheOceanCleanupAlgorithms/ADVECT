@@ -74,8 +74,7 @@ def empty_2D_vectorfield():
 
 
 def open_bathymetry() -> xr.Dataset:
-    etopo1_path = fetch_etopo1()
-    etopo1 = xr.open_dataset(etopo1_path)
+    etopo1 = fetch_etopo1()
     etopo1['z'] = etopo1.z.astype(np.float32)
     etopo1 = etopo1.rename({'x': 'lon', 'y': 'lat', 'z': 'elevation'})
 
