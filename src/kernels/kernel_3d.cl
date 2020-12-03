@@ -69,7 +69,8 @@ __kernel void advect(
                      .x_spacing = calculate_spacing(current_x, current_x_len),
                      .y_spacing = calculate_spacing(current_y, current_y_len),
                      .t_spacing = calculate_spacing(current_t, current_t_len),
-                     .U = current_U, .V = current_V, .W = current_W};
+                     .U = current_U, .V = current_V, .W = current_W,
+                     .z_floor = 2*current_z[current_z_len-1] - current_z[current_z_len-2]};  // bottom edge of lowest layer
 
     // turn 2d wind into 3d wind with singleton z
     double wind_z[1] = {0.0};
@@ -78,7 +79,8 @@ __kernel void advect(
                     .x_spacing = calculate_spacing(wind_x, wind_x_len),
                     .y_spacing = calculate_spacing(wind_y, wind_y_len),
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
-                    .U = wind_U, .V = wind_V, .W = 0};
+                    .U = wind_U, .V = wind_V, .W = 0,
+                    .z_floor = 0};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],

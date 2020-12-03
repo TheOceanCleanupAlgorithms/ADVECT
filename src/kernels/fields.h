@@ -8,6 +8,7 @@ typedef struct field3d {
     const unsigned int x_len, y_len, z_len, t_len;
     const double x_spacing, y_spacing, t_spacing;
     __global const float *U, *V, *W;
+    const double z_floor;  // bottom edge of lowest layer
 } field3d;
 
 typedef struct grid_point {
