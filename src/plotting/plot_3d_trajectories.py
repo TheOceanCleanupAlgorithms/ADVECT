@@ -24,7 +24,7 @@ def plot_3d_trajectories(
        and only shows particles which enter this domain at some point.  Also, don't use outfiles with too many
        particles."""
     P = xr.open_dataset(outputfile)
-    bathy = xr.open_dataset(fetch_etopo1())
+    bathy = fetch_etopo1()
     bathy = bathy.transpose("y", "x")
     smallgrid = bathy.sel(x=slice(*lon_range), y=slice(*lat_range))
     smallgrid['z'] = smallgrid.z.clip(min=depth_range[0], max=0)
@@ -97,7 +97,7 @@ plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/ad
                      lon_range=(-80, -60),
                      lat_range=(-60, -44),
                      depth_range=(-200, -50))
-'''
+
 # falkland islands
 plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/advector_output_2015.nc',
                      lon_range=(-62, -60),
@@ -105,7 +105,7 @@ plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/ad
                      depth_range=(-200, -50),
                      pan_and_tilt=(70, -70),
                      stride=1)
-'''
+
 # zanzibar
 plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
                      current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
@@ -118,11 +118,10 @@ plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_o
                      lon_range=(-25.1, -24.9),
                      lat_range=(68.3, 68.5),
                      depth_range=(-10000, 0))
-
-# nz
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
-                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     lon_range=(160, 180),
-                     lat_range=(-50, -30),
-                     depth_range=(-500, -10))
 '''
+# nz
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/advector_output_2015.nc',
+                     lon_range=(162, 182),
+                     lat_range=(-50, -32.5),
+                     depth_range=(-1000, -30),
+                     pan_and_tilt=(60, -160))

@@ -1,25 +1,21 @@
 """
 advect on ECCO currents
 """
+from pathlib import Path
 
 from plotting.plot_advection import animate_ocean_advection
 from run_advector import run_advector
 from datetime import datetime, timedelta
 
-EDDY_DIFFUSIVITY = 1800  # m^2 / s
-''' Sylvia Cole et al 2015: diffusivity calculated at a 300km eddy scale, global average in top 1000m, Argo float data.
-  This paper shows 2 orders of magnitude variation regionally, not resolving regional differences is a big error source.
-  Additionally, the assumption here is that 300km eddies are not resolved by the velocity field itself.  If they are,
-  we're doubling up on the eddy transport.  For reference, to resolve 300km eddies, the grid scale probably needs to be
-  on order 30km, which at the equator would be ~1/3 degree.
-'''
-WINDAGE_COEFF = .005  # float in [0, 1] representing fraction of wind speed that is transferred to particle
-# windage coeff needs a good literature source.  Responsibility of user.  This one is taken from trashtracker.
-
+EDDY_DIFFUSIVITY = 0  # m^2 / s
+# needs a good literature source.  Responsibility of user.
+WINDAGE_COEFF = .01  # float in [0, 1] representing fraction of wind speed that is transferred to particle
+# windage coeff needs a good literature source.  Responsibility of user.
+sourcefile = 'sourcefiles/neutral.nc'
 if __name__ == '__main__':
     out_paths = run_advector(
-        output_directory='outputfiles/2015_ECCO/',
-        sourcefile_path='sourcefiles/2015_uniform_surface.nc',
+        output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
+        sourcefile_path=sourcefile,
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
         w_water_path='ECCO/ECCO_interp/W_2015*.nc',
@@ -34,8 +30,8 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         windage_coeff=WINDAGE_COEFF,
         verbose=True,
-        opencl_device=(0, 2),
-        memory_utilization=.95,
+        opencl_device=(0, 0),
+        memory_utilization=.4,
     )
 
     for out_path in out_paths:

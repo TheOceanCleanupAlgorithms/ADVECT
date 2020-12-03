@@ -17,7 +17,7 @@ def plot_ocean_trajectories(outputfile_path: str):
     fig, ax = plt.subplots(figsize=[14, 8])
 
     # show current data grid
-    bathy = xr.open_dataset(fetch_etopo1()).rename({'x': 'lon', 'y': 'lat', 'z': 'elevation'})
+    bathy = fetch_etopo1().rename({'x': 'lon', 'y': 'lat', 'z': 'elevation'})
     xspacing = np.diff(bathy.lon).mean()
     yspacing = np.diff(bathy.lat).mean()
     ax.imshow(bathy.elevation <= 0, origin='lower', cmap='gray',
