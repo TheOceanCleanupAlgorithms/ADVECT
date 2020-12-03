@@ -68,7 +68,7 @@ def plot_3d_trajectories(
 
 
 # cape horn
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/advector_output_2015.nc',
                      current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
                      lon_range=(-80, -60),
                      lat_range=(-60, -44),
