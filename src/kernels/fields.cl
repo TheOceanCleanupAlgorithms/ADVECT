@@ -57,6 +57,10 @@ double calculate_spacing(__global const double *arr, const unsigned int arr_len)
 }
 
 double calculate_coordinate_floor(__global const double *arr, const unsigned int arr_len) {
+    /*
+     * Calculates the lower boundary of a coordinate array, i.e. the edge of the lowest grid cell.
+     * arr references the centers of grid cells, hence the extrapolation
+    */
     if (arr_len > 1) {
         return arr[0] - (arr[1] - arr[0]) / 2;  // linear extrapolation
     } else if (arr_len == 1) {
