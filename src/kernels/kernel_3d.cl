@@ -19,9 +19,9 @@ __kernel void advect(
     __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int current_x_len,   // 1 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int current_y_len,   // 1 <= current_z_len <= UINT_MAX + 1
-    __global const double *current_z,    // depth, meters, positive up
-    const unsigned int current_z_len,   // 1 <= current_y_len <= UINT_MAX + 1
+    const unsigned int current_y_len,   // 1 <= current_y_len <= UINT_MAX + 1
+    __global const double *current_z,    // depth, meters, positive up, sorted ascending
+    const unsigned int current_z_len,   // 1 <= current_z_len <= UINT_MAX + 1
     __global const double *current_t,     // time, seconds since epoch, uniform spacing
     const unsigned int current_t_len,   // 1 <= current_t_len <= UINT_MAX + 1
     __global const float *current_U,    // m / s, 32 bit to save space
@@ -69,7 +69,8 @@ __kernel void advect(
                      .x_spacing = calculate_spacing(current_x, current_x_len),
                      .y_spacing = calculate_spacing(current_y, current_y_len),
                      .t_spacing = calculate_spacing(current_t, current_t_len),
-                     .U = current_U, .V = current_V, .W = current_W};
+                     .U = current_U, .V = current_V, .W = current_W,
+                     .z_floor = calculate_coordinate_floor(current_z, current_z_len)};  // bottom edge of lowest layer
 
     // turn 2d wind into 3d wind with singleton z
     double wind_z[1] = {0.0};
@@ -78,7 +79,8 @@ __kernel void advect(
                     .x_spacing = calculate_spacing(wind_x, wind_x_len),
                     .y_spacing = calculate_spacing(wind_y, wind_y_len),
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
-                    .U = wind_U, .V = wind_V, .W = 0};
+                    .U = wind_U, .V = wind_V, .W = 0,
+                    .z_floor = 0};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],

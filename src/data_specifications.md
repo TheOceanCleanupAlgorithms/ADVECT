@@ -69,8 +69,30 @@ Outputfiles contain the state of particles along some timeseries.  They are esse
 | 2 | INVALID_LATITUDE | particle latitude outside of [-90, 90] |
 
 ## Forcing Data
-### 2D Vector Fields (Sea Surface Current, Surface Wind)
-By virtue of representing similar physical quantities, Sea Surface Current and Surface Wind share the specifications of a generic geospatial 2D Vector Field.  They are encoded as netcdf datasets, and must adhere to the following specifications:
+### Sea Surface Current
+Encoded as a netcdf dataset, and must adhere to the following specifications:
+
+#### Dimensions
+| Name | Data Type | Description |
+| --- | --- | --- |
+| lon | integer | indexes longitude |
+| lat | integer | indexes latitude |
+| time | integer | indexes time |
+| depth | integer | indexes depth |
+
+#### Variables
+| Name | Dimensions | Data Type | Description |
+| --- | --- | --- | --- |
+| lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
+| lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
+| depth | (depth) | numeric | depth of grid cell centers, meters, positive up (coordinate variable).  Values must be sorted but can have arbitrary spacing. |
+| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
+| U | (time, depth, lat, lon) | numeric | zonal component of velocity (m/s), positive east.
+| V | (time, depth, lat, lon) | numeric | meridional component of velocity (m/s), positive north. |
+| W | (time, depth, lat, lon) | numeric | vertical component of velocity (m/s), positive up. |
+
+### Surface Wind
+Encoded as a netcdf dataset, and must adhere to the following specifications:
 
 #### Dimensions
 | Name | Data Type | Description |
@@ -82,8 +104,8 @@ By virtue of representing similar physical quantities, Sea Surface Current and S
 #### Variables
 | Name | Dimensions | Data Type | Description |
 | --- | --- | --- | --- |
-| lon | (lon) | numeric | longitude coordinate of field, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
-| lat | (lat) | numeric | latitude coordinate of field, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
+| lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
+| lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
 | time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
 | U | (lon, lat, time) | numeric | zonal component of velocity (m/s), positive east.
 | V | (lon, lat, time) | numeric | meridional component of velocity (m/s), positive north.

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +8,12 @@ import xarray as xr
 def plot_3d_trajectories(
     outputfile: str,
     current_U_path: str,
+    current_V_path: str,
+    current_W_path: str,
     lon_range: Tuple[float, float],
     lat_range: Tuple[float, float],
     depth_range: Tuple[float, float],
+    variable_mapping: Optional[dict] = None,
 ):
     """current_U_path will be used to plot landmass/bathymetry; best if same file as used in creation of outputfile, so
         the boundary behavior matches up.
@@ -19,7 +22,9 @@ def plot_3d_trajectories(
        and only shows particles which enter this domain at some point.  Also, don't use outfiles with too many
        particles."""
     P = xr.open_dataset(outputfile)
-    grid = xr.open_dataset(current_U_path).U.isnull().isel(time=0)
+    currents = xr.open_mfdataset([current_U_path, current_V_path, current_W_path]).squeeze()
+    currents = currents.rename(variable_mapping)
+    grid = (currents.U.isnull() | currents.V.isnull() | currents.W.isnull())
     grid = grid.transpose("lon", "lat", "depth").sortby("depth", "ascending")
     smallgrid = grid.sel(
         lon=slice(*lon_range), lat=slice(*lat_range), depth=slice(*depth_range)
@@ -31,9 +36,9 @@ def plot_3d_trajectories(
         ).values  # halfway between grid points
         return np.concatenate(
             (
-                [2 * depth_bnds[0] - depth_bnds[1]],
+                [coord[0] - (coord[1]-coord[0])/2],
                 depth_bnds,
-                [2 * depth_bnds[-1] - depth_bnds[-2]],
+                [coord[-1] - (coord[-2]-coord[-1])/2],
             )
         )  # linearly extrapolate endpoints
 
@@ -67,31 +72,11 @@ def plot_3d_trajectories(
     ax.set_zlabel('Depth (m)')
 
 
-# cape horn
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
+# sargasso seabed
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/dense/advector_output_2015.nc',
                      current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     lon_range=(-80, -60),
-                     lat_range=(-60, -44),
-                     depth_range=(-800, -50))
-'''
-# zanzibar
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
-                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     lon_range=(35, 50),
-                     lat_range=(-10, 10),
-                     depth_range=(-150, 0))
-
-# greenland
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
-                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     lon_range=(-60, -35),
-                     lat_range=(55, 70),
-                     depth_range=(-1000, 0))
-
-# nz
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/advector_output_2015.nc',
-                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     lon_range=(160, 180),
-                     lat_range=(-50, -30),
-                     depth_range=(-500, -10))
-'''
+                     current_V_path='../../examples/ECCO/ECCO_interp/V_2015-01-01.nc',
+                     current_W_path='../../examples/ECCO/ECCO_interp/W_2015-01-01.nc',
+                     lon_range=(-70, -50),
+                     lat_range=(20, 30),
+                     depth_range=(-6000, 0))
