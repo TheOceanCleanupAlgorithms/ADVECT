@@ -11,21 +11,21 @@ from pathlib import Path
 @click.option('-rho', 'density', required=False, default=1025)
 @click.option('-r', 'radius', required=False, default=.001)
 @click.option('-z', 'depth', required=False, default=0.0)
-@click.option('-o', 'out_path', required=False, type=click.Path(exists=False, dir_okay=False),
-              default=str(Path(__file__).parent / 'neutral.nc'))
+@click.option('-o', 'out_name', required=False, type=click.Path(exists=False, dir_okay=False),
+              default='neutral.nc')
 def generate_sourcefile(
     num_particles: int,
     density: float,
     radius: float,
     depth: float,
-    out_path: str,
+    out_name: str,
 ):
     """
     :param num_particles: number of particles to generate
     :param density: density of particles, kg m^-3
     :param radius: radius of particles, m
     :param depth: starting depth of particles, m (positive up)
-    :param out_path: path to save the sourcefile at
+    :param out_name: sourcefile name
     :return:
     """
     # create a land mask
@@ -47,6 +47,7 @@ def generate_sourcefile(
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))
 
+    out_path = Path(__file__).parent / out_name
     ds.to_netcdf(out_path)
 
 
