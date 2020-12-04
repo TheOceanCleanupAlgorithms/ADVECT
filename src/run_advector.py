@@ -38,7 +38,7 @@ def run_advector(
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
     wind_varname_map: Optional[dict] = None,
-    windage_coeff: Optional[float] = None,
+    windage_multiplier: Optional[float] = 1,
     verbose: bool = False,
 ) -> List[str]:
     """
@@ -85,9 +85,7 @@ def run_advector(
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional surface wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
-    :param windage_coeff: fraction of wind speed that is transferred to particle.
-        If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
-        Note: this value has a profound impact on results.
+    :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
@@ -112,13 +110,13 @@ def run_advector(
     )
 
     if u_wind_path is not None and v_wind_path is not None:
-        assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
+        assert windage_multiplier is not None, "Wind data must be accompanied by windage coefficient."
         wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
     else:
         wind = empty_2D_vectorfield()
-        windage_coeff = None  # this is how we flag windage=off
+        windage_multiplier = None  # this is how we flag windage=off
 
     out_paths = openCL_advect(
         current=currents,
@@ -131,7 +129,7 @@ def run_advector(
         save_every=save_period,
         advection_scheme=scheme_enum,
         eddy_diffusivity=eddy_diffusivity,
-        windage_coeff=windage_coeff,
+        windage_multiplier=windage_multiplier,
         platform_and_device=opencl_device,
         verbose=verbose,
         memory_utilization=memory_utilization,

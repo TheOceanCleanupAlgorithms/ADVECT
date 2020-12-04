@@ -55,7 +55,7 @@ __kernel void advect(
     /* physics parameters */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
-    const double windage_coeff,  // if nan, disables windage
+    const double windage_multiplier,  // if nan, disables windage
     /* debugging utility */
     __global char *exit_code)
 {
@@ -119,8 +119,8 @@ __kernel void advect(
             displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
-            if (!isnan(windage_coeff)) {
-                displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_coeff));
+            if (!isnan(windage_multiplier)) {
+                displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }
 
             p = update_position_no_beaching(p, displacement_meters, current);
