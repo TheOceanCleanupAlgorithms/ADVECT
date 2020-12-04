@@ -1,23 +1,31 @@
-from pathlib import Path
-
 import click
 import xarray as xr
 import pandas as pd
 import numpy as np
-import os
+
+from pathlib import Path
 
 
 @click.command()
-@click.option('-n', 'num_particles', required=True, type=click.INT)
+@click.option('-n', 'num_particles', required=False, default=5000)
+@click.option('-rho', 'density', required=False, default=1025)
+@click.option('-r', 'radius', required=False, default=.001)
+@click.option('-z', 'depth', required=False, default=0.0)
 @click.option('-o', 'out_path', required=False, type=click.Path(exists=False, dir_okay=False),
-              default=os.path.join(os.path.dirname(__file__), '2015_uniform_surface.nc'))
+              default=str(Path(__file__).parent / 'neutral.nc'))
 def generate_sourcefile(
     num_particles: int,
+    density: float,
+    radius: float,
+    depth: float,
     out_path: str,
 ):
     """
-    :param out_path: path to save the sourcefile at
     :param num_particles: number of particles to generate
+    :param density: density of particles, kg m^-3
+    :param radius: radius of particles, m
+    :param depth: starting depth of particles, m (positive up)
+    :param out_path: path to save the sourcefile at
     :return:
     """
     # create a land mask
@@ -31,10 +39,10 @@ def generate_sourcefile(
     p0['release_date'] = np.datetime64('2015-01-01T12')
     # p0['release_date'] = np.concatenate((np.full(num_particles//2, np.datetime64('2015-01-01T12')),
     #                                      np.full(num_particles//2 + num_particles % 2, np.datetime64('2015-06-01'))))
-    p0['depth'] = 0
+    p0['depth'] = depth
 
-    p0['radius'] = .001  # m
-    p0['density'] = 900  # kg m^-3
+    p0['radius'] = radius
+    p0['density'] = density
 
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))
