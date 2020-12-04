@@ -34,7 +34,8 @@ def plot_ocean_trajectories(outputfile_path: str, current_path: str, current_var
     plt.show()
 
 
-def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90), save: bool = False):
+def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90), save: bool = False,
+                            colorbar_depth=None):
     P = xr.open_dataset(outputfile_path)
     # plot le advection
     proj = ccrs.PlateCarree()
@@ -47,9 +48,9 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
 
     # initialize the scatter plot with dummy data.
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
-
+    vmin = colorbar_depth if colorbar_depth else P.depth.min()
     dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
-                     s=5, norm=mcol.Normalize(vmin=P.depth.min(), vmax=0))
+                     s=5, norm=mcol.Normalize(vmin=vmin, vmax=0))
     cbar = plt.colorbar(mappable=dot, ax=ax)
     cbar.ax.set_ylabel('Depth (m)')
 
@@ -92,13 +93,15 @@ def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot):
 @click.argument("current_path", type=click.Path(), default="")
 @click.option("-s", "--save_to_disk", is_flag=True)
 @click.option("-t", "--trajectories", is_flag=True)
+@click.option("-d", "--colorbar_depth", required=False, default=None)
 def plot_ocean_advection_CLI(outputfile_path: str, current_path: str,
-                             save_to_disk: bool, trajectories: bool):
+                             save_to_disk: bool, trajectories: bool,
+                             colorbar_depth: float):
     if trajectories:
         assert current_path, "current path needed for land grid"
         plot_ocean_trajectories(outputfile_path, current_path)
     else:
-        animate_ocean_advection(outputfile_path, save=save_to_disk)
+        animate_ocean_advection(outputfile_path, save=save_to_disk, colorbar_depth=colorbar_depth)
 
 
 if __name__ == '__main__':
