@@ -55,3 +55,13 @@ double calculate_spacing(__global const double *arr, const unsigned int arr_len)
         return NAN;
     }
 }
+
+double calculate_coordinate_floor(__global const double *arr, const unsigned int arr_len) {
+    if (arr_len > 1) {
+        return arr[0] - (arr[1] - arr[0]) / 2;  // linear extrapolation
+    } else if (arr_len == 1) {
+        return arr[0];
+    } else {
+        return NAN;
+    }
+}

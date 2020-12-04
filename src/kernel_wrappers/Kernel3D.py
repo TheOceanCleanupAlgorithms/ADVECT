@@ -168,6 +168,7 @@ class Kernel3D:
         assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_y)
         assert max(self.current_z) <= 0
+        assert np.all(np.diff(self.current_z) > 0)  # ascending
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced(self.current_t)
 

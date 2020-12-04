@@ -29,6 +29,8 @@ def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping:
         with dask.config.set(**{'array.slicing.split_large_chunks': True}):
             vectors['lon'] = ((vectors.lon + 180) % 360) - 180
             vectors = vectors.sortby('lon')
+    with dask.config.set(**{'array.slicing.split_large_chunks': True}):
+        vectors = vectors.sortby('depth', ascending=True)  # depth required to be ascending sorted
 
     return vectors
 
