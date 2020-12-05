@@ -2,7 +2,7 @@
 #include "advection_schemes.h"
 
 #define density_ratio 1.17e-3  // density of air / density of water (van der Mheen 2020 near eq. 8)
-#define drag_ratio 1           // drag coefficient in air / drag coefficient in water
+#define drag_ratio 1           // drag coefficient in air / drag coefficient in water (van der Mheen 2020 near eq. 8)
 
 double calculate_windage_coeff(double r, double z);
 double circular_segment_area(double R, double r);
@@ -26,7 +26,7 @@ double calculate_windage_coeff(double r, double z) {
     double area_ratio;
     if (z == 0) {  // exactly half emerged; fast solution to likely the most common case
         area_ratio = 1;
-    } else if (-z >= r) {  // fully submerged; fast solution to likely the second most common case
+    } else if (z <= -r) {  // fully submerged; fast solution to likely the second most common case
         area_ratio = 0;
     } else {                 // less than half emerged
         double submerged_segment = circular_segment_area(r, z);
@@ -41,7 +41,8 @@ double circular_segment_area(double R, double r) {
     // circle's center and the line which is intersecting the circle.  It follows that
     // this function is undefined for r > R.  Uses notation/equation from
     // Weisstein, Eric W. "Circular Segment." From MathWorld--A Wolfram Web Resource. https://mathworld.wolfram.com/CircularSegment.html
-    // r > 0 corresponds to a minor segment, r < 0 corresponds to a major segment
+    // if r > 0, theta < 180 degrees, corresponding to a minor segment.
+    // if r < 0, theta > 180 degrees, corresponding to a major segment.
     double theta = 2 * acos(r / R);  // this is the central angle of the segment
     return .5 * pow(R, 2) * (theta - sin(theta));
 }

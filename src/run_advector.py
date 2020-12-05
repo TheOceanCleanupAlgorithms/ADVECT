@@ -10,7 +10,7 @@ See src/data_specifications.md for detailed description of data format requireme
 
 import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Tuple, List
 
 from drivers.opencl_driver_3D import openCL_advect
 from kernel_wrappers.Kernel3D import AdvectionScheme
@@ -31,14 +31,14 @@ def run_advector(
     advection_scheme: str = 'taylor2',
     save_period: int = 1,
     sourcefile_format: str = 'advector',
-    sourcefile_varname_map: Optional[dict] = None,
-    water_varname_map: Optional[dict] = None,
+    sourcefile_varname_map: dict = None,
+    water_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
-    u_wind_path: Optional[str] = None,
-    v_wind_path: Optional[str] = None,
-    wind_varname_map: Optional[dict] = None,
-    windage_multiplier: Optional[float] = 1,
+    u_wind_path: str = None,
+    v_wind_path: str = None,
+    wind_varname_map: dict = None,
+    windage_multiplier: float = 1,
     verbose: bool = False,
 ) -> List[str]:
     """
