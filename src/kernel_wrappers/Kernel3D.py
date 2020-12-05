@@ -33,27 +33,27 @@ class Kernel3D:
                  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
                  radius: np.ndarray, density: np.ndarray,
                  start_time: float, dt: float, ntimesteps: int, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_coeff: Optional[float],
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: Optional[float],
                  X_out: np.ndarray, Y_out: np.ndarray, Z_out: np.ndarray,
                  exit_code: np.ndarray,
                  ):
         """store args to object, perform argument checking, create opencl objects and some timers"""
         self.current_x, self.current_y, self.current_z, self.current_t = current_x, current_y, current_z, current_t
         self.current_U, self.current_V, self.current_W, = current_U, current_V, current_W
-        if windage_coeff is not None:
+        if windage_multiplier is not None:
             self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
             self.wind_U, self.wind_V = wind_U, wind_V
         else:  # opencl won't pass totally empty arrays to the kernel.  Windage disabled, so array contents don't matter
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
-            self.windage_coeff = np.nan  # to flag the kernel that windage is disabled
+            self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
         self.x0, self.y0, self.z0, self.release_date = x0, y0, z0, release_date
         self.radius, self.density = radius, density
         self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
         self.X_out, self.Y_out, self.Z_out = X_out, Y_out, Z_out
         self.advection_scheme = advection_scheme
         self.eddy_diffusivity = eddy_diffusivity
-        self.windage_coeff = windage_coeff
+        self.windage_multiplier = windage_multiplier
         self._check_args()
 
         # create opencl objects
@@ -116,7 +116,7 @@ class Kernel3D:
                 np.float64(self.start_time), np.float64(self.dt),
                 np.uint32(self.ntimesteps), np.uint32(self.save_every),
                 d_X_out, d_Y_out, d_Z_out,
-                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_coeff),
+                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_multiplier),
                 d_exit_codes)
 
         # wait for the computation to complete

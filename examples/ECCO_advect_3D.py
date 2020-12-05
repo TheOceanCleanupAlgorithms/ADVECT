@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 
 EDDY_DIFFUSIVITY = 0  # m^2 / s
 # needs a good literature source.  Responsibility of user.
-WINDAGE_COEFF = .01  # float in [0, 1] representing fraction of wind speed that is transferred to particle
-# windage coeff needs a good literature source.  Responsibility of user.
+WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
+
 sourcefile = 'sourcefiles/neutral.nc'
 if __name__ == '__main__':
     out_paths = run_advector(
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme='eulerian',
         eddy_diffusivity=EDDY_DIFFUSIVITY,
-        windage_coeff=WINDAGE_COEFF,
+        windage_multiplier=WINDAGE_MULTIPLIER,
         verbose=True,
         opencl_device=(0, 2),
         memory_utilization=.95,
