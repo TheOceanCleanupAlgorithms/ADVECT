@@ -10,7 +10,7 @@ from typing import List, Tuple
 
 
 def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: xr.Dataset, num_particles: int, advect_time: pd.DatetimeIndex,
-                           save_every: int) -> Tuple[List[pd.DatetimeIndex], List[pd.DatetimeIndex], List[xr.Dataset], List[xr.Dataset]]:
+                           save_every: int) -> Tuple[List[pd.DatetimeIndex], List[xr.Dataset], List[xr.Dataset]]:
     """given the parameters for advection, return parameters for an iterative advection"""
     out_time = advect_time[::save_every]
     # each element of out_time marks a time at which the driver will return particle position
@@ -56,7 +56,7 @@ def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: xr.Data
             break
         num_chunks += 1
 
-    return advect_time_chunks, out_time_chunks, current_chunks, wind_chunks
+    return advect_time_chunks, current_chunks, wind_chunks
 
 
 def estimate_memory_bytes(current: xr.Dataset, wind: xr.Dataset, num_particles: int, out_timesteps: int

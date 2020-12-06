@@ -27,10 +27,14 @@ class Kernel3D:
     """wrapper for src/kernels/kernel_3d.cl"""
 
     def __init__(self, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
-                 start_time: pd.Timestamp, dt: datetime.timedelta, num_timesteps: int, save_every: int,
+                 advect_time: pd.DatetimeIndex, save_every: int,
                  advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: float,
-                 context: cl.Context, out_timesteps: int):
+                 context: cl.Context):
         """convert convenient python objects to raw representation for kernel"""
+        # save some arguments for creating output dataset
+        self.p0 = p0
+        self.out_time = advect_time[::save_every][1:]
+
         # ---KERNEL ARGUMENT INITIALIZATION--- #
         # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
 
@@ -62,14 +66,14 @@ class Kernel3D:
         self.radius = p0.radius.values.astype(np.float64)
         self.density = p0.density.values.astype(np.float64)
         # advection time parameters
-        self.start_time = np.float64(start_time.timestamp())
-        self.dt = np.float64(dt.total_seconds())
-        self.ntimesteps = np.uint32(num_timesteps)
+        self.start_time = np.float64(advect_time[0].timestamp())
+        self.dt = np.float64(pd.Timedelta(advect_time.freq).total_seconds())
+        self.ntimesteps = np.uint32(len(advect_time) - 1)  # minus one bc initial position given
         self.save_every = np.uint32(save_every)
         # output_vectors
-        self.X_out = np.full((len(p0.lon) * out_timesteps), np.nan, dtype=np.float32)  # output will have this value
-        self.Y_out = np.full((len(p0.lat) * out_timesteps), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
-        self.Z_out = np.full((len(p0.depth) * out_timesteps), np.nan, dtype=np.float32)
+        self.X_out = np.full((len(p0.lon) * len(self.out_time)), np.nan, dtype=np.float32)  # output will have this value
+        self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
+        self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
         self.advection_scheme = np.uint32(advection_scheme.value)
         self.eddy_diffusivity = np.float64(eddy_diffusivity)
@@ -88,8 +92,9 @@ class Kernel3D:
         self.buf_time = 0
         self.kernel_time = 0
 
-    def execute(self):
-        """tranfers arguments to the compute device, triggers execution, waits on result"""
+
+    def execute(self) -> xr.Dataset:
+        """tranfers arguments to the compute device, triggers execution, returns result"""
         # perform argument check
         self._check_args()
 
@@ -141,6 +146,17 @@ class Kernel3D:
         cl.enqueue_copy(self.queue, self.Z_out, d_Z_out)
         cl.enqueue_copy(self.queue, self.exit_code, d_exit_codes)
         self.buf_time += time.time() - read_start
+
+        # create and return dataset
+        P = self.p0.assign_coords({"time": self.out_time})  # add a time dimension
+        return P.assign(  # overwrite with new data
+                {
+                        "lon": (["p_id", "time"], self.X_out.reshape([len(P.p_id), -1])),
+                        "lat": (["p_id", "time"], self.Y_out.reshape([len(P.p_id), -1])),
+                        "depth": (["p_id", "time"], self.Z_out.reshape([len(P.p_id), -1])),
+                        "exit_code": (["p_id"], self.exit_code),
+                }
+        )
 
     def print_memory_footprint(self):
         print('-----MEMORY FOOTPRINT-----')
