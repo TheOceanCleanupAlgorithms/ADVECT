@@ -5,12 +5,14 @@ of executing kernels.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import kernel_wrappers.kernel_constants as cl_const
 import numpy as np
 import pyopencl as cl
 import time
+import xarray as xr
+import datetime
+import pandas as pd
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
 
@@ -24,38 +26,58 @@ class AdvectionScheme(Enum):
 class Kernel3D:
     """wrapper for src/kernels/kernel_3d.cl"""
 
-    def __init__(self,
-                 context: cl.Context,
-                 current_x: np.ndarray, current_y: np.ndarray, current_z: np.ndarray, current_t: np.ndarray,
-                 current_U: np.ndarray, current_V: np.ndarray, current_W: np.ndarray,
-                 wind_x: np.ndarray, wind_y: np.ndarray, wind_t: np.ndarray,
-                 wind_U: np.ndarray, wind_V: np.ndarray,
-                 x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, release_date: np.ndarray,
-                 radius: np.ndarray, density: np.ndarray,
-                 start_time: float, dt: float, ntimesteps: int, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: Optional[float],
-                 X_out: np.ndarray, Y_out: np.ndarray, Z_out: np.ndarray,
-                 exit_code: np.ndarray,
-                 ):
-        """store args to object, perform argument checking, create opencl objects and some timers"""
-        self.current_x, self.current_y, self.current_z, self.current_t = current_x, current_y, current_z, current_t
-        self.current_U, self.current_V, self.current_W, = current_U, current_V, current_W
+    def __init__(self, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
+                 start_time: pd.Timestamp, dt: datetime.timedelta, num_timesteps: int, save_every: int,
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: float,
+                 context: cl.Context, out_timesteps: int):
+        """convert convenient python objects to raw representation for kernel"""
+        # ---KERNEL ARGUMENT INITIALIZATION--- #
+        # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
+
+        current = current.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+        self.current_x = current.lon.values.astype(np.float64)
+        self.current_y = current.lat.values.astype(np.float64)
+        self.current_z = current.depth.values.astype(np.float64)
+        self.current_t = current.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+        self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+        self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
+        self.current_W = current.W.values.astype(np.float32, copy=False).ravel()
+        # wind vector field
         if windage_multiplier is not None:
-            self.wind_x, self.wind_y, self.wind_t = wind_x, wind_y, wind_t
-            self.wind_U, self.wind_V = wind_U, wind_V
-        else:  # opencl won't pass totally empty arrays to the kernel.  Windage disabled, so array contents don't matter
+            wind = wind.transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
+            self.wind_x = wind.lon.values.astype(np.float64)
+            self.wind_y = wind.lat.values.astype(np.float64)
+            self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+            self.wind_U = wind.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+            self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
+        else:  # Windage disabled; pass a dummy field with singleton dimensions
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
-        self.x0, self.y0, self.z0, self.release_date = x0, y0, z0, release_date
-        self.radius, self.density = radius, density
-        self.start_time, self.dt, self.ntimesteps, self.save_every = start_time, dt, ntimesteps, save_every
-        self.X_out, self.Y_out, self.Z_out = X_out, Y_out, Z_out
-        self.advection_scheme = advection_scheme
-        self.eddy_diffusivity = eddy_diffusivity
-        self.windage_multiplier = windage_multiplier
-        self._check_args()
+        # particle initialization
+        self.x0 = p0.lon.values.astype(np.float32)
+        self.y0 = p0.lat.values.astype(np.float32)
+        self.z0 = p0.depth.values.astype(np.float32)
+        self.release_date = p0.release_date.values.astype('datetime64[s]').astype(np.float64)
+        self.radius = p0.radius.values.astype(np.float64)
+        self.density = p0.density.values.astype(np.float64)
+        # advection time parameters
+        self.start_time = np.float64(start_time.timestamp())
+        self.dt = np.float64(dt.total_seconds())
+        self.ntimesteps = np.uint32(num_timesteps)
+        self.save_every = np.uint32(save_every)
+        # output_vectors
+        self.X_out = np.full((len(p0.lon) * out_timesteps), np.nan, dtype=np.float32)  # output will have this value
+        self.Y_out = np.full((len(p0.lat) * out_timesteps), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
+        self.Z_out = np.full((len(p0.depth) * out_timesteps), np.nan, dtype=np.float32)
+        # physics
+        self.advection_scheme = np.uint32(advection_scheme.value)
+        self.eddy_diffusivity = np.float64(eddy_diffusivity)
+        self.windage_multiplier = np.float64(windage_multiplier)
+        # debugging
+        self.exit_code = p0.exit_code.values.astype(np.byte)
 
+        # ---HOST INITIALIZATIONS--- #
         # create opencl objects
         self.context = context
         self.queue = cl.CommandQueue(context)
@@ -66,11 +88,11 @@ class Kernel3D:
         self.buf_time = 0
         self.kernel_time = 0
 
-        # debugging
-        self.exit_code = exit_code
-
     def execute(self):
         """tranfers arguments to the compute device, triggers execution, waits on result"""
+        # perform argument check
+        self._check_args()
+
         # write arguments to compute device
         write_start = time.time()
         d_current_x, d_current_y, d_current_z, d_current_t,\
@@ -90,16 +112,6 @@ class Kernel3D:
         self.buf_time = time.time() - write_start
 
         # execute the program
-        self.cl_kernel.set_scalar_arg_dtypes(
-                [None, np.uint32, None, np.uint32, None, np.uint32, None, np.uint32,
-                 None, None, None,
-                 None, np.uint32, None, np.uint32, None, np.uint32,
-                 None, None,
-                 None, None, None, None, None, None,
-                 np.float64, np.float64, np.uint32, np.uint32,
-                 None, None, None,
-                 np.uint32, np.float64, np.float64,
-                 None])
         execution_start = time.time()
         self.cl_kernel(
                 self.queue, (len(self.x0),), None,
@@ -113,10 +125,9 @@ class Kernel3D:
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
                 d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
-                np.float64(self.start_time), np.float64(self.dt),
-                np.uint32(self.ntimesteps), np.uint32(self.save_every),
+                self.start_time, self.dt, self.ntimesteps, self.save_every,
                 d_X_out, d_Y_out, d_Z_out,
-                np.uint32(self.advection_scheme.value), np.float64(self.eddy_diffusivity), np.float64(self.windage_multiplier),
+                self.advection_scheme, self.eddy_diffusivity, self.windage_multiplier,
                 d_exit_codes)
 
         # wait for the computation to complete
@@ -192,4 +203,4 @@ class Kernel3D:
         assert np.nanmax(self.z0) <= 0
 
         # check enum valid
-        assert self.advection_scheme.value in (0, 1)
+        assert self.advection_scheme in (0, 1)
