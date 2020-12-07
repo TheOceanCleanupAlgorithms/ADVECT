@@ -61,7 +61,7 @@ def openCL_advect(current: xr.Dataset,
 
     # get the minimum RAM available on the specified compute devices.
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
-    advect_time_chunks, out_time_chunks, current_chunks, wind_chunks = \
+    advect_time_chunks, current_chunks, wind_chunks = \
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
                                wind=wind,
@@ -69,37 +69,27 @@ def openCL_advect(current: xr.Dataset,
                                advect_time=advect_time,
                                save_every=save_every)
 
-    buf_time, kernel_time = 0, 0
     writer = OutputWriter(out_dir=out_dir)
     create_logger(out_dir / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
-    for i, (advect_time_chunk, out_time_chunk, current_chunk, wind_chunk) \
-            in enumerate(zip(advect_time_chunks, out_time_chunks, current_chunks, wind_chunks)):
+    for i, (advect_time_chunk, current_chunk, wind_chunk) \
+            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
-        num_timesteps_chunk = len(advect_time_chunk) - 1  # because initial position is given!
-        out_timesteps_chunk = len(out_time_chunk) - 1     #
-
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents and wind...')  # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = create_kernel(advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_multiplier=windage_multiplier,
-                                   context=context, current=current_chunk, wind=wind_chunk, p0=p0_chunk, num_particles=num_particles,
-                                   dt=dt, start_time=advect_time_chunk[0], num_timesteps=num_timesteps_chunk, save_every=save_every,
-                                   out_timesteps=out_timesteps_chunk)
-        kernel.execute()
+            print(f'  Loading currents and wind...')   # these get implicitly loaded when .values is called on current_chunk variables
+            kernel = Kernel3D(current=current_chunk, wind=wind_chunk, p0=p0_chunk,
+                              advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_multiplier=windage_multiplier,
+                              advect_time=advect_time_chunk, save_every=save_every,
+                              context=context)
+        P_chunk = kernel.execute()
+        handle_errors(chunk=P_chunk, chunk_num=i + 1)
 
-        buf_time += kernel.buf_time
-        kernel_time += kernel.kernel_time
         if verbose:
             kernel.print_memory_footprint()
             kernel.print_execution_time()
-
-        P_chunk = create_dataset_from_kernel(kernel=kernel,
-                                             chunk_init_state=p0_chunk,
-                                             advect_time=out_time_chunk)
-        handle_errors(chunk=P_chunk, chunk_num=i + 1)
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
@@ -113,64 +103,6 @@ def openCL_advect(current: xr.Dataset,
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
     return writer.paths
-
-
-def create_kernel(advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: float,
-                  context: cl.Context, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
-                  num_particles: int, dt: datetime.timedelta, start_time: pd.Timestamp,
-                  num_timesteps: int, save_every: int, out_timesteps: int) -> Kernel3D:
-    """create and return the wrapper for the opencl kernel"""
-    current = current.transpose('time', 'depth', 'lon', 'lat')
-    wind = wind.transpose('time', 'lon', 'lat')
-    return Kernel3D(
-            advection_scheme=advection_scheme,
-            eddy_diffusivity=eddy_diffusivity,
-            windage_multiplier=windage_multiplier,
-            context=context,
-            current_x=current.lon.values.astype(np.float64),
-            current_y=current.lat.values.astype(np.float64),
-            current_z=current.depth.values.astype(np.float64),
-            current_t=current.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            current_U=current.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
-            current_V=current.V.values.astype(np.float32, copy=False).ravel(),
-            current_W=current.W.values.astype(np.float32, copy=False).ravel(),
-            wind_x=wind.lon.values.astype(np.float64),
-            wind_y=wind.lat.values.astype(np.float64),
-            wind_t=wind.time.values.astype('datetime64[s]').astype(np.float64),  # float64 representation of unix timestamp
-            wind_U=wind.U.values.astype(np.float32, copy=False).ravel(),  # astype will still copy if field.U is not already float32
-            wind_V=wind.V.values.astype(np.float32, copy=False).ravel(),
-            x0=p0.lon.values.astype(np.float32),
-            y0=p0.lat.values.astype(np.float32),
-            z0=p0.depth.values.astype(np.float32),
-            release_date=p0.release_date.values.astype('datetime64[s]').astype(np.float64),
-            radius=p0.radius.values.astype(np.float64),
-            density=p0.density.values.astype(np.float64),
-            start_time=start_time.timestamp(),
-            dt=dt.total_seconds(),
-            ntimesteps=num_timesteps,
-            save_every=save_every,
-            X_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # output will have this value
-            Y_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),  # unless overwritten (e.g. pre-release)
-            Z_out=np.full((num_particles*out_timesteps), np.nan, dtype=np.float32),
-            exit_code=p0.exit_code.values.astype(np.byte),
-    )
-
-
-def create_dataset_from_kernel(
-    kernel: Kernel3D, chunk_init_state: xr.Dataset, advect_time: pd.DatetimeIndex
-) -> xr.Dataset:
-    """assumes kernel has been run"""
-    P = chunk_init_state.assign_coords({"time": advect_time[1:]})  # add a time dimension
-
-    P = P.assign(  # overwrite with new data
-        {
-            "lon": (["p_id", "time"], kernel.X_out.reshape([len(P.p_id), -1])),
-            "lat": (["p_id", "time"], kernel.Y_out.reshape([len(P.p_id), -1])),
-            "depth": (["p_id", "time"], kernel.Z_out.reshape([len(P.p_id), -1])),
-            "exit_code": (["p_id"], kernel.exit_code),
-        }
-    )
-    return P
 
 
 def create_logger(log_path: Path):

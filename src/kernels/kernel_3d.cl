@@ -16,47 +16,47 @@ enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TO
 
 __kernel void advect(
     /* current vector field */
-    __global const double *current_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int current_x_len,   // 1 <= current_x_len <= UINT_MAX + 1
-    __global const double *current_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int current_y_len,   // 1 <= current_y_len <= UINT_MAX + 1
-    __global const double *current_z,    // depth, meters, positive up, sorted ascending
-    const unsigned int current_z_len,   // 1 <= current_z_len <= UINT_MAX + 1
-    __global const double *current_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int current_t_len,   // 1 <= current_t_len <= UINT_MAX + 1
-    __global const float *current_U,    // m / s, 32 bit to save space
-    __global const float *current_V,    // m / s
-    __global const float *current_W,    // m / s
+    __global const double *current_x,       // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int current_x_len,       // 1 <= current_x_len <= UINT_MAX + 1
+    __global const double *current_y,       // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int current_y_len,       // 1 <= current_y_len <= UINT_MAX + 1
+    __global const double *current_z,       // depth, meters, positive up, sorted ascending
+    const unsigned int current_z_len,       // 1 <= current_z_len <= UINT_MAX + 1
+    __global const double *current_t,       // time, seconds since epoch, uniform spacing
+    const unsigned int current_t_len,       // 1 <= current_t_len <= UINT_MAX + 1
+    __global const float *current_U,        // m / s, shape=(t, z, y, x) flattened, 32 bit to save space
+    __global const float *current_V,        // m / s
+    __global const float *current_W,        // m / s
     /* wind vector field */
-    __global const double *wind_x,    // lon, Deg E (-180 to 180), uniform spacing
-    const unsigned int wind_x_len,   // 1 <= wind_x_len <= UINT_MAX + 1
-    __global const double *wind_y,    // lat, Deg N (-90 to 90), uniform spacing
-    const unsigned int wind_y_len,   // 1 <= wind_y_len <= UINT_MAX + 1
-    __global const double *wind_t,     // time, seconds since epoch, uniform spacing
-    const unsigned int wind_t_len,   // 1 <= wind_t_len <= UINT_MAX + 1
-    __global const float *wind_U,    // m / s, 32 bit to save space
-    __global const float *wind_V,    // m / s
-    /* particle initialization information */
-    __global const float *x0,         // lon, Deg E (-180 to 180)
-    __global const float *y0,         // lat, Deg N (-90 to 90)
-    __global const float *z0,         // depth, m, positive up, <= 0
-    __global const double *release_date,         // unix timestamp
-    __global const double *radius,      // particle radius, m
-    __global const double *density,     // particle density, kg m^-3
+    __global const double *wind_x,          // lon, Deg E (-180 to 180), uniform spacing
+    const unsigned int wind_x_len,          // 1 <= wind_x_len <= UINT_MAX + 1
+    __global const double *wind_y,          // lat, Deg N (-90 to 90), uniform spacing
+    const unsigned int wind_y_len,          // 1 <= wind_y_len <= UINT_MAX + 1
+    __global const double *wind_t,          // time, seconds since epoch, uniform spacing
+    const unsigned int wind_t_len,          // 1 <= wind_t_len <= UINT_MAX + 1
+    __global const float *wind_U,           // m / s, shape=(t, y, x) flattened, 32 bit to save space
+    __global const float *wind_V,           // m / s
+    /* particle initialization */
+    __global const float *x0,               // lon, Deg E (-180 to 180)
+    __global const float *y0,               // lat, Deg N (-90 to 90)
+    __global const float *z0,               // depth, m, positive up, <= 0
+    __global const double *release_date,    // unix timestamp
+    __global const double *radius,          // particle radius, m
+    __global const double *density,         // particle density, kg m^-3
     /* advection time parameters */
-    const double start_time,          // unix timestamp
-    const double dt,             // seconds
+    const double start_time,                // unix timestamp
+    const double dt,                        // seconds
     const unsigned int ntimesteps,
     const unsigned int save_every,
     /* output vectors */
-    __global float *X_out,      // lon, Deg E (-180 to 180)
-    __global float *Y_out,      // lat, Deg N (-90 to 90)
-    __global float *Z_out,      // depth, m, positive up
-    /* physics parameters */
+    __global float *X_out,                  // lon, Deg E (-180 to 180)
+    __global float *Y_out,                  // lat, Deg N (-90 to 90)
+    __global float *Z_out,                  // depth, m, positive up
+    /* physics */
     const unsigned int advection_scheme,
     const double eddy_diffusivity,
     const double windage_multiplier,  // if nan, disables windage
-    /* debugging utility */
+    /* debugging */
     __global char *exit_code)
 {
     int global_id = get_global_id(0);
