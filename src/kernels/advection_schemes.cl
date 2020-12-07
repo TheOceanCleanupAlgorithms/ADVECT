@@ -31,17 +31,25 @@ vector taylor2_displacement(particle p, field2d field, double dt) {
     vector uv_n = index_vector_field(field, gp_n, true);    // one grid cell up
     vector uv_dt = index_vector_field(field, gp_dt, true);  // one grid cell in future
 
-    // grid spacing at particle in x direction (m)
-    double dx_m = degrees_lon_to_meters(field.x_spacing, p.y);
+    double dx = 2 * field.x_spacing; // distance between gp_west and gp_east (deg longitude).
+                                     // Uniform spacing, no boundaries, so very simple.
+    double dx_m = degrees_lon_to_meters(dx, p.y);
 
-    // grid spacing at particle in y direction (m)
-    double dy_m = degrees_lat_to_meters(field.y_spacing, p.y);
+
+    double dy;  // distance between gp_north and gp_south (deg latitude).
+                // Uniform spacing, boundaries at top/bottom, so a bit more complex.
+    if (gp.y_idx == 0 || gp.y_idx == field.y_len - 1) {
+        dy = field.y_spacing;
+    } else {
+        dy = 2 * field.y_spacing;
+    }
+    double dy_m = degrees_lat_to_meters(dy, p.y);
 
     // Calculate horizontal gradients
-    double ux = (uv_e.x - uv_w.x) / (2*dx_m);
-    double vx = (uv_e.y - uv_w.y) / (2*dx_m);
-    double uy = (uv_n.x - uv_s.x) / (2*dy_m);
-    double vy = (uv_n.y - uv_s.y) / (2*dy_m);
+    double ux = (uv_e.x - uv_w.x) / (dx_m);
+    double vx = (uv_e.y - uv_w.y) / (dx_m);
+    double uy = (uv_n.x - uv_s.x) / (dy_m);
+    double vy = (uv_n.y - uv_s.y) / (dy_m);
 
     // Calculate time gradients
     double ut = (uv_dt.x - uv.x) / dt;
