@@ -46,14 +46,15 @@ vector taylor2_displacement(particle p, field2d field, double dt) {
     double dy_m = degrees_lat_to_meters(dy, p.y);
 
     // Calculate horizontal gradients
-    double ux = (uv_e.x - uv_w.x) / (dx_m);
-    double vx = (uv_e.y - uv_w.y) / (dx_m);
-    double uy = (uv_n.x - uv_s.x) / (dy_m);
-    double vy = (uv_n.y - uv_s.y) / (dy_m);
+    // nan spacing indicates singleton dimension
+    double ux = isnan(dx_m) ? 0 : (uv_e.x - uv_w.x) / (dx_m);
+    double vx = isnan(dx_m) ? 0 : (uv_e.y - uv_w.y) / (dx_m);
+    double uy = isnan(dy_m) ? 0 : (uv_n.x - uv_s.x) / (dy_m);
+    double vy = isnan(dy_m) ? 0 : (uv_n.y - uv_s.y) / (dy_m);
 
     // Calculate time gradients
-    double ut = (uv_dt.x - uv.x) / dt;
-    double vt = (uv_dt.y - uv.y) / dt;
+    double ut = isnan(field.t_spacing) ? 0 : (uv_dt.x - uv.x) / field.t_spacing;
+    double vt = isnan(field.t_spacing) ? 0 : (uv_dt.y - uv.y) / field.t_spacing;
 
     // simplifying term
     double u_ = uv.x + (dt*ut)/2;
