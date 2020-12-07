@@ -73,10 +73,10 @@ def plot_3d_trajectories(
 
 
 # sargasso seabed
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/dense/advector_output_2015.nc',
+plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/advector_output_2015.nc',
                      current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
                      current_V_path='../../examples/ECCO/ECCO_interp/V_2015-01-01.nc',
                      current_W_path='../../examples/ECCO/ECCO_interp/W_2015-01-01.nc',
-                     lon_range=(-70, -50),
-                     lat_range=(20, 30),
-                     depth_range=(-6000, 0))
+                     lon_range=(-80, -60),
+                     lat_range=(-56, -46),
+                     depth_range=(-1000, 0))

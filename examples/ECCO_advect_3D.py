@@ -26,7 +26,7 @@ if __name__ == '__main__':
         timestep=timedelta(hours=1),
         num_timesteps=24*365,
         save_period=24,
-        advection_scheme='eulerian',
+        advection_scheme='taylor2',
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         windage_multiplier=WINDAGE_MULTIPLIER,
         verbose=True,
