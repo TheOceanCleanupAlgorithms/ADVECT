@@ -32,28 +32,16 @@ vector taylor2_displacement(particle p, field2d field, double dt) {
     vector uv_dt = index_vector_field(field, gp_dt, true);  // one grid cell in future
 
     // grid spacing at particle in x direction (m)
-    double dx;
-    if (gp.x_idx == 0) {
-        dx = field.x[gp.x_idx + 1] - field.x[gp.x_idx];
-    } else {
-        dx = field.x[gp.x_idx] - field.x[gp.x_idx - 1];
-    }
-    double dx_m = degrees_lon_to_meters(dx, p.y);
+    double dx_m = degrees_lon_to_meters(field.x_spacing, p.y);
 
     // grid spacing at particle in y direction (m)
-    double dy;
-    if (gp.y_idx == 0) {
-        dy = field.y[gp.y_idx + 1] - field.y[gp.y_idx];
-    } else {
-        dy = field.y[gp.y_idx] - field.y[gp.y_idx - 1];
-    }
-    double dy_m = degrees_lat_to_meters(dy, p.y);
+    double dy_m = degrees_lat_to_meters(field.y_spacing, p.y);
 
     // Calculate horizontal gradients
-    double ux = (uv_w.x - uv_e.x) / (2*dx_m);
-    double vx = (uv_w.y - uv_e.y) / (2*dx_m);
-    double uy = (uv_s.x - uv_n.x) / (2*dy_m);
-    double vy = (uv_s.y - uv_n.y) / (2*dy_m);
+    double ux = (uv_e.x - uv_w.x) / (2*dx_m);
+    double vx = (uv_e.y - uv_w.y) / (2*dx_m);
+    double uy = (uv_n.x - uv_s.x) / (2*dy_m);
+    double vy = (uv_n.y - uv_s.y) / (2*dy_m);
 
     // Calculate time gradients
     double ut = (uv_dt.x - uv.x) / dt;
