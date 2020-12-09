@@ -7,6 +7,7 @@
 #include "eddy_diffusion.cl"
 #include "windage.cl"
 #include "buoyancy.cl"
+#include "gradients.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
