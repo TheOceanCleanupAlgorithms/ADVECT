@@ -1,6 +1,7 @@
 #include "gradients.cl"
 #include "fields.cl"
 #include "particle.cl"
+#include "geography.cl"
 
 __kernel void test_partials(
     /* vector field */

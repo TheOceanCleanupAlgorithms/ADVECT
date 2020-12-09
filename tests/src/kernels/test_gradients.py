@@ -4,11 +4,12 @@ import pyopencl as cl
 import os
 import numpy as np
 from config import ROOT_DIR
+from tests.src.kernels.test_geography import degrees_lon_to_meters, degrees_lat_to_meters
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 KERNEL_SOURCE = Path(__file__).parent / "test_gradients.cl"
 # setup
-ctx = cl.create_some_context(answers=[0, 2])
+ctx = cl.create_some_context(answers=[0, 0])
 queue = cl.CommandQueue(ctx)
 prg = cl.Program(ctx, open(KERNEL_SOURCE).read()).build(
     options=["-I", str(ROOT_DIR / "src/kernels")]
@@ -85,17 +86,18 @@ def test_partial_x():
               'U': np.array([0, 2, 7, 9, 5, -1]).reshape((1, 1, 1, 6))}
     xfield.update({'V': -1*xfield['U'], 'W': 2*xfield['U']})
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
+    dx_m = degrees_lon_to_meters(.5, p['y'])
 
     p['x'] = 0.1  # between index 0 and 1 of xfield.x
-    V_xx_true = (2 - 0) / .5
+    V_xx_true = (2 - 0) / dx_m
     np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
 
     p['x'] = 1.6  # between index 2 and 3 of xfield.x
-    V_xx_true = (5 - 9) / .5
+    V_xx_true = (5 - 9) / dx_m
     np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
 
     p['x'] = -.1  # off bottom of array (but x is circular...)
-    V_xx_true = (0 - (-1)) / (.5)
+    V_xx_true = (0 - (-1)) / dx_m
     np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
     p['x'] = 2.8  # off top of array (but x is circular...)
     np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
@@ -129,11 +131,11 @@ def test_partial_y():
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
 
     p['y'] = 0  # between index 1 and 2 of yfield.y
-    V_yx_true = (3.6 - (-4)) / 3
+    V_yx_true = (3.6 - (-4)) / degrees_lat_to_meters(3, p['y'])
     np.testing.assert_allclose(calculate_partials(p, yfield)[1], [V_yx_true, -V_yx_true, 2 * V_yx_true])
 
     p['y'] = 5.0001  # between index 3 and 4 of yfield.y
-    V_yx_true = (-3 - 7) / 3
+    V_yx_true = (-3 - 7) / degrees_lat_to_meters(3, p['y'])
     np.testing.assert_allclose(calculate_partials(p, yfield)[1], [V_yx_true, -V_yx_true, 2 * V_yx_true])
 
 
