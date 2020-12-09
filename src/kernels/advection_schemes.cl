@@ -50,9 +50,27 @@ vector taylor2_displacement(particle p, field3d field, double dt) {
         // simplified form of scheme in Appendix A4 of Tim Jensen Master's Thesis; copied from his code
         // at https://github.com/TimJansen94/3D-dispersal-model-Tim/blob/master/run_model/funcs_advect.m
     vector displacement_meters;
-    displacement_meters.x = dt * -(8*u_ - 4*dt*u_*vy + 4*dt*uy*v_ - 4*dt*u_*wz + 4*dt*uz*w_ + 2*pow(dt, 2)*u_*vy*wz - 2*pow(dt, 2)*u_*vz*wy - 2*pow(dt, 2)*uy*v_*wz + 2*pow(dt, 2)*uy*vz*w_ + 2*pow(dt, 2)*uz*v_*wy - 2*pow(dt, 2)*uz*vy*w_)/(4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
-    displacement_meters.y = dt * -(8*v_ + 4*dt*u_*vx - 4*dt*ux*v_ - 4*dt*v_*wz + 4*dt*vz*w_ - 2*pow(dt, 2)*u_*vx*wz + 2*pow(dt, 2)*u_*vz*wx + 2*pow(dt, 2)*ux*v_*wz - 2*pow(dt, 2)*ux*vz*w_ - 2*pow(dt, 2)*uz*v_*wx + 2*pow(dt, 2)*uz*vx*w_)/(4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
-    displacement_meters.z = dt * -(8*w_ + 4*dt*u_*wx - 4*dt*ux*w_ + 4*dt*v_*wy - 4*dt*vy*w_ + 2*pow(dt, 2)*u_*vx*wy - 2*pow(dt, 2)*u_*vy*wx - 2*pow(dt, 2)*ux*v_*wy + 2*pow(dt, 2)*ux*vy*w_ + 2*pow(dt, 2)*uy*v_*wx - 2*pow(dt, 2)*uy*vx*w_)/(4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
+    displacement_meters.x = dt * -(8*u_ - 4*dt*u_*vy + 4*dt*uy*v_ - 4*dt*u_*wz + 4*dt*uz*w_ + 2*pow(dt, 2)*u_*vy*wz
+                                   - 2*pow(dt, 2)*u_*vz*wy - 2*pow(dt, 2)*uy*v_*wz + 2*pow(dt, 2)*uy*vz*w_
+                                   + 2*pow(dt, 2)*uz*v_*wy - 2*pow(dt, 2)*uz*vy*w_)
+                                / (4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx
+                                   - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy
+                                   + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz
+                                   + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
+    displacement_meters.y = dt * -(8*v_ + 4*dt*u_*vx - 4*dt*ux*v_ - 4*dt*v_*wz + 4*dt*vz*w_ - 2*pow(dt, 2)*u_*vx*wz
+                                   + 2*pow(dt, 2)*u_*vz*wx + 2*pow(dt, 2)*ux*v_*wz - 2*pow(dt, 2)*ux*vz*w_
+                                   - 2*pow(dt, 2)*uz*v_*wx + 2*pow(dt, 2)*uz*vx*w_)
+                                / (4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx
+                                   - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy
+                                   + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz
+                                   + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
+    displacement_meters.z = dt * -(8*w_ + 4*dt*u_*wx - 4*dt*ux*w_ + 4*dt*v_*wy - 4*dt*vy*w_ + 2*pow(dt, 2)*u_*vx*wy
+                                   - 2*pow(dt, 2)*u_*vy*wx - 2*pow(dt, 2)*ux*v_*wy + 2*pow(dt, 2)*ux*vy*w_
+                                   + 2*pow(dt, 2)*uy*v_*wx - 2*pow(dt, 2)*uy*vx*w_)
+                                / (4*dt*ux + 4*dt*vy + 4*dt*wz - 2*pow(dt, 2)*ux*vy + 2*pow(dt, 2)*uy*vx
+                                   - 2*pow(dt, 2)*ux*wz + 2*pow(dt, 2)*uz*wx - 2*pow(dt, 2)*vy*wz + 2*pow(dt, 2)*vz*wy
+                                   + pow(dt, 3)*ux*vy*wz - pow(dt, 3)*ux*vz*wy - pow(dt, 3)*uy*vx*wz
+                                   + pow(dt, 3)*uy*vz*wx + pow(dt, 3)*uz*vx*wy - pow(dt, 3)*uz*vy*wx - 8);
             
     return displacement_meters;
 }
