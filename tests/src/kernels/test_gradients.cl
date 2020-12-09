@@ -44,4 +44,8 @@ __kernel void test_partials(
     partials[6] = V_z.x;
     partials[7] = V_z.y;
     partials[8] = V_z.z;
+    vector V_t = t_partial(p, field);
+    partials[9] = V_t.x;
+    partials[10] = V_t.y;
+    partials[11] = V_t.z;
 }

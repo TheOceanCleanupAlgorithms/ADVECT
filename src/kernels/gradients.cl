@@ -82,10 +82,36 @@ vector z_partial(particle p, field3d field) {
     vector V_lower = index_vector_field(field, lower, true);
 
     double dz = field.z[higher.z_idx] - field.z[lower.z_idx];
-    vector V_y;
-    V_y.x = (V_higher.x - V_lower.x) / dz;
-    V_y.y = (V_higher.y - V_lower.y) / dz;
-    V_y.z = (V_higher.z - V_lower.z) / dz;
+    vector V_z;
+    V_z.x = (V_higher.x - V_lower.x) / dz;
+    V_z.y = (V_higher.y - V_lower.y) / dz;
+    V_z.z = (V_higher.z - V_lower.z) / dz;
 
-    return V_y;
+    return V_z;
+}
+
+vector t_partial(particle p, field3d field) {
+    if (p.t <= field.t[0] || p.t >= field.t[field.t_len - 1]) {  // position outside of domain
+        vector undefined = {.x = NAN, .y = NAN, .z = NAN};
+        return undefined;
+    }
+
+    grid_point neighbor = find_nearest_neighbor(p, field);
+    grid_point higher = neighbor;  // grid point above particle in t
+    grid_point lower = neighbor;  // grid point below particle in t
+    if (field.t[neighbor.t_idx] > p.t) {  // particle is below neighbor in t dimension
+        lower.t_idx = neighbor.t_idx - 1;
+    } else {
+        higher.t_idx = neighbor.t_idx + 1;
+    }
+
+    vector V_higher = index_vector_field(field, higher, true);
+    vector V_lower = index_vector_field(field, lower, true);
+
+    vector V_t;
+    V_t.x = (V_higher.x - V_lower.x) / field.t_spacing;
+    V_t.y = (V_higher.y - V_lower.y) / field.t_spacing;
+    V_t.z = (V_higher.z - V_lower.z) / field.t_spacing;
+
+    return V_t;
 }

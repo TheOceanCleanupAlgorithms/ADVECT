@@ -21,9 +21,10 @@ def calculate_partials(p: dict, field: dict) -> np.ndarray:
     :param field: vector field, keys={'x', 'y', 'z', 't', 'U', 'V', 'W'}.
         x/y/z/t are sorted 1d np arrays; x/y/t uniformly spaced, z ascending
         U/V/W are np ndarrays with shape (t, z, y, x)
-    :return 3x3 ndarray of partials [[U_x, V_x, W_x],
+    :return 4x3 ndarray of partials [[U_x, V_x, W_x],
                                      [U_y, V_y, W_y],
-                                     [U_z, V_z, W_z]]
+                                     [U_z, V_z, W_z],
+                                     [U_t, V_t, W_t]]
     """
     d_field_x, d_field_y, d_field_z, d_field_t, d_field_U, d_field_V, d_field_W = (
         cl.Buffer(
@@ -40,7 +41,7 @@ def calculate_partials(p: dict, field: dict) -> np.ndarray:
         )
     )
 
-    partials_out = np.empty(9)
+    partials_out = np.empty(12)
     d_partials_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, partials_out.nbytes)
 
     prg.test_partials(
@@ -68,7 +69,7 @@ def calculate_partials(p: dict, field: dict) -> np.ndarray:
 
     cl.enqueue_copy(queue, partials_out, d_partials_out)
 
-    return partials_out.reshape([3, 3])
+    return partials_out.reshape([4, 3])
 
 
 # create some dummy data
@@ -123,7 +124,7 @@ def test_domain_y():
 
 def test_partial_y():
     yfield = {'x': np.zeros(1), 'y': np.array([-4, -1, 2, 5, 8]), 'z': np.zeros(1), 't': np.zeros(1),
-              'U': np.array([10, -4, 3.6, 7, -3]).reshape((1, 1, 1, 5))}
+              'U': np.array([10, -4, 3.6, 7, -3]).reshape((1, 1, 5, 1))}
     yfield.update({'V': -1*yfield['U'], 'W': 2*yfield['U']})
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
 
@@ -159,7 +160,7 @@ def test_domain_z():
 
 def test_partial_z():
     zfield = {'x': np.zeros(1), 'y': np.zeros(1), 'z': np.array([-100, -50, -20, -10, -5]), 't': np.zeros(1),
-              'U': np.array([4, 52, -2, 4.2, 0]).reshape((1, 1, 1, 5))}
+              'U': np.array([4, 52, -2, 4.2, 0]).reshape((1, 5, 1, 1))}
     zfield.update({'V': -1*zfield['U'], 'W': 2*zfield['U']})
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
 
@@ -170,3 +171,40 @@ def test_partial_z():
     p['z'] = -8  # between index 3 and 4 of zfield.z
     V_zx_true = (0 - 4.2) / (-5 - (-10))
     np.testing.assert_allclose(calculate_partials(p, zfield)[2], [V_zx_true, -V_zx_true, 2 * V_zx_true])
+
+
+def test_domain_t():
+    # test nans returned outside domain, not inside
+    p = default_p.copy()
+    eps = 1e-7
+
+    p['t'] = min(field['t'])
+    assert all(np.isnan(calculate_partials(p, field)[3]))
+    p['t'] = max(field['t'])
+    assert all(np.isnan(calculate_partials(p, field)[3]))
+
+    p['t'] = min(field['t']) - eps
+    assert all(np.isnan(calculate_partials(p, field)[3]))
+    p['t'] = max(field['t']) + eps
+    assert all(np.isnan(calculate_partials(p, field)[3]))
+
+    p['t'] = min(field['t']) + eps
+    assert not any(np.isnan(calculate_partials(p, field)[3]))
+    p['t'] = max(field['t']) - eps
+    assert not any(np.isnan(calculate_partials(p, field)[3]))
+
+
+def test_partial_t():
+    tfield = {'x': np.zeros(1), 'y': np.zeros(1), 'z': np.zeros(1),
+              't': np.array([3410, 3420, 3430, 3440, 3450, 3460]),
+              'U': np.array([.5, .8, 10, .2, -.5, 3]).reshape((6, 1, 1, 1))}
+    tfield.update({'V': -1*tfield['U'], 'W': 2*tfield['U']})
+    p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
+
+    p['t'] = 3422  # between index 1 and 2 of tfield.t
+    V_tx_true = (10 - .8) / 10
+    np.testing.assert_allclose(calculate_partials(p, tfield)[3], [V_tx_true, -V_tx_true, 2 * V_tx_true])
+
+    p['t'] = 3444  # between index 3 and 4 of tfield.t
+    V_tx_true = (-.5 - .2) / 10
+    np.testing.assert_allclose(calculate_partials(p, tfield)[3], [V_tx_true, -V_tx_true, 2 * V_tx_true])
