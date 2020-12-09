@@ -92,7 +92,6 @@ class Kernel3D:
         self.buf_time = 0
         self.kernel_time = 0
 
-
     def execute(self) -> xr.Dataset:
         """tranfers arguments to the compute device, triggers execution, returns result"""
         # perform argument check
@@ -181,7 +180,7 @@ class Kernel3D:
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""
 
-        def is_uniformly_spaced(arr):
+        def is_uniformly_spaced_ascending(arr):
             tol = 1e-3
             return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
@@ -189,27 +188,27 @@ class Kernel3D:
         assert max(self.current_x) <= 180
         assert min(self.current_x) >= -180
         assert 1 <= len(self.current_x) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.current_x)
+        assert is_uniformly_spaced_ascending(self.current_x)
         assert max(self.current_y) <= 90
         assert min(self.current_y) >= -90
         assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.current_y)
+        assert is_uniformly_spaced_ascending(self.current_y)
         assert max(self.current_z) <= 0
         assert np.all(np.diff(self.current_z) > 0)  # ascending
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.current_t)
+        assert is_uniformly_spaced_ascending(self.current_t)
 
         # check wind field valid
         assert max(self.wind_x) <= 180
         assert min(self.wind_x) >= -180
         assert 1 <= len(self.wind_x) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.wind_x)
+        assert is_uniformly_spaced_ascending(self.wind_x)
         assert max(self.wind_y) <= 90
         assert min(self.wind_y) >= -90
         assert 1 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.wind_y)
+        assert is_uniformly_spaced_ascending(self.wind_y)
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced(self.wind_t)
+        assert is_uniformly_spaced_ascending(self.wind_t)
 
         # check particle positions valid
         assert np.nanmax(self.x0) < 180

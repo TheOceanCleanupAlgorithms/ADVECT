@@ -16,13 +16,13 @@ enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TO
 
 __kernel void advect(
     /* current vector field */
-    __global const double *current_x,       // lon, Deg E (-180 to 180), uniform spacing
+    __global const double *current_x,       // lon, Deg E (-180 to 180), uniform spacing, ascending, circular array
     const unsigned int current_x_len,       // 1 <= current_x_len <= UINT_MAX + 1
-    __global const double *current_y,       // lat, Deg N (-90 to 90), uniform spacing
+    __global const double *current_y,       // lat, Deg N (-90 to 90), uniform spacing, ascending
     const unsigned int current_y_len,       // 1 <= current_y_len <= UINT_MAX + 1
     __global const double *current_z,       // depth, meters, positive up, sorted ascending
     const unsigned int current_z_len,       // 1 <= current_z_len <= UINT_MAX + 1
-    __global const double *current_t,       // time, seconds since epoch, uniform spacing
+    __global const double *current_t,       // time, seconds since epoch, uniform spacing, ascending
     const unsigned int current_t_len,       // 1 <= current_t_len <= UINT_MAX + 1
     __global const float *current_U,        // m / s, shape=(t, z, y, x) flattened, 32 bit to save space
     __global const float *current_V,        // m / s
