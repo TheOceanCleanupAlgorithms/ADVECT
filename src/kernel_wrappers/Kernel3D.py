@@ -5,6 +5,7 @@ of executing kernels.
 """
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import kernel_wrappers.kernel_constants as cl_const
 import numpy as np
@@ -28,7 +29,7 @@ class Kernel3D:
 
     def __init__(self, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
                  advect_time: pd.DatetimeIndex, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: float,
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: Optional[float],
                  context: cl.Context):
         """convert convenient python objects to raw representation for kernel"""
         # save some arguments for creating output dataset

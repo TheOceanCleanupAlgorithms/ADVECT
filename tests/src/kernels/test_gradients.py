@@ -3,7 +3,7 @@ from pathlib import Path
 import pyopencl as cl
 import os
 import numpy as np
-from config import ROOT_DIR
+from tests.config import ROOT_DIR
 from tests.src.kernels.test_geography import degrees_lon_to_meters, degrees_lat_to_meters
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"

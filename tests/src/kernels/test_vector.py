@@ -3,7 +3,7 @@ from pathlib import Path
 import pyopencl as cl
 import os
 import numpy as np
-from config import ROOT_DIR
+from tests.config import ROOT_DIR
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 KERNEL_SOURCE = Path(__file__).parent / "test_vector.cl"
