@@ -1,4 +1,5 @@
 #include "particle.h"
+#include "geography.h"
 
 particle constrain_coordinates(particle p) {
     // deal with advecting over the poles
@@ -10,9 +11,7 @@ particle constrain_coordinates(particle p) {
         p.x = p.x + 180;
     }
     // keep longitude representation within [-180, 180)
-    // builtin fmod(a, b) is a - b*trunc(a/b), which behaves incorrectly for negative numbers.
-    //            so we use  a - b*floor(a/b) instead
-    p.x = ((p.x+180) - 360*floor((p.x+180)/360)) - 180;
+    p.x = constrain_longitude_to_valid_domain(p.x);
 
     // keep particles out of the atmosphere
     if (p.z > 0) {
@@ -78,12 +77,12 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, __global 
 
 grid_point find_nearest_neighbor(particle p, field3d field) {
 /* assumption: particle has non-null latitude and longitude. */
-        grid_point neighbor;
-        neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
-        neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
-        neighbor.z_idx = find_nearest_neighbor_idx_non_uniform(p.z, field.z, field.z_len);
-        neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
-        return neighbor;
+    grid_point neighbor;
+    neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
+    neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
+    neighbor.z_idx = find_nearest_neighbor_idx_non_uniform(p.z, field.z, field.z_len);
+    neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
+    return neighbor;
 }
 
 bool in_ocean(particle p, field3d field) {

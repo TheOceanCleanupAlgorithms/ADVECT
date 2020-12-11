@@ -1,15 +1,15 @@
 import pyopencl as cl
 import os
 import numpy as np
-from config import ROOT_DIR
+from tests.config import ROOT_DIR
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 
 
 def calculate_windage_coeff(r, z) -> np.ndarray:
     """calculate area of a circular segment using kernel code
-    :param R: radius of circle
-    :param r: distance from center of circle to chord forming segment
+    :param r: radius of circle
+    :param z: distance from center of circle to chord forming segment
     """
     # setup
     ctx = cl.create_some_context()
@@ -29,7 +29,6 @@ def calculate_windage_coeff(r, z) -> np.ndarray:
     out = np.zeros(1).astype(np.float64)
     d_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, out.nbytes)
 
-    prg.coeff.set_scalar_arg_dtypes([np.float64, np.float64, None])
     prg.coeff(queue, (1,), None, np.float64(r), np.float64(z), d_out)
     queue.finish()
 
