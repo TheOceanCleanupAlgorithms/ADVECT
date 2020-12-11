@@ -4,7 +4,27 @@
 /*
     Derivatives are calculated as a finite difference between the two grid points which the particle lies between
         along a given coordinate.  Derivative exactly at gridpoint defined as gradient just above gridpoint (statistically unimportant).
+    Derivatives undefined at and beyond grid bounds, except in the special case that x is a circular array
+        (e.g. global longitude), in which case p beyond grid bounds is assumed within domain,
+        with the derivative defined in a circular manner.
 */
+
+__constant vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
+
+vector calculate_partial(grid_point lower, grid_point higher, double spacing, field3d field) {
+    vector V_higher = index_vector_field(field, higher, true);
+    vector V_lower = index_vector_field(field, lower, true);
+
+    vector partial;
+    partial.x = (V_higher.x - V_lower.x) / spacing;
+    partial.y = (V_higher.y - V_lower.y) / spacing;
+    partial.z = (V_higher.z - V_lower.z) / spacing;
+    return partial;
+}
+
+bool in_domain(double position, __global const double *dim, const unsigned int dim_len) {
+    return (position > dim[0] && position < dim[dim_len - 1]);
+}
 
 vector x_partial(particle p, field3d field) {
     /*return the partial derivatives of the vector field wrt x at p's location
@@ -16,10 +36,9 @@ vector x_partial(particle p, field3d field) {
     grid_point higher = neighbor;  // grid point above particle in x
     grid_point lower = neighbor;  // grid point below particle in x
     // if x is circular, assumed if p is outside domain, it is "between" points.
-    if (p.x <= field.x[0] || p.x >= field.x[field.x_len - 1]) {
+    if (!in_domain(p.x, field.x, field.x_len)) {
         if (!field.x_is_circular) { // p outside valid domain
-            vector undefined = {.x = NAN, .y = NAN, .z = NAN};
-            return undefined;
+            return UNDEFINED;
         } else {  // p is assumed above last, below first (bc x circular)
             lower.x_idx = field.x_len - 1;
             higher.x_idx = 0;
@@ -32,26 +51,16 @@ vector x_partial(particle p, field3d field) {
         }
     }
 
-    vector V_higher = index_vector_field(field, higher, true);
-    vector V_lower = index_vector_field(field, lower, true);
-
     double dx_m = degrees_lon_to_meters(field.x_spacing, p.y);
-
-    vector V_x;
-    V_x.x = (V_higher.x - V_lower.x) / dx_m;
-    V_x.y = (V_higher.y - V_lower.y) / dx_m;
-    V_x.z = (V_higher.z - V_lower.z) / dx_m;
-
-    return V_x;
+    return calculate_partial(lower, higher, dx_m, field);
 }
 
 vector y_partial(particle p, field3d field) {
     /*return the partial derivatives of the vector field wrt y at p's location
      * units: (m/s) / m
      */
-    if (p.y <= field.y[0] || p.y >= field.y[field.y_len - 1]) {  // position outside of domain
-        vector undefined = {.x = NAN, .y = NAN, .z = NAN};
-        return undefined;
+    if (!in_domain(p.y, field.y, field.y_len)) {  // position outside of domain
+        return UNDEFINED;
     }
 
     grid_point neighbor = find_nearest_neighbor(p, field);
@@ -63,26 +72,16 @@ vector y_partial(particle p, field3d field) {
         higher.y_idx = neighbor.y_idx + 1;
     }
 
-    vector V_higher = index_vector_field(field, higher, true);
-    vector V_lower = index_vector_field(field, lower, true);
-
     double dy_m = degrees_lat_to_meters(field.y_spacing, p.y);
-
-    vector V_y;
-    V_y.x = (V_higher.x - V_lower.x) / dy_m;
-    V_y.y = (V_higher.y - V_lower.y) / dy_m;
-    V_y.z = (V_higher.z - V_lower.z) / dy_m;
-
-    return V_y;
+    return calculate_partial(lower, higher, dy_m, field);
 }
 
 vector z_partial(particle p, field3d field) {
     /*return the partial derivatives of the vector field wrt z at p's location
      * units: (m/s) / m
      */
-    if (p.z <= field.z[0] || p.z >= field.z[field.z_len - 1]) {  // position outside of domain
-        vector undefined = {.x = NAN, .y = NAN, .z = NAN};
-        return undefined;
+    if (!in_domain(p.z, field.z, field.z_len)) {  // position outside of domain
+        return UNDEFINED;
     }
 
     grid_point neighbor = find_nearest_neighbor(p, field);
@@ -94,25 +93,16 @@ vector z_partial(particle p, field3d field) {
         higher.z_idx = neighbor.z_idx + 1;
     }
 
-    vector V_higher = index_vector_field(field, higher, true);
-    vector V_lower = index_vector_field(field, lower, true);
-
     double dz_m = field.z[higher.z_idx] - field.z[lower.z_idx];
-    vector V_z;
-    V_z.x = (V_higher.x - V_lower.x) / dz_m;
-    V_z.y = (V_higher.y - V_lower.y) / dz_m;
-    V_z.z = (V_higher.z - V_lower.z) / dz_m;
-
-    return V_z;
+    return calculate_partial(lower, higher, dz_m, field);
 }
 
 vector t_partial(particle p, field3d field) {
     /*return the partial derivatives of the vector field wrt t at p's location
      * units: (m/s) / s
      */
-    if (p.t <= field.t[0] || p.t >= field.t[field.t_len - 1]) {  // position outside of domain
-        vector undefined = {.x = NAN, .y = NAN, .z = NAN};
-        return undefined;
+    if (!in_domain(p.t, field.t, field.t_len)) {  // position outside of domain
+        return UNDEFINED;
     }
 
     grid_point neighbor = find_nearest_neighbor(p, field);
@@ -124,13 +114,5 @@ vector t_partial(particle p, field3d field) {
         higher.t_idx = neighbor.t_idx + 1;
     }
 
-    vector V_higher = index_vector_field(field, higher, true);
-    vector V_lower = index_vector_field(field, lower, true);
-
-    vector V_t;
-    V_t.x = (V_higher.x - V_lower.x) / field.t_spacing;
-    V_t.y = (V_higher.y - V_lower.y) / field.t_spacing;
-    V_t.z = (V_higher.z - V_lower.z) / field.t_spacing;
-
-    return V_t;
+    return calculate_partial(lower, higher, field.t_spacing, field);
 }
