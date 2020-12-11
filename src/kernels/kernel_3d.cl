@@ -17,7 +17,7 @@ enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TO
 
 __kernel void advect(
     /* current vector field */
-    __global const double *current_x,       // lon, Deg E (-180 to 180), uniform spacing, ascending, circular array
+    __global const double *current_x,       // lon, Deg E (-180 to 180), uniform spacing, ascending,
     const unsigned int current_x_len,       // 1 <= current_x_len <= UINT_MAX + 1
     __global const double *current_y,       // lat, Deg N (-90 to 90), uniform spacing, ascending
     const unsigned int current_y_len,       // 1 <= current_y_len <= UINT_MAX + 1
@@ -72,6 +72,7 @@ __kernel void advect(
                      .t_spacing = calculate_spacing(current_t, current_t_len),
                      .U = current_U, .V = current_V, .W = current_W,
                      .z_floor = calculate_coordinate_floor(current_z, current_z_len)};  // bottom edge of lowest layer
+    current.x_is_circular = x_is_circular(current);
 
     // turn 2d wind into 3d wind with singleton z
     double wind_z[1] = {0.0};
@@ -82,6 +83,7 @@ __kernel void advect(
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
                     .U = wind_U, .V = wind_V, .W = 0,
                     .z_floor = 0};
+    wind.x_is_circular = x_is_circular(wind);
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],

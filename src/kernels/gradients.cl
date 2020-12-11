@@ -10,19 +10,23 @@ vector x_partial(particle p, field3d field) {
     /*return the partial derivatives of the vector field wrt x at p's location
      * units: (m/s) / m
      */
-    // note: field.x is a modular (circular) array
+    // note: field.x is considered a modular (circular) array
+
     grid_point neighbor = find_nearest_neighbor(p, field);
     grid_point higher = neighbor;  // grid point above particle in x
     grid_point lower = neighbor;  // grid point below particle in x
-    if (field.x[neighbor.x_idx] > p.x) {  // particle is below neighbor in x dimension
-        if (neighbor.x_idx == 0) {  // off lower end of array; wrap
+    // if x is circular, assumed if p is outside domain, it is "between" points.
+    if (p.x <= field.x[0] || p.x >= field.x[field.x_len - 1]) {
+        if (!field.x_is_circular) { // p outside valid domain
+            vector undefined = {.x = NAN, .y = NAN, .z = NAN};
+            return undefined;
+        } else {  // p is assumed above last, below first (bc x circular)
             lower.x_idx = field.x_len - 1;
-        } else {
-            lower.x_idx = neighbor.x_idx - 1;
+            higher.x_idx = 0;
         }
     } else {
-        if (neighbor.x_idx == neighbor.x_idx - 1) {  // off upper end of array; wrap
-            higher.x_idx = 0;
+        if (field.x[neighbor.x_idx] > p.x) {  // particle is below neighbor in x dimension
+            lower.x_idx = neighbor.x_idx - 1;
         } else {
             higher.x_idx = neighbor.x_idx + 1;
         }

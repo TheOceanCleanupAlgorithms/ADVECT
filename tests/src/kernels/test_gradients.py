@@ -16,12 +16,13 @@ prg = cl.Program(ctx, open(KERNEL_SOURCE).read()).build(
 )
 
 
-def calculate_partials(p: dict, field: dict) -> np.ndarray:
+def calculate_partials(p: dict, field: dict, x_is_circular: bool = False) -> np.ndarray:
     """calculate partial derivatives of vector field at particle position using kernel code
     :param p: particle location, keys={'x', 'y', 'z', 't'}
     :param field: vector field, keys={'x', 'y', 'z', 't', 'U', 'V', 'W'}.
         x/y/z/t are sorted 1d np arrays; x/y/t uniformly spaced, z ascending
         U/V/W are np ndarrays with shape (t, z, y, x)
+    :param x_is_circular: determines how domain is handled.
     :return 4x3 ndarray of partials [[U_x, V_x, W_x],
                                      [U_y, V_y, W_y],
                                      [U_z, V_z, W_z],
@@ -64,6 +65,7 @@ def calculate_partials(p: dict, field: dict) -> np.ndarray:
         np.float64(p["y"]),
         np.float64(p["z"]),
         np.float64(p["t"]),
+        np.bool_(x_is_circular),
         d_partials_out,
     )
     queue.finish()
@@ -79,6 +81,35 @@ rng = np.random.default_rng(seed=0)
 field = {'x': np.linspace(-2, 2, 10), 'y': np.linspace(-1, 1, 5), 'z': np.linspace(-2, 0, 4), 't': np.linspace(0, 10, 7)}
 field['U'] = field['x'] * np.ones((len(field['t']), len(field['z']), len(field['y']), len(field['x'])))
 field.update({'V': -1 * field['U'], 'W': 2 * field['U']})
+
+
+def test_domain_x():
+    # test nans returned outside domain, not inside
+    p = default_p.copy()
+    eps = 1e-7
+    domain_min = min(field['x'])
+    domain_max = max(field['x'])
+    p['x'] = domain_min
+    assert all(np.isnan(calculate_partials(p, field)[0]))
+    p['x'] = domain_max
+    assert all(np.isnan(calculate_partials(p, field)[0]))
+
+    p['x'] = domain_min - eps
+    assert all(np.isnan(calculate_partials(p, field)[0]))
+    p['x'] = domain_max + eps
+    assert all(np.isnan(calculate_partials(p, field)[0]))
+
+    p['x'] = domain_min + eps
+    assert not any(np.isnan(calculate_partials(p, field)[0]))
+    p['x'] = domain_max - eps
+    assert not any(np.isnan(calculate_partials(p, field)[0]))
+
+    # check circular array disables domain checking
+    xspacing = (field['x'][-1] - field['x'][0]) / (len(field['x']) - 1)
+    p['x'] = domain_min - xspacing * 100
+    assert not any(np.isnan(calculate_partials(p, field, x_is_circular=True)[0]))
+    p['x'] = domain_max + xspacing * 100
+    assert not any(np.isnan(calculate_partials(p, field, x_is_circular=True)[0]))
 
 
 def test_partial_x():
@@ -98,9 +129,9 @@ def test_partial_x():
 
     p['x'] = -.1  # off bottom of array (but x is circular...)
     V_xx_true = (0 - (-1)) / dx_m
-    np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
+    np.testing.assert_allclose(calculate_partials(p, xfield, x_is_circular=True)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
     p['x'] = 2.8  # off top of array (but x is circular...)
-    np.testing.assert_allclose(calculate_partials(p, xfield)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
+    np.testing.assert_allclose(calculate_partials(p, xfield, x_is_circular=True)[0], [V_xx_true, -V_xx_true, 2 * V_xx_true])
 
 
 def test_domain_y():

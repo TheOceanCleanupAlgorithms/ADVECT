@@ -21,6 +21,7 @@ __kernel void test_partials(
     const double p_y,
     const double p_z,
     const double p_t,
+    const bool x_is_circular,
     __global double *partials) {
     
     field3d field = {.x = field_x, .y = field_y, .z = field_z, .t = field_t,
@@ -29,7 +30,8 @@ __kernel void test_partials(
                      .y_spacing = calculate_spacing(field_y, field_y_len),
                      .t_spacing = calculate_spacing(field_t, field_t_len),
                      .U = field_U, .V = field_V, .W = field_W,
-                     .z_floor = calculate_coordinate_floor(field_z, field_z_len)};  // bottom edge of lowest layer
+                     .z_floor = calculate_coordinate_floor(field_z, field_z_len),  // bottom edge of lowest layer
+                     .x_is_circular = x_is_circular};
 
     particle p = {.x = p_x, .y = p_y, .z = p_z, .t = p_t};
 

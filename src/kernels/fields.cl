@@ -69,3 +69,11 @@ double calculate_coordinate_floor(__global const double *arr, const unsigned int
         return NAN;
     }
 }
+
+bool x_is_circular(field3d field) {
+    if (field.x_len < 2) {
+        return false;
+    }
+    double tolerance = .001;
+    return (fabs((fmod((field.x[field.x_len - 1] + field.x_spacing + 180), 360) - 180) - field.x[0]) < tolerance);
+}
