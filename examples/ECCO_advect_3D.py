@@ -30,8 +30,8 @@ if __name__ == '__main__':
         eddy_diffusivity=EDDY_DIFFUSIVITY,
         windage_multiplier=WINDAGE_MULTIPLIER,
         verbose=True,
-        opencl_device=(0, 2),
-        memory_utilization=.95,
+        opencl_device=(0, 0),
+        memory_utilization=.4,
     )
 
     for out_path in out_paths:
