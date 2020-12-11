@@ -64,27 +64,36 @@ vector taylor2_formula(vector V, vector V_x, vector V_y, vector V_z, vector V_t,
     double v_ = V.y + (dt*V_t.y)/2;
     double w_ = V.z + (dt*V_t.z)/2;
     
+    double denominator =
+        (4
+        - 2*dt*(V_x.x + V_y.y + V_z.z)
+        - 2*pow(dt, 2)*(-V_x.x*V_y.y - V_x.x*V_z.z - V_y.y*V_z.z
+                       + V_y.x*V_x.y + V_z.x*V_x.z + V_z.y*V_y.z)
+        -.5*pow(dt, 3)*(V_x.x*(V_y.y*V_z.z - V_y.z*V_z.y)
+                      + V_x.y*(V_y.z*V_z.x - V_y.x*V_z.z)
+                      + V_x.z*(V_y.x*V_z.y - V_y.y*V_z.x))
+        );
     vector displacement_meters;
-    displacement_meters.x = dt * -(8*u_ - 4*dt*u_*V_y.y + 4*dt*V_y.x*v_ - 4*dt*u_*V_z.z + 4*dt*V_z.x*w_ + 2*pow(dt, 2)*u_*V_y.y*V_z.z
-                                   - 2*pow(dt, 2)*u_*V_z.y*V_y.z - 2*pow(dt, 2)*V_y.x*v_*V_z.z + 2*pow(dt, 2)*V_y.x*V_z.y*w_
-                                   + 2*pow(dt, 2)*V_z.x*v_*V_y.z - 2*pow(dt, 2)*V_z.x*V_y.y*w_)
-                                / (4*dt*V_x.x + 4*dt*V_y.y + 4*dt*V_z.z - 2*pow(dt, 2)*V_x.x*V_y.y + 2*pow(dt, 2)*V_y.x*V_x.y
-                                   - 2*pow(dt, 2)*V_x.x*V_z.z + 2*pow(dt, 2)*V_z.x*V_x.z - 2*pow(dt, 2)*V_y.y*V_z.z + 2*pow(dt, 2)*V_z.y*V_y.z
-                                   + pow(dt, 3)*V_x.x*V_y.y*V_z.z - pow(dt, 3)*V_x.x*V_z.y*V_y.z - pow(dt, 3)*V_y.x*V_x.y*V_z.z
-                                   + pow(dt, 3)*V_y.x*V_z.y*V_x.z + pow(dt, 3)*V_z.x*V_x.y*V_y.z - pow(dt, 3)*V_z.x*V_y.y*V_x.z - 8);
-    displacement_meters.y = dt * -(8*v_ + 4*dt*u_*V_x.y - 4*dt*V_x.x*v_ - 4*dt*v_*V_z.z + 4*dt*V_z.y*w_ - 2*pow(dt, 2)*u_*V_x.y*V_z.z
-                                   + 2*pow(dt, 2)*u_*V_z.y*V_x.z + 2*pow(dt, 2)*V_x.x*v_*V_z.z - 2*pow(dt, 2)*V_x.x*V_z.y*w_
-                                   - 2*pow(dt, 2)*V_z.x*v_*V_x.z + 2*pow(dt, 2)*V_z.x*V_x.y*w_)
-                                / (4*dt*V_x.x + 4*dt*V_y.y + 4*dt*V_z.z - 2*pow(dt, 2)*V_x.x*V_y.y + 2*pow(dt, 2)*V_y.x*V_x.y
-                                   - 2*pow(dt, 2)*V_x.x*V_z.z + 2*pow(dt, 2)*V_z.x*V_x.z - 2*pow(dt, 2)*V_y.y*V_z.z + 2*pow(dt, 2)*V_z.y*V_y.z
-                                   + pow(dt, 3)*V_x.x*V_y.y*V_z.z - pow(dt, 3)*V_x.x*V_z.y*V_y.z - pow(dt, 3)*V_y.x*V_x.y*V_z.z
-                                   + pow(dt, 3)*V_y.x*V_z.y*V_x.z + pow(dt, 3)*V_z.x*V_x.y*V_y.z - pow(dt, 3)*V_z.x*V_y.y*V_x.z - 8);
-    displacement_meters.z = dt * -(8*w_ + 4*dt*u_*V_x.z - 4*dt*V_x.x*w_ + 4*dt*v_*V_y.z - 4*dt*V_y.y*w_ + 2*pow(dt, 2)*u_*V_x.y*V_y.z
-                                   - 2*pow(dt, 2)*u_*V_y.y*V_x.z - 2*pow(dt, 2)*V_x.x*v_*V_y.z + 2*pow(dt, 2)*V_x.x*V_y.y*w_
-                                   + 2*pow(dt, 2)*V_y.x*v_*V_x.z - 2*pow(dt, 2)*V_y.x*V_x.y*w_)
-                                / (4*dt*V_x.x + 4*dt*V_y.y + 4*dt*V_z.z - 2*pow(dt, 2)*V_x.x*V_y.y + 2*pow(dt, 2)*V_y.x*V_x.y
-                                   - 2*pow(dt, 2)*V_x.x*V_z.z + 2*pow(dt, 2)*V_z.x*V_x.z - 2*pow(dt, 2)*V_y.y*V_z.z + 2*pow(dt, 2)*V_z.y*V_y.z
-                                   + pow(dt, 3)*V_x.x*V_y.y*V_z.z - pow(dt, 3)*V_x.x*V_z.y*V_y.z - pow(dt, 3)*V_y.x*V_x.y*V_z.z
-                                   + pow(dt, 3)*V_y.x*V_z.y*V_x.z + pow(dt, 3)*V_z.x*V_x.y*V_y.z - pow(dt, 3)*V_z.x*V_y.y*V_x.z - 8);
+    displacement_meters.x = dt * (
+        (4*u_
+         + 2*dt*(-u_*V_y.y + V_y.x*v_ - u_*V_z.z + V_z.x*w_)
+         + pow(dt, 2)*(u_*(V_y.y*V_z.z - V_y.z*V_z.y)
+                     + v_*(V_y.z*V_z.x - V_y.x*V_z.z)
+                     + w_*(V_y.x*V_z.y - V_y.y*V_z.x))
+        ) / denominator);
+    displacement_meters.y = dt * (
+       (4*v_
+        + 2*dt*(u_*V_x.y - V_x.x*v_ - v_*V_z.z + V_z.y*w_)
+        + pow(dt, 2)*(u_*(V_z.y*V_x.z - V_x.y*V_z.z)
+                    + v_*(V_x.x*V_z.z - V_z.x*V_x.z)
+                    + w_*(V_z.x*V_x.y - V_x.x*V_z.y))
+       ) / denominator);
+    displacement_meters.z = dt * (
+        (4*w_
+         + 2*dt*(u_*V_x.z - V_x.x*w_ + v_*V_y.z - V_y.y*w_)
+         + pow(dt, 2)*(u_*(V_x.y*V_y.z - V_y.y*V_x.z)
+                     + v_*(V_y.x*V_x.z - V_x.x*V_y.z)
+                     + w_*(V_x.x*V_y.y - V_y.x*V_x.y))
+        ) / denominator);
     return displacement_meters;
 }
