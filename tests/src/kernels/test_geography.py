@@ -1,9 +1,7 @@
 import pyopencl as cl
-import os
 import numpy as np
-from tests.config import ROOT_DIR
 
-os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
+from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
 
 
 def degrees_lon_to_meters(deg_lon, lat) -> np.ndarray:
@@ -12,9 +10,7 @@ def degrees_lon_to_meters(deg_lon, lat) -> np.ndarray:
     :param lat: latitude of displacement (degrees N)
     """
     # setup
-    ctx = cl.create_some_context()
-    queue = cl.CommandQueue(ctx)
-    prg = cl.Program(ctx, """
+    prg = cl.Program(CL_CONTEXT, """
     #include "geography.cl"
 
     __kernel void deg_lon_to_m(
@@ -27,12 +23,12 @@ def degrees_lon_to_meters(deg_lon, lat) -> np.ndarray:
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
 
     meters = np.zeros(1).astype(np.float64)
-    d_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, meters.nbytes)
+    d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, meters.nbytes)
 
-    prg.deg_lon_to_m(queue, (1,), None, np.float64(deg_lon), np.float64(lat), d_out)
-    queue.finish()
+    prg.deg_lon_to_m(CL_QUEUE, (1,), None, np.float64(deg_lon), np.float64(lat), d_out)
+    CL_QUEUE.finish()
 
-    cl.enqueue_copy(queue, meters, d_out)
+    cl.enqueue_copy(CL_QUEUE, meters, d_out)
 
     return meters[0]
 

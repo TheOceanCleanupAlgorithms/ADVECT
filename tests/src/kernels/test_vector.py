@@ -1,21 +1,16 @@
+import pyopencl as cl
+import numpy as np
 from pathlib import Path
 
-import pyopencl as cl
-import os
-import numpy as np
-from tests.config import ROOT_DIR
+from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
 
-os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 KERNEL_SOURCE = Path(__file__).parent / "test_vector.cl"
-# setup
-ctx = cl.create_some_context(answers=[0, 2])
-queue = cl.CommandQueue(ctx)
 
 
 def resolve_and_sort(x, y, z) -> np.ndarray:
     """run a vector through the opencl program"""
     test = (
-        cl.Program(ctx, open(KERNEL_SOURCE).read())
+        cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read())
         .build(options=["-I", str(ROOT_DIR / "src/kernels")])
         .resolve_and_sort_test
     )
@@ -24,18 +19,18 @@ def resolve_and_sort(x, y, z) -> np.ndarray:
     y_out = np.zeros(3)
     z_out = np.zeros(3)
     d_x_out = cl.Buffer(
-        ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=x_out
+        CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=x_out
     )
     d_y_out = cl.Buffer(
-        ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=y_out
+        CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=y_out
     )
     d_z_out = cl.Buffer(
-        ctx, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=z_out
+        CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=z_out
     )
 
     test.set_scalar_arg_dtypes([np.float64, np.float64, np.float64, None, None, None])
     test(
-        queue,
+        CL_QUEUE,
         (1,),
         None,
         np.float64(x),
@@ -45,11 +40,11 @@ def resolve_and_sort(x, y, z) -> np.ndarray:
         d_y_out,
         d_z_out,
     )
-    queue.finish()
+    CL_QUEUE.finish()
 
-    cl.enqueue_copy(queue, x_out, d_x_out)
-    cl.enqueue_copy(queue, y_out, d_y_out)
-    cl.enqueue_copy(queue, z_out, d_z_out)
+    cl.enqueue_copy(CL_QUEUE, x_out, d_x_out)
+    cl.enqueue_copy(CL_QUEUE, y_out, d_y_out)
+    cl.enqueue_copy(CL_QUEUE, z_out, d_z_out)
 
     return np.stack((x_out, y_out, z_out)).T
 

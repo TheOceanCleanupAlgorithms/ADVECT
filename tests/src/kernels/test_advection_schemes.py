@@ -1,15 +1,10 @@
+import pyopencl as cl
+import numpy as np
 from pathlib import Path
 
-import pyopencl as cl
-import os
-import numpy as np
-from tests.config import ROOT_DIR
+from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
 
-os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 KERNEL_SOURCE = Path(__file__).parent / "test_advection_schemes.cl"
-# setup
-ctx = cl.create_some_context(answers=[0, 0])
-queue = cl.CommandQueue(ctx)
 
 
 def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
@@ -21,12 +16,12 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
     :param dt: timestep (seconds)
     :return displacement [dx, dy, dz]
     """
-    prg = cl.Program(ctx, open(KERNEL_SOURCE).read()).build(
+    prg = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(
             options=["-I", str(ROOT_DIR / "src/kernels")]
     )
     d_field_x, d_field_y, d_field_z, d_field_t, d_field_U, d_field_V, d_field_W = (
         cl.Buffer(
-            ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf
+            CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf
         )
         for hostbuf in (
             field["x"].astype(np.float64),
@@ -40,10 +35,10 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
     )
 
     displacement_out = np.empty(3)
-    d_displacement_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
+    d_displacement_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
 
     prg.test_taylor2(
-        queue,
+        CL_QUEUE,
         (1,),
         None,
         d_field_x,
@@ -64,15 +59,15 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
         np.float64(dt),
         d_displacement_out,
     )
-    queue.finish()
+    CL_QUEUE.finish()
 
-    cl.enqueue_copy(queue, displacement_out, d_displacement_out)
+    cl.enqueue_copy(CL_QUEUE, displacement_out, d_displacement_out)
 
     return displacement_out
 
 
 def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
-    prg = cl.Program(ctx, """
+    prg = cl.Program(CL_CONTEXT, """
     #include "advection_schemes.cl"
     __kernel void test_taylor2_formula(
         const double u, const double v, const double w,
@@ -97,10 +92,10 @@ def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
     )
 
     displacement_out = np.empty(3)
-    d_displacement_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
+    d_displacement_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
 
     prg.test_taylor2_formula(
-        queue,
+        CL_QUEUE,
         (1,),
         None,
         np.float64(V[0]), np.float64(V[1]), np.float64(V[2]),
@@ -111,9 +106,9 @@ def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
         np.float64(dt),
         d_displacement_out,
     )
-    queue.finish()
+    CL_QUEUE.finish()
 
-    cl.enqueue_copy(queue, displacement_out, d_displacement_out)
+    cl.enqueue_copy(CL_QUEUE, displacement_out, d_displacement_out)
 
     return displacement_out
 

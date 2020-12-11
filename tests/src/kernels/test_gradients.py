@@ -1,17 +1,12 @@
-from pathlib import Path
-
 import pyopencl as cl
-import os
 import numpy as np
-from tests.config import ROOT_DIR
+from pathlib import Path
+from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+
 from tests.src.kernels.test_geography import degrees_lon_to_meters, degrees_lat_to_meters
 
-os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 KERNEL_SOURCE = Path(__file__).parent / "test_gradients.cl"
-# setup
-ctx = cl.create_some_context(answers=[0, 0])
-queue = cl.CommandQueue(ctx)
-prg = cl.Program(ctx, open(KERNEL_SOURCE).read()).build(
+prg = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(
     options=["-I", str(ROOT_DIR / "src/kernels")]
 )
 
@@ -30,7 +25,7 @@ def calculate_partials(p: dict, field: dict, x_is_circular: bool = False) -> np.
     """
     d_field_x, d_field_y, d_field_z, d_field_t, d_field_U, d_field_V, d_field_W = (
         cl.Buffer(
-            ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf
+            CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf
         )
         for hostbuf in (
             field["x"].astype(np.float64),
@@ -44,10 +39,10 @@ def calculate_partials(p: dict, field: dict, x_is_circular: bool = False) -> np.
     )
 
     partials_out = np.empty(12)
-    d_partials_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, partials_out.nbytes)
+    d_partials_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, partials_out.nbytes)
 
     prg.test_partials(
-        queue,
+        CL_QUEUE,
         (1,),
         None,
         d_field_x,
@@ -68,9 +63,9 @@ def calculate_partials(p: dict, field: dict, x_is_circular: bool = False) -> np.
         np.bool_(x_is_circular),
         d_partials_out,
     )
-    queue.finish()
+    CL_QUEUE.finish()
 
-    cl.enqueue_copy(queue, partials_out, d_partials_out)
+    cl.enqueue_copy(CL_QUEUE, partials_out, d_partials_out)
 
     return partials_out.reshape([4, 3])
 
