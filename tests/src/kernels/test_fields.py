@@ -15,6 +15,7 @@ def x_is_circular(x: np.ndarray) -> np.ndarray:
     queue = cl.CommandQueue(ctx)
     prg = cl.Program(ctx, """
     #include "fields.cl"
+    #include "geography.cl"
 
     __kernel void test_x_is_circular(
         __global const double* x,

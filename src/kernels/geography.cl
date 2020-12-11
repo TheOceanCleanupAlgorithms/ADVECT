@@ -22,3 +22,11 @@ double degrees_lat_to_meters(double dy, double y) {
     double rlat = y * M_PI/180;
     return dy * (111132.09 - 556.05 * cos(2 * rlat) + 1.2 * cos(4 * rlat));
 }
+
+double constrain_longitude_to_valid_domain(double lon) {
+    /* valid domain: (-180, 180]
+     * builtin fmod(a, b) is a - b*trunc(a/b), which behaves incorrectly for negative numbers.
+     *            so we use  a - b*floor(a/b) instead
+     */
+    return ((lon+180) - 360*floor((lon+180)/360)) - 180;
+}

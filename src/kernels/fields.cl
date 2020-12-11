@@ -1,4 +1,5 @@
 #include "fields.h"
+#include "geography.h"
 
 unsigned int find_nearest_neighbor_idx(double value, __global const double *arr, const unsigned int arr_len, const double spacing) {
     /* assumptions:
@@ -75,5 +76,5 @@ bool x_is_circular(field3d field) {
         return false;
     }
     double tolerance = .001;
-    return (fabs((fmod((field.x[field.x_len - 1] + field.x_spacing + 180), 360) - 180) - field.x[0]) < tolerance);
+    return (fabs(constrain_longitude_to_valid_domain(field.x[field.x_len - 1] + field.x_spacing) - field.x[0]) < tolerance);
 }

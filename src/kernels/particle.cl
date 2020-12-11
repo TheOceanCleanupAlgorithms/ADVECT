@@ -11,9 +11,7 @@ particle constrain_coordinates(particle p) {
         p.x = p.x + 180;
     }
     // keep longitude representation within [-180, 180)
-    // builtin fmod(a, b) is a - b*trunc(a/b), which behaves incorrectly for negative numbers.
-    //            so we use  a - b*floor(a/b) instead
-    p.x = ((p.x+180) - 360*floor((p.x+180)/360)) - 180;
+    p.x = constrain_longitude_to_valid_domain(p.x);
 
     // keep particles out of the atmosphere
     if (p.z > 0) {
