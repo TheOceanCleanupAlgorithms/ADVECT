@@ -1,72 +1,44 @@
 #include "advection_schemes.h"
 #include "geography.h"
+#include "gradients.h"
 
 vector eulerian_displacement(particle p, field2d field, double dt) {
     // find nearest neighbors in grid
     grid_point neighbor = find_nearest_neighbor(p, field);
     // find U and V nearest to particle position
-    vector uv = index_vector_field(field, neighbor, true);
+    vector V = index_vector_field(field, neighbor, true);
 
     //////////// advect particle using euler forward advection scheme
     // meters displacement
-    vector displacement_meters = {.x = uv.x * dt,
-                                  .y = uv.y * dt};
+    vector displacement_meters = {.x = V.x * dt,
+                                  .y = V.y * dt};
     return displacement_meters;
 }
 
 vector taylor2_displacement(particle p, field2d field, double dt) {
     grid_point gp = find_nearest_neighbor(p, field);
-    // find adjacent cells
-    grid_point gp_w = {.x_idx = (gp.x_idx + 1) % field.x_len, .y_idx = gp.y_idx, .t_idx = gp.t_idx};
-    grid_point gp_e = {.x_idx = (gp.x_idx - 1) % field.x_len, .y_idx = gp.y_idx, .t_idx = gp.t_idx};
-    grid_point gp_s = {.x_idx = gp.x_idx, .y_idx = max(gp.y_idx - 1, 0u), .t_idx = gp.t_idx};
-    grid_point gp_n = {.x_idx = gp.x_idx, .y_idx = min(gp.y_idx + 1, field.y_len - 1), .t_idx = gp.t_idx};
-    grid_point gp_dt = {.x_idx = gp.x_idx, .y_idx = gp.y_idx, .t_idx = min(gp.t_idx + 1, field.t_len - 1)};
+    vector V = index_vector_field(field, gp, true);
 
-    // extract values from nearest neighbor + adjacent cells
-    vector uv = index_vector_field(field, gp, true);        // at the particle
-    vector uv_w = index_vector_field(field, gp_w, true);    // one grid cell left
-    vector uv_e = index_vector_field(field, gp_e, true);    // one grid cell right
-    vector uv_s = index_vector_field(field, gp_s, true);    // one grid cell down
-    vector uv_n = index_vector_field(field, gp_n, true);    // one grid cell up
-    vector uv_dt = index_vector_field(field, gp_dt, true);  // one grid cell in future
-
-    // grid spacing at particle in x direction (m)
-    double dx;
-    if (gp.x_idx == 0) {
-        dx = field.x[gp.x_idx + 1] - field.x[gp.x_idx];
-    } else {
-        dx = field.x[gp.x_idx] - field.x[gp.x_idx - 1];
-    }
-    double dx_m = degrees_lon_to_meters(dx, p.y);
-
-    // grid spacing at particle in y direction (m)
-    double dy;
-    if (gp.y_idx == 0) {
-        dy = field.y[gp.y_idx + 1] - field.y[gp.y_idx];
-    } else {
-        dy = field.y[gp.y_idx] - field.y[gp.y_idx - 1];
-    }
-    double dy_m = degrees_lat_to_meters(dy, p.y);
-
-    // Calculate horizontal gradients
-    double ux = (uv_w.x - uv_e.x) / (2*dx_m);
-    double vx = (uv_w.y - uv_e.y) / (2*dx_m);
-    double uy = (uv_s.x - uv_n.x) / (2*dy_m);
-    double vy = (uv_s.y - uv_n.y) / (2*dy_m);
-
-    // Calculate time gradients
-    double ut = (uv_dt.x - uv.x) / dt;
-    double vt = (uv_dt.y - uv.y) / dt;
+    // Calculate gradients
+    // nan result means p outside domain
+    vector V_x = x_partial(p, field);
+    vector V_y = y_partial(p, field);
+    vector V_t = t_partial(p, field);
+    V_x.x = isnan(V_x.x) ? 0 : V_x.x;
+    V_x.y = isnan(V_x.y) ? 0 : V_x.y;
+    V_y.x = isnan(V_y.x) ? 0 : V_y.x;
+    V_y.y = isnan(V_y.y) ? 0 : V_y.y;
+    V_t.x = isnan(V_t.x) ? 0 : V_t.x;
+    V_t.y = isnan(V_t.y) ? 0 : V_t.y;
 
     // simplifying term
-    double u_ = uv.x + (dt*ut)/2;
-    double v_ = uv.y + (dt*vt)/2;
+    double u_ = V.x + (dt*V_t.x)/2;
+    double v_ = V.y + (dt*V_t.y)/2;
 
     //////////// advect particle using second-order taylor approx advection scheme (Black and Gay, 1990, eq. 12/13)
     vector displacement_meters;
-    displacement_meters.x = (u_ + (uy*v_ - vy*u_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (uy*vx * pow(dt, 2)) / 4);
-    displacement_meters.y = (v_ + (vx*u_ - ux*v_) * dt/2) * dt / ((1 - ux*dt/2) * (1 - vy*dt/2) - (ux*vy * pow(dt, 2)) / 4);
+    displacement_meters.x = (u_ + (V_y.x*v_ - V_y.y*u_) * dt/2) * dt / ((1 - V_x.x*dt/2) * (1 - V_y.y*dt/2) - (V_y.x*V_x.y * pow(dt, 2)) / 4);
+    displacement_meters.y = (v_ + (V_x.y*u_ - V_x.x*v_) * dt/2) * dt / ((1 - V_x.x*dt/2) * (1 - V_y.y*dt/2) - (V_y.x*V_x.y * pow(dt, 2)) / 4);
 
     return displacement_meters;
 }

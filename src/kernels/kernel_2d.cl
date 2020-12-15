@@ -6,6 +6,7 @@
 #include "advection_schemes.cl"
 #include "eddy_diffusion.cl"
 #include "windage.cl"
+#include "gradients.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1};
 // positive codes are considered non-fatal, and are reported in outputfiles;
