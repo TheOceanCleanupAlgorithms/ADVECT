@@ -4,7 +4,7 @@
 #include "particle.cl"
 #include "random.cl"
 #include "advection_schemes.cl"
-#include "eddy_diffusion.cl"
+#include "diffusion.cl"
 #include "windage.cl"
 #include "buoyancy.cl"
 #include "gradients.cl"
