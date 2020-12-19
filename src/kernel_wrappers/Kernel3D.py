@@ -29,7 +29,7 @@ class Kernel3D:
 
     def __init__(self, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
                  advect_time: pd.DatetimeIndex, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: Optional[float],
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: xr.Dataset, windage_multiplier: Optional[float],
                  context: cl.Context):
         """convert convenient python objects to raw representation for kernel"""
         # save some arguments for creating output dataset
@@ -77,7 +77,7 @@ class Kernel3D:
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
         self.advection_scheme = np.uint32(advection_scheme.value)
-        self.eddy_diffusivity = np.float64(eddy_diffusivity)
+        self.eddy_diffusivity = np.float64(eddy_diffusivity.horizontal_diffusivity.sel(z_hd=0, method='nearest'))
         self.windage_multiplier = np.float64(windage_multiplier)
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
