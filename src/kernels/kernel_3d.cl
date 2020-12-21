@@ -8,6 +8,7 @@
 #include "windage.cl"
 #include "buoyancy.cl"
 #include "gradients.cl"
+#include "vertical_profile.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
@@ -55,7 +56,10 @@ __kernel void advect(
     __global float *Z_out,                  // depth, m, positive up
     /* physics */
     const unsigned int advection_scheme,
-    const double eddy_diffusivity,
+        /* kappa (eddy diffusivity) */
+    __global const float *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
+    const unsigned int horizontal_kappa_len, //
+    __global const float *horizontal_kappa,    // m^2 s^-1
     const double windage_multiplier,  // if nan, disables windage
     /* debugging */
     __global char *exit_code)
@@ -84,6 +88,10 @@ __kernel void advect(
                     .U = wind_U, .V = wind_V, .W = 0,
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
+
+    vertical_profile kappa_xy_profile = {.var = horizontal_kappa,
+                                         .z = horizontal_kappa_z,
+                                         .len = horizontal_kappa_len};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
@@ -121,7 +129,7 @@ __kernel void advect(
             }
             displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
-            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, kappa_xy_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }
