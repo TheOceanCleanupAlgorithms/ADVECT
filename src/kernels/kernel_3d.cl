@@ -49,8 +49,8 @@ __kernel void advect(
     const unsigned int advection_scheme,
     const double windage_multiplier,  // if nan, disables windage
     /* kappa (eddy diffusivity) */
-    __global const float *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
-    __global const float *horizontal_kappa,    // m^2 s^-1
+    __global const double *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *horizontal_kappa,    // m^2 s^-1
     const unsigned int horizontal_kappa_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp

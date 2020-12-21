@@ -15,3 +15,9 @@ double random(random_state *state) {
 	state->a = x;
 	return x / ((double) UINT_MAX);
 }
+
+
+double random_within_magnitude(double magnitude, random_state *rstate) {
+    /* returns a uniformly random number in the range [-magnitude, magnitude] */
+    return (random(rstate) * 2 - 1) * magnitude;
+}
