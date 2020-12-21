@@ -45,6 +45,13 @@ __kernel void advect(
     __global const double *release_date,    // unix timestamp
     __global const double *radius,          // particle radius, m
     __global const double *density,         // particle density, kg m^-3
+    /* physics */
+    const unsigned int advection_scheme,
+    const double windage_multiplier,  // if nan, disables windage
+    /* kappa (eddy diffusivity) */
+    __global const float *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const float *horizontal_kappa,    // m^2 s^-1
+    const unsigned int horizontal_kappa_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -54,13 +61,6 @@ __kernel void advect(
     __global float *X_out,                  // lon, Deg E (-180 to 180)
     __global float *Y_out,                  // lat, Deg N (-90 to 90)
     __global float *Z_out,                  // depth, m, positive up
-    /* physics */
-    const unsigned int advection_scheme,
-        /* kappa (eddy diffusivity) */
-    __global const float *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
-    const unsigned int horizontal_kappa_len, //
-    __global const float *horizontal_kappa,    // m^2 s^-1
-    const double windage_multiplier,  // if nan, disables windage
     /* debugging */
     __global char *exit_code)
 {

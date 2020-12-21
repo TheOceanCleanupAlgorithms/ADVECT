@@ -77,8 +77,11 @@ class Kernel3D:
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
         self.advection_scheme = np.uint32(advection_scheme.value)
-        self.eddy_diffusivity = np.float64(eddy_diffusivity.horizontal_diffusivity.sel(z_hd=0, method='nearest'))
         self.windage_multiplier = np.float64(windage_multiplier)
+        # eddy diffusivity
+        self.horizontal_kappa_z = eddy_diffusivity.z_hd.values.astype(np.float64)
+        self.horizontal_kappa = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
+
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 
@@ -103,13 +106,15 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density = \
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,\
+            d_horizontal_kappa_z, d_horizontal_kappa = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density))
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density,
+              self.horizontal_kappa_z, self.horizontal_kappa))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
         d_Z_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Z_out)
@@ -130,9 +135,10 @@ class Kernel3D:
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
                 d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
+                self.advection_scheme, self.windage_multiplier,
+                d_horizontal_kappa_z, d_horizontal_kappa, np.uint32(len(self.horizontal_kappa)),
                 self.start_time, self.dt, self.ntimesteps, self.save_every,
                 d_X_out, d_Y_out, d_Z_out,
-                self.advection_scheme, self.eddy_diffusivity, self.windage_multiplier,
                 d_exit_codes)
 
         # wait for the computation to complete
