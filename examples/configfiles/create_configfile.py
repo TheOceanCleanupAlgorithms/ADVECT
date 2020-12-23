@@ -38,7 +38,7 @@ def create_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, out_
 
 
 create_configfile(
-    horizontal_diffusivity=np.linspace(1000, 1, 10),
-    z_hd=-np.logspace(0, 3, 10),  # m
+    horizontal_diffusivity=np.linspace(1500, 1, 20),
+    z_hd=-np.logspace(0, 4, 20),  # m
     out_path=Path(__file__).parent / "config.nc",
 )

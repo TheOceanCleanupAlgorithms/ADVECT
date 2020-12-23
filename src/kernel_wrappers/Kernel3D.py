@@ -191,6 +191,9 @@ class Kernel3D:
             tol = 1e-3
             return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
+        def is_sorted_ascending(arr):
+            return np.all(np.diff(arr) > 0)
+
         # check current field valid
         assert max(self.current_x) <= 180
         assert min(self.current_x) >= -180
@@ -201,7 +204,7 @@ class Kernel3D:
         assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.current_y)
         assert max(self.current_z) <= 0
-        assert np.all(np.diff(self.current_z) > 0)  # ascending
+        assert is_sorted_ascending(self.current_z)
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.current_t)
 
@@ -216,6 +219,9 @@ class Kernel3D:
         assert is_uniformly_spaced_ascending(self.wind_y)
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_t)
+
+        # check eddy diffusion valid
+        assert is_sorted_ascending(self.horizontal_kappa_z)
 
         # check particle positions valid
         assert np.nanmax(self.x0) < 180

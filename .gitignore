@@ -8,3 +8,4 @@ examples/HYCOM_currents
 .idea
 examples/ECCO/ECCO_interp
 examples/ECCO/ECCO_native
+tests/throwaway_plots/*
