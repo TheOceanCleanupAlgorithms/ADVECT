@@ -69,14 +69,14 @@ def test_diffusion(plot=False):
 
     if plot:
         fig, ax = plt.subplots(1)
-        ax.plot(drift, p_depth, '.', markersize=.5, label='particle states')
+        ax.plot(drift, p_depth, '.', markersize=.5, label='particles')
         ax.plot(bin_mean, z_grid, label='100m bin median')
         ax.plot(bin_max, z_grid[1:], label='100m bin max')
         ax.plot(expected_step, z_grid, label='expected diffusivity step (m)')
         ax.plot(diff_amp, z_grid, label='max diffusivity amplitude (m)')
         ax.set_ylim([min(z_grid), max(z_grid)])
         ax.set_ylabel('depth (m)')
-        ax.set_xlabel('lat displacement each timestep (m)')
+        ax.set_xlabel(f'lat displacement in {timestep_seconds} seconds (m)')
         ax.legend()
         ax.set_title('Depth-dependent horizontal diffusivity test')
 
