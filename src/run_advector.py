@@ -9,7 +9,6 @@ See src/data_specifications.md for detailed description of data format requireme
 """
 
 import datetime
-import xarray as xr
 from pathlib import Path
 from typing import Tuple, List
 

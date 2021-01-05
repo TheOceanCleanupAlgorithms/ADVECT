@@ -6,7 +6,7 @@
 typedef struct vertical_profile {
     __global const double *z;
     const unsigned int len;
-    __global const double *var;
+    __global const double *value;
 } vertical_profile;
 
 double sample_profile(vertical_profile profile, double z);

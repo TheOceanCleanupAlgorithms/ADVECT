@@ -4,7 +4,7 @@ import numpy as np
 from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
 
 
-def sample_profile(var: np.ndarray, z: np.ndarray, sample_z: np.ndarray) -> np.ndarray:
+def sample_profile(sample_z: np.ndarray, z: np.ndarray, var: np.ndarray) -> np.ndarray:
     """should return linear interpolation of profile given by var, z at z=sample_z
         samples all sample_z elements in parallel"""
     # setup
@@ -18,7 +18,7 @@ def sample_profile(var: np.ndarray, z: np.ndarray, sample_z: np.ndarray) -> np.n
         __global const double *sample_z,
         __global double *out) {
         
-        vertical_profile prof = {.z = z, .var = var, .len = len};
+        vertical_profile prof = {.z = z, .value = var, .len = len};
         out[get_global_id(0)] = sample_profile(prof, sample_z[get_global_id(0)]);
     }
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
@@ -52,7 +52,7 @@ def test_interpolation():
     sample_z = np.linspace(min(z), max(z), 10000)
 
     np.testing.assert_allclose(np.interp(sample_z, z, var),
-                               sample_profile(var, z, sample_z))
+                               sample_profile(sample_z=sample_z, z=z, var=var))
 
 
 def test_outside_domain():
@@ -61,4 +61,4 @@ def test_outside_domain():
     z = np.array([-2, 0, 1, 4])
     sample_z = np.array([-2.1, -2, 4, 4.1])
     np.testing.assert_allclose([1000, 1000, 2000, 2000],
-                               sample_profile(var, z, sample_z))
+                               sample_profile(sample_z=sample_z, z=z, var=var))

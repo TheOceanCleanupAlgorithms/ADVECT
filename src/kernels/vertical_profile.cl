@@ -6,9 +6,9 @@ double sample_profile(vertical_profile profile, double z) {
      */
 
      if (z <= profile.z[0]) {
-        return profile.var[0];
+        return profile.value[0];
      } else if (z >= profile.z[profile.len - 1]) {
-        return profile.var[profile.len - 1];
+        return profile.value[profile.len - 1];
      }
 
      // find two nearest neighbors, depth and variable value
@@ -17,13 +17,13 @@ double sample_profile(vertical_profile profile, double z) {
      for (unsigned int i=1; i < profile.len; i++) {
         if (z < profile.z[i]) {
             z0 = profile.z[i-1];
-            var0 = profile.var[i-1];
+            var0 = profile.value[i-1];
             z1 = profile.z[i];
-            var1 = profile.var[i];
+            var1 = profile.value[i];
             break;
         }
     }
 
-    // linear interpolation of profile.var at z between z0 and z1
+    // linear interpolation of profile.value at z between z0 and z1
     return var0 + (z - z0) * (var1 - var0) / (z1 - z0);
 }

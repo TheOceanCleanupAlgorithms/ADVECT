@@ -48,10 +48,10 @@ __kernel void advect(
     /* physics */
     const unsigned int advection_scheme,
     const double windage_multiplier,  // if nan, disables windage
-    /* kappa (eddy diffusivity) */
-    __global const double *horizontal_kappa_z,  // depth coordinates, m, positive up, sorted ascending
-    __global const double *horizontal_kappa,    // m^2 s^-1
-    const unsigned int horizontal_kappa_len,
+    /* eddy diffusivity */
+    __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *horizontal_eddy_diffusivity_value,    // m^2 s^-1
+    const unsigned int horizontal_eddy_diffusivity_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -89,9 +89,10 @@ __kernel void advect(
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
 
-    vertical_profile kappa_xy_profile = {.var = horizontal_kappa,
-                                         .z = horizontal_kappa_z,
-                                         .len = horizontal_kappa_len};
+    vertical_profile horizontal_eddy_diffusivity_profile =
+        {.value = horizontal_eddy_diffusivity_value,
+        .z = horizontal_eddy_diffusivity_z,
+        .len = horizontal_eddy_diffusivity_len};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
@@ -129,7 +130,7 @@ __kernel void advect(
             }
             displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
-            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, kappa_xy_profile));
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, horizontal_eddy_diffusivity_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }

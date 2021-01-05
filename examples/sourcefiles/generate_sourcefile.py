@@ -47,6 +47,9 @@ def generate_sourcefile(
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))
 
+    ds.attrs["title"] = f"Sourcefile for ADVECTOR"
+    ds.attrs["institution"] = "The Ocean Cleanup"
+
     out_path = Path(__file__).parent / out_name
     ds.to_netcdf(out_path)
 

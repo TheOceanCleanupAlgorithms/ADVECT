@@ -2,14 +2,14 @@
 
 double amplitude_of_diffusion(const double dt, unsigned int ndims, double diffusivity);
 
-vector eddy_diffusion_meters(double z, const double dt, random_state *rstate, vertical_profile kappa_xy_profile) {
+vector eddy_diffusion_meters(double z, const double dt, random_state *rstate, vertical_profile horizontal_eddy_diffusivity_profile) {
     /*
     Currently, only horizontal diffusion is supported.
     This diffusion is represented by a random displacement, the magnitude of which is determined
-    by sampling the depth profile of horizontal diffusivity, kappa_xy_profile
+    by sampling the depth profile of horizontal diffusivity
     */
-    double kappa_xy = sample_profile(kappa_xy_profile, z);
-    double horizontal_amplitude = amplitude_of_diffusion(dt, 2, kappa_xy);
+    double horizontal_eddy_diffusivity = sample_profile(horizontal_eddy_diffusivity_profile, z);
+    double horizontal_amplitude = amplitude_of_diffusion(dt, 2, horizontal_eddy_diffusivity);
     vector diff = {.x = random_within_magnitude(horizontal_amplitude, rstate),
                    .y = random_within_magnitude(horizontal_amplitude, rstate),
                    .z = 0};
