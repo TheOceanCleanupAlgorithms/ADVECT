@@ -112,7 +112,7 @@ def test_partial_x():
               'U': np.array([0, 2, 7, 9, 5, -1]).reshape((1, 1, 1, 6))}
     xfield.update({'V': -1*xfield['U'], 'W': 2*xfield['U']})
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
-    dx_m = degrees_lon_to_meters(.5, p['y'])
+    dx_m = degrees_lon_to_meters(np.array([.5]), p['y'])[0]
 
     p['x'] = 0.1  # between index 0 and 1 of xfield.x
     V_xx_true = (2 - 0) / dx_m
@@ -157,11 +157,11 @@ def test_partial_y():
     p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
 
     p['y'] = 0  # between index 1 and 2 of yfield.y
-    V_yx_true = (3.6 - (-4)) / degrees_lat_to_meters(3, p['y'])
+    V_yx_true = (3.6 - (-4)) / degrees_lat_to_meters(np.array([3]), p['y'])[0]
     np.testing.assert_allclose(calculate_partials(p, yfield)[1], [V_yx_true, -V_yx_true, 2 * V_yx_true])
 
     p['y'] = 5.0001  # between index 3 and 4 of yfield.y
-    V_yx_true = (-3 - 7) / degrees_lat_to_meters(3, p['y'])
+    V_yx_true = (-3 - 7) / degrees_lat_to_meters(np.array([3]), p['y'])[0]
     np.testing.assert_allclose(calculate_partials(p, yfield)[1], [V_yx_true, -V_yx_true, 2 * V_yx_true])
 
 

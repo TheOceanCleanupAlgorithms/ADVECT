@@ -52,7 +52,6 @@ def compare_alg_drift(initial_radius: float, plot=False):
     p0['release_date'] = time[0]
     p0 = xr.Dataset(p0.set_index('p_id'))
     save_every = 1
-    eddy_diffusivity = 0
     wind = empty_2D_vectorfield()
 
     euler = Kernel3D(current=current, wind=wind, p0=p0,
