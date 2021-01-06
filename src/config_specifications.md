@@ -19,3 +19,17 @@ Horizontal eddy diffusivity parameterizes a particle's random walk in latitude/l
 | --- | --- | --- | --- |
 | z_hd | (z_hd) | numeric | depth coordinate for horizontal_diffusivity (m, positive up) (coordinate variable) |
 | horizontal_diffusivity | (z_hd) | numeric | horizontal eddy diffusivity (m^2 s^-1) |
+
+### Vertical Eddy Diffusivity
+Vertical eddy diffusivity parameterizes a particle's random walk in depth.
+#### Dimensions
+
+| Name | Data Type | Description |
+| --- | --- | --- |
+| z_vd | integer | indexes variable z_vd |
+
+#### Variables
+| Name | Dimensions | Data Type | Description |
+| --- | --- | --- | --- |
+| z_vd | (z_vd) | numeric | depth coordinate for vertical_diffusivity (m, positive up) (coordinate variable) |
+| vertical_diffusivity | (z_vd) | numeric | vertical eddy diffusivity (m^2 s^-1) |
