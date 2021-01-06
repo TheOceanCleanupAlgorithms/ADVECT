@@ -50,7 +50,7 @@ __kernel void advect(
     const double windage_multiplier,  // if nan, disables windage
     /* eddy diffusivity */
     __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
-    __global const double *horizontal_eddy_diffusivity_value,    // m^2 s^-1
+    __global const double *horizontal_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int horizontal_eddy_diffusivity_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
@@ -90,7 +90,7 @@ __kernel void advect(
     wind.x_is_circular = x_is_circular(wind);
 
     vertical_profile horizontal_eddy_diffusivity_profile =
-        {.values = horizontal_eddy_diffusivity_value,
+        {.values = horizontal_eddy_diffusivity_values,
         .z = horizontal_eddy_diffusivity_z,
         .len = horizontal_eddy_diffusivity_len};
 
