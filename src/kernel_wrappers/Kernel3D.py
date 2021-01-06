@@ -3,17 +3,16 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+import numpy as np
+import pyopencl as cl
+import time
+import xarray as xr
+import pandas as pd
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
 import kernel_wrappers.kernel_constants as cl_const
-import numpy as np
-import pyopencl as cl
-import time
-import xarray as xr
-import datetime
-import pandas as pd
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
 
@@ -29,7 +28,7 @@ class Kernel3D:
 
     def __init__(self, current: xr.Dataset, wind: xr.Dataset, p0: xr.Dataset,
                  advect_time: pd.DatetimeIndex, save_every: int,
-                 advection_scheme: AdvectionScheme, eddy_diffusivity: float, windage_multiplier: Optional[float],
+                 advection_scheme: AdvectionScheme, eddy_diffusivity: xr.Dataset, windage_multiplier: Optional[float],
                  context: cl.Context):
         """convert convenient python objects to raw representation for kernel"""
         # save some arguments for creating output dataset
@@ -77,8 +76,11 @@ class Kernel3D:
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
         self.advection_scheme = np.uint32(advection_scheme.value)
-        self.eddy_diffusivity = np.float64(eddy_diffusivity)
         self.windage_multiplier = np.float64(windage_multiplier)
+        # eddy diffusivity
+        self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
+        self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
+
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 
@@ -103,13 +105,16 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density = \
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,\
+            d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density))
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density,
+              self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
+              ))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
         d_Z_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Z_out)
@@ -130,9 +135,10 @@ class Kernel3D:
                 d_wind_t, np.uint32(len(self.wind_t)),
                 d_wind_U, d_wind_V,
                 d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
+                self.advection_scheme, self.windage_multiplier,
+                d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
                 self.start_time, self.dt, self.ntimesteps, self.save_every,
                 d_X_out, d_Y_out, d_Z_out,
-                self.advection_scheme, self.eddy_diffusivity, self.windage_multiplier,
                 d_exit_codes)
 
         # wait for the computation to complete
@@ -185,6 +191,9 @@ class Kernel3D:
             tol = 1e-3
             return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
 
+        def is_sorted_ascending(arr):
+            return np.all(np.diff(arr) > 0)
+
         # check current field valid
         assert max(self.current_x) <= 180
         assert min(self.current_x) >= -180
@@ -195,7 +204,7 @@ class Kernel3D:
         assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.current_y)
         assert max(self.current_z) <= 0
-        assert np.all(np.diff(self.current_z) > 0)  # ascending
+        assert is_sorted_ascending(self.current_z)
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.current_t)
 
@@ -210,6 +219,9 @@ class Kernel3D:
         assert is_uniformly_spaced_ascending(self.wind_y)
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_t)
+
+        # check eddy diffusion valid
+        assert is_sorted_ascending(self.horizontal_eddy_diffusivity_z)
 
         # check particle positions valid
         assert np.nanmax(self.x0) < 180

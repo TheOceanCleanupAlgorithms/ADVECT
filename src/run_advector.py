@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Tuple, List
 
 from drivers.opencl_driver_3D import openCL_advect
+from io_tools.open_configfiles import get_eddy_diffusivity
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
 from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
@@ -20,6 +21,7 @@ from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield,
 
 def run_advector(
     sourcefile_path: str,
+    configfile_path: str,
     output_directory: str,
     u_water_path: str,
     v_water_path: str,
@@ -27,7 +29,6 @@ def run_advector(
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
-    eddy_diffusivity: float = 0,
     advection_scheme: str = 'taylor2',
     save_period: int = 1,
     sourcefile_format: str = 'advector',
@@ -45,6 +46,8 @@ def run_advector(
     :param sourcefile_path: path to the particle sourcefile netcdf file.
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
         See data_specifications.md for data requirements.
+    :param configfile_path: path to the configfile netcdf file.
+        See config_specifications.md for details
     :param output_directory: directory which will be populated with the outfiles.
         Existing files in this directory may be overwritten.
         See data_specifications.md for outputfile format details.
@@ -56,11 +59,6 @@ def run_advector(
         Any particles which are scheduled to be released prior to this date will be released at this date.
     :param timestep: python timedelta object denoting the duration of each advection timestep.
     :param num_timesteps: length of the advection timeseries.
-    :param eddy_diffusivity: (m^2 / s) controls the scale of each particle's random walk.  0 (default) has no effect.
-        Note: since eddy diffusivity parameterizes ocean mechanics at smaller scales than the current files resolve,
-            the value chosen should reflect the resolution of the current files.  Further, though eddy diffusivity in
-            the real ocean varies widely in space and time, ADVECTOR uses one value everywhere, and the value should be
-            selected with this in mind.
     :param advection_scheme: one of {"taylor2", "eulerian"}.
         "taylor2" is a second-order advection scheme as described in Black/Gay 1990 which improves adherence to circular
             streamlines compared to a first-order scheme.  This is the default.
@@ -117,6 +115,8 @@ def run_advector(
     else:
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
+
+    eddy_diffusivity = get_eddy_diffusivity(configfile_path=configfile_path)
 
     out_paths = openCL_advect(
         current=currents,

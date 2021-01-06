@@ -27,7 +27,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
     U = np.divide(-LAT, mag, out=np.zeros_like(LON), where=mag != 0)
     V = np.divide(LON, mag, out=np.zeros_like(LON), where=mag != 0)
 
-    field = xr.Dataset(
+    current = xr.Dataset(
         {
             "U": (["lat", "lon", "depth", "time"], U[:, :, np.newaxis, np.newaxis]),
             "V": (["lat", "lon", "depth", "time"], V[:, :, np.newaxis, np.newaxis]),
@@ -41,29 +41,33 @@ def compare_alg_drift(initial_radius: float, plot=False):
         },
     )
 
+    horizontal_eddy_diffusivity = xr.Dataset(
+        {"horizontal_diffusivity": ("z_hd", ([0]))},
+        coords={"z_hd": [0]}
+    )
+
     p0 = pd.DataFrame({'lon': [0], 'lat': [initial_radius], 'p_id': [0], 'depth': [0], 'radius': [.001], 'density': [1025], 'exit_code': [0]})
     dt = timedelta(seconds=30)
     time = pd.date_range(start='2000-01-01', end='2000-01-01T6:00:00', freq=dt)
     p0['release_date'] = time[0]
     p0 = xr.Dataset(p0.set_index('p_id'))
     save_every = 1
-    eddy_diffusivity = 0
     wind = empty_2D_vectorfield()
 
-    euler = Kernel3D(current=field, wind=wind, p0=p0,
+    euler = Kernel3D(current=current, wind=wind, p0=p0,
                      advect_time=time, save_every=save_every,
-                     advection_scheme=AdvectionScheme.eulerian, eddy_diffusivity=eddy_diffusivity,
+                     advection_scheme=AdvectionScheme.eulerian, eddy_diffusivity=horizontal_eddy_diffusivity,
                      windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
-    taylor = Kernel3D(current=field, p0=p0, wind=wind,
+    taylor = Kernel3D(current=current, p0=p0, wind=wind,
                       advect_time=time, save_every=save_every,
-                      advection_scheme=AdvectionScheme.taylor2, eddy_diffusivity=eddy_diffusivity,
+                      advection_scheme=AdvectionScheme.taylor2, eddy_diffusivity=horizontal_eddy_diffusivity,
                       windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
     if plot:
         plt.figure(figsize=(8, 4))
         ax = plt.axes()
-        ax.quiver(field.lon, field.lat, field.U.squeeze(), field.V.squeeze())
+        ax.quiver(current.lon, current.lat, current.U.squeeze(), current.V.squeeze())
         ax.plot(p0.lon, p0.lat, 'go')
 
         for name, P in {'euler': euler, 'taylor': taylor}.items():

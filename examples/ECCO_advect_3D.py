@@ -7,8 +7,6 @@ from plotting.plot_advection import animate_ocean_advection
 from run_advector import run_advector
 from datetime import datetime, timedelta
 
-EDDY_DIFFUSIVITY = 0  # m^2 / s
-# needs a good literature source.  Responsibility of user.
 WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
 
 sourcefile = 'sourcefiles/neutral.nc'
@@ -16,6 +14,7 @@ if __name__ == '__main__':
     out_paths = run_advector(
         output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
         sourcefile_path=sourcefile,
+        configfile_path='configfiles/config.nc',
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
         w_water_path='ECCO/ECCO_interp/W_2015*.nc',
@@ -27,7 +26,6 @@ if __name__ == '__main__':
         num_timesteps=24*365,
         save_period=24,
         advection_scheme='taylor2',
-        eddy_diffusivity=EDDY_DIFFUSIVITY,
         windage_multiplier=WINDAGE_MULTIPLIER,
         verbose=True,
         opencl_device=(0, 0),

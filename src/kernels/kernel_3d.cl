@@ -4,10 +4,11 @@
 #include "particle.cl"
 #include "random.cl"
 #include "advection_schemes.cl"
-#include "eddy_diffusion.cl"
+#include "diffusion.cl"
 #include "windage.cl"
 #include "buoyancy.cl"
 #include "gradients.cl"
+#include "vertical_profile.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
@@ -44,6 +45,13 @@ __kernel void advect(
     __global const double *release_date,    // unix timestamp
     __global const double *radius,          // particle radius, m
     __global const double *density,         // particle density, kg m^-3
+    /* physics */
+    const unsigned int advection_scheme,
+    const double windage_multiplier,  // if nan, disables windage
+    /* eddy diffusivity */
+    __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *horizontal_eddy_diffusivity_values,    // m^2 s^-1
+    const unsigned int horizontal_eddy_diffusivity_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -53,10 +61,6 @@ __kernel void advect(
     __global float *X_out,                  // lon, Deg E (-180 to 180)
     __global float *Y_out,                  // lat, Deg N (-90 to 90)
     __global float *Z_out,                  // depth, m, positive up
-    /* physics */
-    const unsigned int advection_scheme,
-    const double eddy_diffusivity,
-    const double windage_multiplier,  // if nan, disables windage
     /* debugging */
     __global char *exit_code)
 {
@@ -84,6 +88,11 @@ __kernel void advect(
                     .U = wind_U, .V = wind_V, .W = 0,
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
+
+    vertical_profile horizontal_eddy_diffusivity_profile =
+        {.values = horizontal_eddy_diffusivity_values,
+        .z = horizontal_eddy_diffusivity_z,
+        .len = horizontal_eddy_diffusivity_len};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
@@ -121,7 +130,7 @@ __kernel void advect(
             }
             displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
-            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, eddy_diffusivity));
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, horizontal_eddy_diffusivity_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }

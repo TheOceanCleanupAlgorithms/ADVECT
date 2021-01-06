@@ -25,7 +25,7 @@ def openCL_advect(current: xr.Dataset,
                   num_timesteps: int,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
-                  eddy_diffusivity: float,
+                  eddy_diffusivity: xr.Dataset,
                   windage_multiplier: Optional[float],
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
@@ -41,7 +41,7 @@ def openCL_advect(current: xr.Dataset,
     :param num_timesteps: number of timesteps
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
-    :param eddy_diffusivity: constant, scales random walk, model dependent value
+    :param eddy_diffusivity: xarray Dataset storing vertical profiles of eddy diffusivities
     :param windage_multiplier: multiplies the default windage, which is based on emerged area
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
