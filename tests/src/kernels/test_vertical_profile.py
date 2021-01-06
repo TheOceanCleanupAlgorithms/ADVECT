@@ -18,7 +18,7 @@ def sample_profile(sample_z: np.ndarray, z: np.ndarray, var: np.ndarray) -> np.n
         __global const double *sample_z,
         __global double *out) {
         
-        vertical_profile prof = {.z = z, .value = var, .len = len};
+        vertical_profile prof = {.z = z, .values = var, .len = len};
         out[get_global_id(0)] = sample_profile(prof, sample_z[get_global_id(0)]);
     }
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])

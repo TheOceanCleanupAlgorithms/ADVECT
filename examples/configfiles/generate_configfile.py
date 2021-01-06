@@ -39,10 +39,10 @@ def generate_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, ou
     config.to_netcdf(out_path)
 
 
-# a default configuration file
+# a sample configuration file
 if __name__ == '__main__':
     generate_configfile(
-        horizontal_diffusivity=np.linspace(1500, 1, 20),
+        horizontal_diffusivity=np.linspace(1500, 1, 20),  # m^2 s^-1
         z_hd=-np.logspace(0, 4, 20),  # m
         out_name="config.nc",
     )

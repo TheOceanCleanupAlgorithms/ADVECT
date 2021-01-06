@@ -90,7 +90,7 @@ __kernel void advect(
     wind.x_is_circular = x_is_circular(wind);
 
     vertical_profile horizontal_eddy_diffusivity_profile =
-        {.value = horizontal_eddy_diffusivity_value,
+        {.values = horizontal_eddy_diffusivity_value,
         .z = horizontal_eddy_diffusivity_z,
         .len = horizontal_eddy_diffusivity_len};
 
