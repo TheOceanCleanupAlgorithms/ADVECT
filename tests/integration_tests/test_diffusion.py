@@ -13,8 +13,10 @@ def run_diffusion(num_particles: int):
     """run a bunch of particles through one timestep; no current, no winds, and a set horizontal diffusivity profile"""
     # some arbitrary profile
     horizontal_eddy_diffusivity = xr.Dataset(
-            {"horizontal_diffusivity": ("z_hd", (np.linspace(1, 1500, 20)))},
-            coords={"z_hd": -np.logspace(4, 0, 20)}
+            {"horizontal_diffusivity": ("z_hd", (np.linspace(1, 1500, 20))),
+             "vertical_diffusivity": ("z_vd", ([0]))},
+            coords={"z_hd": -np.logspace(4, 0, 20),
+                    "z_vd": [0]}
     )
 
     current_depth = np.linspace(-10000, 0, 100)

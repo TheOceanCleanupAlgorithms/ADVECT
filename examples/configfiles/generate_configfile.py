@@ -64,7 +64,7 @@ if __name__ == "__main__":
     generate_configfile(
         horizontal_diffusivity=np.linspace(1500, 1, 20),  # m^2 s^-1
         z_hd=-np.logspace(0, 4, 20),  # m
-        vertical_diffusivity=np.linspace(-4, 16, 10)**2,
+        vertical_diffusivity=np.linspace(-5e-3, 1e-2, 10)**2,
         z_vd=np.linspace(-1e4, 0, 10),  # m
         out_name="config.nc",
     )
