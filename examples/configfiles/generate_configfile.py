@@ -3,7 +3,13 @@ import numpy as np
 from pathlib import Path
 
 
-def generate_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, out_name: str):
+def generate_configfile(
+    horizontal_diffusivity: np.ndarray,
+    z_hd: np.ndarray,
+    vertical_diffusivity: np.ndarray,
+    z_vd: np.ndarray,
+    out_name: str,
+):
     """
     script to generate a configuration file given requisite parameters
     :param horizontal_diffusivity: horizontal diffusivity at depth levels, m^2 s^-1
@@ -17,6 +23,11 @@ def generate_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, ou
                 horizontal_diffusivity,
                 {"units": "m^2 s^-1"},
             ),
+            "vertical_diffusivity": (
+                "z_vd",
+                vertical_diffusivity,
+                {"units": "m^2 s^-1"},
+            ),
         },
         coords={
             "z_hd": (
@@ -24,6 +35,15 @@ def generate_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, ou
                 z_hd,
                 {
                     "long_name": "depth coordinate for horizontal_diffusivity",
+                    "units": "m",
+                    "positive": "up",
+                },
+            ),
+            "z_vd": (
+                "z_vd",
+                z_vd,
+                {
+                    "long_name": "depth coordinate for vertical_diffusivity",
                     "units": "m",
                     "positive": "up",
                 },
@@ -39,10 +59,12 @@ def generate_configfile(horizontal_diffusivity: np.ndarray, z_hd: np.ndarray, ou
     config.to_netcdf(out_path)
 
 
-# a sample configuration file
-if __name__ == '__main__':
+# a sample configuration file, profiles are NOT based on true ocean state
+if __name__ == "__main__":
     generate_configfile(
         horizontal_diffusivity=np.linspace(1500, 1, 20),  # m^2 s^-1
         z_hd=-np.logspace(0, 4, 20),  # m
+        vertical_diffusivity=np.linspace(-4, 16, 10)**2,
+        z_vd=np.linspace(-1e4, 0, 10),  # m
         out_name="config.nc",
     )
