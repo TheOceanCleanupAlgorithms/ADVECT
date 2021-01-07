@@ -80,6 +80,8 @@ class Kernel3D:
         # eddy diffusivity
         self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
         self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
+        self.vertical_eddy_diffusivity_z = eddy_diffusivity.z_vd.values.astype(np.float64)
+        self.vertical_eddy_diffusivity_values = eddy_diffusivity.vertical_diffusivity.values.astype(np.float64)
 
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
@@ -106,7 +108,8 @@ class Kernel3D:
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,\
-            d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity = \
+            d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity,\
+            d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
@@ -114,6 +117,7 @@ class Kernel3D:
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
               self.x0, self.y0, self.z0, self.release_date, self.radius, self.density,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
+              self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
               ))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
@@ -137,6 +141,7 @@ class Kernel3D:
                 d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
                 self.advection_scheme, self.windage_multiplier,
                 d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
+                d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),
                 self.start_time, self.dt, self.ntimesteps, self.save_every,
                 d_X_out, d_Y_out, d_Z_out,
                 d_exit_codes)

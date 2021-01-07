@@ -52,6 +52,9 @@ __kernel void advect(
     __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *horizontal_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int horizontal_eddy_diffusivity_len,
+    __global const double *vertical_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *vertical_eddy_diffusivity_values,    // m^2 s^-1
+    const unsigned int vertical_eddy_diffusivity_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -89,10 +92,15 @@ __kernel void advect(
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
 
-    vertical_profile horizontal_eddy_diffusivity_profile =
-        {.values = horizontal_eddy_diffusivity_values,
+    vertical_profile horizontal_eddy_diffusivity_profile = {
+        .values = horizontal_eddy_diffusivity_values,
         .z = horizontal_eddy_diffusivity_z,
         .len = horizontal_eddy_diffusivity_len};
+
+    vertical_profile vertical_eddy_diffusivity_profile = {
+        .values = vertical_eddy_diffusivity_values,
+        .z = vertical_eddy_diffusivity_z,
+        .len = vertical_eddy_diffusivity_len};
 
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
@@ -130,7 +138,9 @@ __kernel void advect(
             }
             displacement_meters = add(displacement_meters, buoyancy_transport_meters);
 
-            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate, horizontal_eddy_diffusivity_profile));
+            displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate,
+                                                                                 horizontal_eddy_diffusivity_profile,
+                                                                                 vertical_eddy_diffusivity_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }
