@@ -52,6 +52,9 @@ __kernel void advect(
     __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *horizontal_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int horizontal_eddy_diffusivity_len,
+    __global const double *vertical_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *vertical_eddy_diffusivity_values,    // m^2 s^-1
+    const unsigned int vertical_eddy_diffusivity_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
