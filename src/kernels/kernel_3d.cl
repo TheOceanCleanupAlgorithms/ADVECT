@@ -9,6 +9,7 @@
 #include "buoyancy.cl"
 #include "gradients.cl"
 #include "vertical_profile.cl"
+#include "wind_driven_mixing.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
@@ -143,6 +144,7 @@ __kernel void advect(
                                                                                  vertical_eddy_diffusivity_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
+                displacement_meters = add(displacement_meters, wind_mixing_meters(p, wind, dt, &rstate));
             }
 
             p = update_position_no_beaching(p, displacement_meters, current);
