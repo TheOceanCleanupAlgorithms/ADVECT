@@ -10,6 +10,7 @@
 #include "gradients.cl"
 #include "vertical_profile.cl"
 #include "wind_driven_mixing.cl"
+#include "wind_mixing_and_buoyancy.cl"
 
 enum ExitCode {SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3,
                INVALID_ADVECTION_SCHEME = -1};
@@ -132,20 +133,21 @@ __kernel void advect(
                 return;
             }
 
-            vector buoyancy_transport_meters = buoyancy_transport(p, dt);
-            if (isnan(buoyancy_transport_meters.z)) {
-                exit_code[global_id] = PARTICLE_TOO_LARGE;
-                return;
-            }
-            displacement_meters = add(displacement_meters, buoyancy_transport_meters);
-
             displacement_meters = add(displacement_meters, eddy_diffusion_meters(p.z, dt, &rstate,
                                                                                  horizontal_eddy_diffusivity_profile,
                                                                                  vertical_eddy_diffusivity_profile));
             if (!isnan(windage_multiplier)) {
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
-                displacement_meters = add(displacement_meters, wind_mixing_meters(p, wind, dt, &rstate));
             }
+
+            // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
+            vector wind_mixing_and_buoyancy_meters =
+                wind_mixing_and_buoyancy_transport(p, wind, dt, &rstate, !isnan(windage_multiplier));
+            if (isnan(wind_mixing_and_buoyancy_meters.z)) {
+                exit_code[global_id] = PARTICLE_TOO_LARGE;
+                return;
+            }
+            displacement_meters = add(displacement_meters, wind_mixing_and_buoyancy_meters);
 
             p = update_position_no_beaching(p, displacement_meters, current);
 
