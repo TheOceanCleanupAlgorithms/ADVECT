@@ -1,25 +1,36 @@
 #include "wind_driven_mixing.h"
 #include "physical_constants.h"
-#include "random.h"
 
 double near_surface_diffusivity(double wind_speed_10m);
 double calculate_significant_wave_height(double wind_stress);
 double calculate_wind_stress(double wind_speed_10m);
 
-bool in_mixing_layer(double z, double wind_speed_10m) {
+double mixed_layer_depth(double wind_speed_10m) {
     double wind_stress = calculate_wind_stress(wind_speed_10m);
     double wave_height = calculate_significant_wave_height(wind_stress);
-    return z > -1.5 * wave_height;  // definition from kukulka 2012
+    return -10 * wave_height;  // reasonable approximation, see D'Asaro et al 2013 Figure 1 for evidence
 }
 
 
 double sample_concentration_profile(double wind_speed_10m, double rise_velocity, random_state *rstate) {
-    /* Generate a random depth, weighted by Kukulka 2012 eq. 4.*/
-    // This equation comes from normalizing eq. 4 into a PDF, integrating it into a CDF,
+    /* Generate a random depth, within mixed layer, PDF based on Kukulka 2012 eq. 4.*/
+    // requirement: rise velocity > 0
+    // This equation comes from normalizing eq. 4 from z=MLD to z=0 into a PDF, integrating it into a CDF,
     // then inverting this CDF so that it can be sampled using inverse transform sampling.
+    // for 0 rise velocity, simply draw uniform in MLD (as full equation is undefined at z == 0)
     double A_0 = near_surface_diffusivity(wind_speed_10m);
-    random(rstate);
-    return (A_0 / rise_velocity * log(random(rstate)));
+    double MLD = mixed_layer_depth(wind_speed_10m);
+    if (rise_velocity < 0) {
+        return NAN;
+    } else if (rise_velocity == 0) {
+        return random_in_range(MLD, 0, rstate);
+    } else {
+        double w_b = rise_velocity;
+        return A_0/w_b * log(
+            exp(w_b/A_0 * MLD) +
+            random(rstate) * (1 - exp(w_b/A_0 * MLD))
+        );
+    };
 }
 
 
@@ -34,7 +45,10 @@ double near_surface_diffusivity(double wind_speed_10m) {
 double calculate_significant_wave_height(double wind_stress) {
     const double wave_age = 35.0;  // Kukulka 2012 assumption: fully developed sea state
     double frictional_air_velocity = sqrt(wind_stress/DENSITY_SURFACE_AIR);  // Large and Pond (1981) eq. 2
-    return fabs(.96 / ACC_GRAVITY * pow(wave_age, 1.5) * pow(frictional_air_velocity, 2));  // Kukulka 2012, just after eq. 3
+    return fmin(
+        fabs(.96 / ACC_GRAVITY * pow(wave_age, 1.5) * pow(frictional_air_velocity, 2)),  // Kukulka 2012, just after eq. 3
+        MAX_RECORDED_SIGNIFICANT_WAVE_HEIGHT);  // the above equation generates unrealistically large waves for u10 > 20 m/s ish.
+                                                // this caps the wave size based on the world record measurement.
 }
 
 

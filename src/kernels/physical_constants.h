@@ -7,5 +7,6 @@
                                             // https://ittc.info/media/4048/75-02-01-03.pdf)
 #define DENSITY_SURFACE_AIR 1.225  // kg m^-3, according to International Standard Atmosphere (ISO 2533:1975)
 #define VON_KARMAN_CONSTANT .4
+#define MAX_RECORDED_SIGNIFICANT_WAVE_HEIGHT 20 // m, approximate world record as of 2020 (https://wmo.asu.edu/content/World-Highest-Wave-Buoy)
 
 #endif // PHYSICAL_CONSTANTS
