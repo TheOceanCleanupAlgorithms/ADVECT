@@ -3,8 +3,21 @@
 #include "buoyancy.h"
 
 vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, double dt, random_state *rstate, const bool wind_mixing_enabled) {
+    /* Calculates the
+     *
+     * p: the particle whose transport we're considering
+     * wind: 10 meter wind vector field (m/s)
+     * dt: the timestep (s)
+     * rstate: random state for random turbulent mixing behavior
+     * wind_mixing_enabled: flag to manually disable wind mixing, instead just return buoyancy transport.
+     *
+     * return: displacement (m) due to both wind mixing and particle buoyancy
+     *  which form an equilibrium in the near-surface.  Outside of the near-surface, only buoyancy transport
+     *  is considered.
+     *  If return is NAN, this means the particle radius is outside valid domain for the buoyancy transport paramaterization.
+     */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
-    double vertical_velocity = buoyancy_vertical_velocity(p);
+    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho);
     if (isnan(vertical_velocity)) {
         transport_meters.z = NAN;  // pass on failure flag
         return transport_meters;

@@ -11,9 +11,6 @@
 
 __constant vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
 
-vector calculate_partial(grid_point lower, grid_point higher, double spacing, field3d field);
-bool in_domain(double position, __global const double *dim, const unsigned int dim_len);
-
 vector calculate_partial(grid_point lower, grid_point higher, double spacing, field3d field) {
     vector V_higher = index_vector_field(field, higher, true);
     vector V_lower = index_vector_field(field, lower, true);

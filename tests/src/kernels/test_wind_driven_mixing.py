@@ -44,9 +44,9 @@ def sample_concentration_profile(wind_10m: float, rise_velocity: float, nsamples
 
 
 def test_sample_concentration_profile(plot=False):
-    """tries to reproduce concentration plot given in kukulka 2012 fig 3a
+    """tries to reproduce concentration plot given in Kukulka 2012 fig 3a
         parameters: 10m wind speed is 6.5 m/s (based on the .75 cm/s water friction, stated average conditions)
-                    particle rise velocity is modeled at .01 m/s, as they do.
+                    particle rise velocity is modeled at .01 m/s, as in Kukulka
     """
     u10 = 6.5  # m/s, roughly corresponds to water friction velocity .75 cm/s
     w_b = 0.01  # m s^-1, given rise velocity
@@ -72,7 +72,8 @@ def test_sample_concentration_profile(plot=False):
         np.testing.assert_allclose(true_PDF, measured_PDF, atol=.02)  # every bin within 2%, that's a super close match
     test_and_plot()
 
-    # now try with a neutral particle (special case, as PDF/CDF become undefined but asymptotic behavior is understood)
+    # now try with a neutral particle (special case, as PDF/CDF become undefined
+    #   but asymptotic behavior is understood to be a uniform distribution)
     w_b = 0
 
     samples = sample_concentration_profile(wind_10m=u10, rise_velocity=w_b, nsamples=100000)

@@ -92,3 +92,7 @@ def test_random_within_magnitude():
 
     # bin into 10 bins, check each bin has 9-11% of the total samples
     np.testing.assert_allclose(np.histogram(result, bins=10, range=(-magnitude, magnitude))[0] / nsamples, .1, atol=.01)
+
+
+def test_random_in_range():
+    assert False, "TODO"
