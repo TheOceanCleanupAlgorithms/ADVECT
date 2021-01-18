@@ -1,19 +1,23 @@
 #include "windage.h"
 #include "advection_schemes.h"
+#include "physical_constants.h"
 
 #define density_ratio 1.17e-3  // density of air / density of water (van der Mheen 2020 near eq. 8)
 #define drag_ratio 1           // drag coefficient in air / drag coefficient in water (van der Mheen 2020 near eq. 8)
+#define wind_10cm_to_wind_10m_ratio .36156  // (log(.01/.0002) / log(10/.0002)), log wind profile assumption (Charnock 1955),
+                                        // taking surface roughness = .0002 (WMO Guide to Instruments and Methods of Observation, 2018 edition, page 211)
 
 double calculate_windage_coeff(double r, double z);
 double circular_segment_area(double R, double r);
 
-vector windage_meters(particle p, field3d wind, double dt, double windage_multiplier) {
-    /* Physically-motivated windage, scaled by windage_multiplier */
+vector windage_meters(particle p, field3d wind_10m, double dt, double windage_multiplier) {
+    /* Physically-motivated windage, scaled by windage_multiplier.
+     * Wind speed at 10cm is assumed to be representative of wind speed experienced by surfaced particles.
+     */
     double windage_coeff = calculate_windage_coeff(p.r, p.z);
-    vector wind_displacement_meters = eulerian_displacement(p, wind, dt);
-    wind_displacement_meters.x *= windage_coeff * windage_multiplier;
-    wind_displacement_meters.y *= windage_coeff * windage_multiplier;
-    wind_displacement_meters.z = 0;
+    vector nearest_wind_10m = find_nearest_vector(p, wind_10m, true);
+    vector nearest_wind_10cm = mul(nearest_wind_10m, wind_10cm_to_wind_10m_ratio);
+    vector wind_displacement_meters = mul(nearest_wind_10cm, windage_coeff * windage_multiplier * dt);
     return wind_displacement_meters;
 }
 

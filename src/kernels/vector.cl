@@ -7,6 +7,14 @@ vector add(vector a, vector b) {
     return res;
 }
 
+vector mul(vector v, double c) {
+    vector res = {
+        .x = c * v.x,
+        .y = c * v.y,
+        .z = c * v.z};
+    return res;
+}
+
 double magnitude(vector v) {
     return sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2));
 }

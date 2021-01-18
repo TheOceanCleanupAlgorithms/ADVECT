@@ -23,7 +23,7 @@ vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, double dt, r
         return transport_meters;
     }
 
-    vector nearest_wind = index_vector_field(wind, find_nearest_neighbor(p, wind), true);
+    vector nearest_wind = find_nearest_vector(p, wind, true);
     double wind_speed_10m = magnitude(nearest_wind);
     if (wind_mixing_enabled && (vertical_velocity >= 0) && (p.z > mixed_layer_depth(wind_speed_10m))) {
         // under these conditions, in the near surface with floating particles,

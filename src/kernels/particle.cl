@@ -85,6 +85,10 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
     return neighbor;
 }
 
+vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
+    return index_vector_field(field, find_nearest_neighbor(p, field), zero_nans);
+}
+
 bool in_ocean(particle p, field3d field) {
     /* where'er you find the vector nan to be,
        you sure as heck can bet this ain't the sea.
