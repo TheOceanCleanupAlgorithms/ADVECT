@@ -91,7 +91,7 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | V | (time, depth, lat, lon) | numeric | meridional component of velocity (m/s), positive north. |
 | W | (time, depth, lat, lon) | numeric | vertical component of velocity (m/s), positive up. |
 
-### Surface Wind
+### 10m Wind
 Encoded as a netcdf dataset, and must adhere to the following specifications:
 
 #### Dimensions

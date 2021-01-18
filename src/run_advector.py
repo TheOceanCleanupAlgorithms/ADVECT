@@ -79,9 +79,9 @@ def run_advector(
         For example, on a dedicated compute device (e.g. GPU) with 2GB memory, setting memory_utilization = .95
             will allow the program to send a maximum of 1.9GB to the GPU at once.
         In general, set this as high as you can without running out of memory.
-    :param u_wind_path: wildcard path to zonal surface wind files; see 'u_water_path'.
+    :param u_wind_path: wildcard path to zonal 10-meter wind files; see 'u_water_path'.
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
-    :param v_wind_path: wildcard path to meridional surface wind files; see 'u_wind_path'.
+    :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param verbose: whether to print detailed information about kernel execution.

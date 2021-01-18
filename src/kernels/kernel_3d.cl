@@ -31,7 +31,7 @@ __kernel void advect(
     __global const float *current_U,        // m / s, shape=(t, z, y, x) flattened, 32 bit to save space
     __global const float *current_V,        // m / s
     __global const float *current_W,        // m / s
-    /* wind vector field */
+    /* 10-meter wind vector field */
     __global const double *wind_x,          // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int wind_x_len,          // 1 <= wind_x_len <= UINT_MAX + 1
     __global const double *wind_y,          // lat, Deg N (-90 to 90), uniform spacing
