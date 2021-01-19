@@ -40,10 +40,9 @@ double near_surface_diffusivity(double wind_speed_10m) {
 }
 
 double calculate_significant_wave_height(double wind_stress) {
-    const double wave_age = 35.0;  // Kukulka 2012 assumption: fully developed sea state
     double frictional_air_velocity = sqrt(wind_stress/DENSITY_SURFACE_AIR);  // Large and Pond (1981) eq. 2
     return fmin(
-        fabs(.96 / ACC_GRAVITY * pow(wave_age, 1.5) * pow(frictional_air_velocity, 2)),  // Kukulka 2012, just after eq. 3
+        fabs(.96 / ACC_GRAVITY * pow(WAVE_AGE, 1.5) * pow(frictional_air_velocity, 2)),  // Kukulka 2012, just after eq. 3
         MAX_RECORDED_SIGNIFICANT_WAVE_HEIGHT);  // the above equation generates unrealistically large waves for u10 > 20 m/s ish.
                                                 // this caps the wave size based on the world record measurement.
 }

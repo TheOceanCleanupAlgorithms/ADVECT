@@ -50,7 +50,7 @@ def test_sample_concentration_profile(plot=False):
     """
     u10 = 6.5  # m/s, roughly corresponds to water friction velocity .75 cm/s
     w_b = 0.01  # m s^-1, given rise velocity
-    A_0 = .004443  # computed from ustar=.75, or u10 = 6.5 m/s
+    A_0 = .002628  # computed from ustar=.75, or u10 = 6.5 m/s
     H_s = calculate_significant_wave_height(calculate_wind_stress(u10))  # significant wave height
     MLD = -10 * H_s  # as defined in wind_driven_mixing.cl
 
@@ -69,7 +69,7 @@ def test_sample_concentration_profile(plot=False):
             plt.legend()
             plt.ylabel('z')
             plt.title(f'w_b={w_b} m/s, u10={u10} m/s --> MLD={MLD: .2f} m')
-        np.testing.assert_allclose(true_PDF, measured_PDF, atol=.02)  # every bin within 2%, that's a super close match
+        np.testing.assert_allclose(true_PDF, measured_PDF, atol=.03)  # every bin within 3%, that's a super close match
     test_and_plot()
 
     # now try with a neutral particle (special case, as PDF/CDF become undefined
