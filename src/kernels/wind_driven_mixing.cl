@@ -8,9 +8,8 @@ double calculate_wind_stress(double wind_speed_10m);
 double mixed_layer_depth(double wind_speed_10m) {
     double wind_stress = calculate_wind_stress(wind_speed_10m);
     double wave_height = calculate_significant_wave_height(wind_stress);
-    return -10 * wave_height;  // reasonable approximation, see D'Asaro et al 2013 Figure 1 for evidence
+    return MLD_in_terms_of_wave_height * wave_height;
 }
-
 
 double sample_concentration_profile(double wind_speed_10m, double rise_velocity, random_state *rstate) {
     /* Generate a random depth, within mixed layer, PDF based on Kukulka 2012 eq. 4.*/
@@ -33,14 +32,12 @@ double sample_concentration_profile(double wind_speed_10m, double rise_velocity,
     };
 }
 
-
 double near_surface_diffusivity(double wind_speed_10m) {
     double wind_stress = calculate_wind_stress(wind_speed_10m);
     double significant_wave_height = calculate_significant_wave_height(wind_stress);
     double frictional_water_velocity = sqrt(wind_stress/DENSITY_SEAWATER);  // Large and Pond (1981) eq. 2
     return frictional_water_velocity * VON_KARMAN_CONSTANT * 1.5 * significant_wave_height;
 }
-
 
 double calculate_significant_wave_height(double wind_stress) {
     const double wave_age = 35.0;  // Kukulka 2012 assumption: fully developed sea state
@@ -50,7 +47,6 @@ double calculate_significant_wave_height(double wind_stress) {
         MAX_RECORDED_SIGNIFICANT_WAVE_HEIGHT);  // the above equation generates unrealistically large waves for u10 > 20 m/s ish.
                                                 // this caps the wave size based on the world record measurement.
 }
-
 
 double calculate_wind_stress(double wind_speed_10m) {
     // drag coefficient from Large and Pond 1981 eq. 19, extrapolated in both directions

@@ -6,6 +6,8 @@
 #include "fields.h"
 #include "random.h"
 
+#define MLD_in_terms_of_wave_height -10
+
 double sample_concentration_profile(double wind_speed_10m, double rise_velocity, random_state *rstate);
 double mixed_layer_depth(double wind_speed_10m);
 

@@ -1,11 +1,4 @@
 #include "windage.h"
-#include "advection_schemes.h"
-#include "physical_constants.h"
-
-#define density_ratio 1.17e-3  // density of air / density of water (van der Mheen 2020 near eq. 8)
-#define drag_ratio 1           // drag coefficient in air / drag coefficient in water (van der Mheen 2020 near eq. 8)
-#define wind_10cm_per_wind_10m .36156  // wind(10cm)/wind(10m) = (log(.01/.0002) / log(10/.0002)), log wind profile assumption (Charnock 1955),
-                                        // taking surface roughness = .0002 (WMO Guide to Instruments and Methods of Observation, 2018 edition, page 211)
 
 double calculate_windage_coeff(double r, double z);
 double circular_segment_area(double R, double r);
@@ -37,7 +30,7 @@ double calculate_windage_coeff(double r, double z) {
         double emerged_segment = M_PI * pow(r, 2) - submerged_segment;
         area_ratio = emerged_segment / submerged_segment;
     }
-    return sqrt(density_ratio * drag_ratio * area_ratio);
+    return sqrt(density_air_per_density_water * drag_ratio * area_ratio);
 }
 
 double circular_segment_area(double R, double r) {
