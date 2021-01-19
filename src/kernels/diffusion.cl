@@ -5,29 +5,28 @@ double amplitude_of_diffusion(const double dt, unsigned int ndims, double diffus
 vector eddy_diffusion_meters(double z, const double dt, random_state *rstate,
                              vertical_profile horizontal_eddy_diffusivity_profile,
                              vertical_profile vertical_eddy_diffusivity_profile) {
-    /*
-    Currently, only horizontal diffusion is supported.
-    This diffusion is represented by a random displacement, the magnitude of which is determined
-    by sampling the depth profile of horizontal diffusivity
-    */
+    /* Use the vertical profiles of eddy diffusivity to generate a step of motion due to
+       eddy diffusion at depth z.
+     */
     double horizontal_eddy_diffusivity = sample_profile(horizontal_eddy_diffusivity_profile, z);
-    double horizontal_amplitude = amplitude_of_diffusion(dt, 2, horizontal_eddy_diffusivity);
     double vertical_eddy_diffusivity = sample_profile(vertical_eddy_diffusivity_profile, z);
-    double vertical_amplitude = amplitude_of_diffusion(dt, 1, vertical_eddy_diffusivity);
-    vector diffusion = {.x = random_within_magnitude(horizontal_amplitude, rstate),
-                        .y = random_within_magnitude(horizontal_amplitude, rstate),
-                        .z = random_within_magnitude(vertical_amplitude, rstate)};
+    vector diffusion = {.x = diffusion_step(horizontal_eddy_diffusivity, dt, rstate),
+                        .y = diffusion_step(horizontal_eddy_diffusivity, dt, rstate),
+                        .z = diffusion_step(vertical_eddy_diffusivity, dt, rstate)};
     return diffusion;
 }
 
 
-double amplitude_of_diffusion(const double dt, unsigned int ndims, double diffusivity) {
-    /* calculates amplitude of diffusion, given by the square root of the mean square displacement
-       (definition of n-dimensional MSD from http://web.mit.edu/savin/Public/.Tutorial_v1.2/Introduction.html)
+double diffusion_step(double diffusivity, const double dt, random_state *rstate) {
+    /* Calculate a displacement due to one-dimensional turbulent diffusion.
+       Diffusion is represented by a Wiener process, which is more or less a random walk in each dimension
+       where the amplitude of each step is chosen from a normal distribution whose variance is proportional to the
+       the timestep, as well as the eddy diffusivity.
+       See "Stochastic Lagrangian Models of Turbelent Diffusion", Howard Rodean 1996, eq. 8.43.
      * dt: timestep in seconds
-     * ndims: number of dimensions of the diffusive process
      * diffusivity: m^2 s^-1
-     * return: amplitude in meters
-     */
-    return sqrt(2 * ndims * diffusivity * dt);
+     * return: displacement in meters
+    */
+    double dW = random_normal(0, sqrt(dt), rstate);  // Wiener step, eq. 4.3a
+    return sqrt(2*diffusivity) * dW;  // simplified form of eq. 8.43, Rodean 1996
 }

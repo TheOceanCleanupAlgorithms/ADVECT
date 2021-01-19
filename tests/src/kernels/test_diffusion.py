@@ -25,7 +25,7 @@ def single_diffusion_step(
         returns displacements, as array of 3-component vectors (xyz)"""
     out = np.zeros(len(z), dtype=cl.cltypes.double3)
     d_z = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(z))
-    d_seed = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(seed))
+    d_seed = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.uint32(seed))
     d_hedz = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(horiz_eddy_diff_z))
     d_hedv = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(horiz_eddy_diff_val))
     d_vedz = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(vert_eddy_diff_z))
@@ -67,51 +67,35 @@ def test_diffusion(plot=False):
     vertical_diffusivity = np.linspace(5e-3, 1, 10)
     z_vd = np.linspace(-1e4, 0, 10)  # m
 
-    result = single_diffusion_step(p_depth, dt, seed, z_hd, horizontal_diffusivity, z_vd, vertical_diffusivity)
-
-    drift = np.abs(result)
+    drift = single_diffusion_step(p_depth, dt, seed, z_hd, horizontal_diffusivity, z_vd, vertical_diffusivity)
 
     z_grid = np.arange(min(p_depth), max(p_depth), 100)
-    bin_radius = 50
+    bin_radius = 100
     # centered binning for mean
     bin_mean = np.array([np.mean(drift[(p_depth > z - bin_radius) & (p_depth < z + bin_radius)], axis=0) for z in z_grid])
-    # non-centered binning for max
-    bin_max = np.array([np.max(drift[(p_depth > z - 2 * bin_radius) & (p_depth < z)], axis=0) for z in z_grid[1:]])
-    diff_amp_horiz = np.sqrt(4 * np.interp(z_grid, z_hd, horizontal_diffusivity) * dt)
-    expected_step_horiz = diff_amp_horiz * .5  # expected value of a (0,1) uniform distribution is .5
-    diff_amp_vert = np.sqrt(2 * np.interp(z_grid, z_vd, vertical_diffusivity) * dt)
-    expected_step_vert = diff_amp_vert * .5  # expected value of a (0,1) uniform distribution is .5
+    # centered binning for std
+    bin_std = np.array([np.std(drift[(p_depth > z - bin_radius) & (p_depth < z + bin_radius)], axis=0) for z in z_grid])
+    true_std = np.array([np.sqrt(2 * np.interp(z_grid, z_hd, horizontal_diffusivity) * dt),
+                         np.sqrt(2 * np.interp(z_grid, z_vd, vertical_diffusivity) * dt)])
 
-    # within a bin radius from the edge, the bin mean skews because no data past domain
-    np.testing.assert_allclose(bin_mean[:, 0][z_grid > min(z_grid) + bin_radius],
-                               expected_step_horiz[z_grid > min(z_grid) + bin_radius], rtol=.1)
-    np.testing.assert_allclose(bin_mean[:, 1][z_grid > min(z_grid) + bin_radius],
-                               expected_step_horiz[z_grid > min(z_grid) + bin_radius], rtol=.1)
-    np.testing.assert_allclose(bin_mean[:, 2][z_grid > min(z_grid) + bin_radius],
-                               expected_step_vert[z_grid > min(z_grid) + bin_radius], rtol=.1)
-    np.testing.assert_array_less(bin_max[:, 0], diff_amp_horiz[1:])
-    np.testing.assert_array_less(bin_max[:, 1], diff_amp_horiz[1:])
-    np.testing.assert_array_less(bin_max[:, 2], diff_amp_vert[1:])
+    np.testing.assert_allclose(0, bin_mean[:, 0], atol=.2*np.mean(bin_std[:, 0]))  # mean within 1/5 O(std) of 0, p good
+    np.testing.assert_allclose(0, bin_mean[:, 1], atol=.2*np.mean(bin_std[:, 1]))
+    np.testing.assert_allclose(0, bin_mean[:, 2], atol=.2*np.mean(bin_std[:, 2]))
+    np.testing.assert_allclose(true_std[0][1:], bin_std[:, 0][1:], rtol=.1)  # bin at bottom edge is thrown off by boundary, ignore
 
     if plot:
-        fig, ax = plt.subplots(2, 1, figsize=(6, 8))
-        ax[0].plot(drift[:, 0], p_depth, '.', markersize=.5, label='particles')
-        ax[0].plot(bin_mean[:, 0], z_grid, label='100m bin mean')
-        ax[0].plot(bin_max[:, 0], z_grid[1:], label='100m bin max')
-        ax[0].plot(expected_step_horiz, z_grid, label='expected diffusivity step (m)')
-        ax[0].plot(diff_amp_horiz, z_grid, label='max diffusivity amplitude (m)')
-        ax[0].set_ylim([min(z_grid), max(z_grid)])
-        ax[0].set_ylabel('depth (m)')
-        ax[0].set_xlabel(f'lon displacement in {dt} seconds (m)')
+        fig, ax = plt.subplots(2, 1, figsize=(9, 9))
+        for i, j in ((0, 0), (1, 2)):
+            ax[i].plot(drift[:, j], p_depth, '.', markersize=.5, label='particles')
+            ax[i].plot(np.zeros_like(z_grid), z_grid, label='expected mean', linewidth=2)
+            ax[i].plot(bin_mean[:, j], z_grid, label='100m bin mean', linewidth=2)
+            ax[i].plot(true_std[i], z_grid, label='expected std', linewidth=2)
+            ax[i].plot(bin_std[:, j], z_grid, label='100m bin std', linewidth=2)
+            ax[i].set_ylim([min(z_grid), max(z_grid)])
+            ax[i].set_ylabel('depth (m)')
         ax[0].legend()
+        ax[0].set_xlabel(f'lon displacement in {dt} seconds (m)')
         ax[0].set_title('Depth-dependent diffusivity test')
-        ax[1].plot(drift[:, 2], p_depth, '.', markersize=.5, label='particles')
-        ax[1].plot(bin_mean[:, 2], z_grid, label='100m bin mean')
-        ax[1].plot(bin_max[:, 2], z_grid[1:], label='100m bin max')
-        ax[1].plot(expected_step_vert, z_grid, label='expected diffusivity step (m)')
-        ax[1].plot(diff_amp_vert, z_grid, label='max diffusivity amplitude (m)')
-        ax[1].set_ylim([min(z_grid), max(z_grid)])
-        ax[1].set_ylabel('depth (m)')
         ax[1].set_xlabel(f'depth displacement in {dt} seconds (m)')
 
 
