@@ -17,11 +17,6 @@ double random(random_state *rstate) {
 	return x / ((double) UINT_MAX);
 }
 
-double random_within_magnitude(double magnitude, random_state *rstate) {
-    /* returns a uniformly random number in the range (-magnitude, magnitude) */
-    return random_in_range(-magnitude, magnitude, rstate);
-}
-
 double random_in_range(double low, double high, random_state *rstate) {
     /* returns a uniformly random number in the range (low, high) */
     return low + ((high - low) * random(rstate));
