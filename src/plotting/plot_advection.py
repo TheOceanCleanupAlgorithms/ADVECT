@@ -61,10 +61,11 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
 
 
 def animate_ocean_advection_live(P, ax, dot):
+    timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
     for i in range(len(P.time)):
         dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
         dot.set_array(P.isel(time=i).depth.values)
-        ax.set_title(P.time.values[i])
+        ax.set_title(timestr[i])
         ax.set_ylim(-90, 90)
         plt.pause(.005)
     plt.show()
@@ -74,12 +75,13 @@ def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot):
     FFMpegWriter = manimation.writers['ffmpeg']
     writer = FFMpegWriter(fps=30)
     outfile = Path(outputfile_path).with_suffix('.mp4')
+    timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
     print("Creating Movie...")
     with writer.saving(fig, outfile=outfile, dpi=150):
         for i in tqdm(range(len(P.time))):
             dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
             dot.set_array(P.isel(time=i).depth.values)
-            ax.set_title(P.time.values[i])
+            ax.set_title(timestr[i])
             ax.set_ylim(-90, 90)
             writer.grab_frame()
 

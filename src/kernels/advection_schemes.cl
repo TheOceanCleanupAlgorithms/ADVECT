@@ -4,24 +4,18 @@
 vector taylor2_formula(vector V, vector V_x, vector V_y, vector V_z, vector V_t, double dt);
 
 vector eulerian_displacement(particle p, field3d field, double dt) {
-    // find nearest neighbor in grid
-    grid_point neighbor = find_nearest_neighbor(p, field);
     // find vector nearest particle position
-    vector V = index_vector_field(field, neighbor, true);
+    vector V = find_nearest_vector(p, field, true);
 
     //////////// advect particle using euler forward advection scheme
     // meters displacement
-    vector displacement_meters = {.x = V.x * dt,
-                                  .y = V.y * dt,
-                                  .z = V.z * dt};
+    vector displacement_meters = mul(V, dt);
     return displacement_meters;
 }
 
 vector taylor2_displacement(particle p, field3d field, double dt) {
-    grid_point gp = find_nearest_neighbor(p, field);
-
-    // extract values from nearest neighbor
-    vector V = index_vector_field(field, gp, true);
+    // find vector nearest particle position
+    vector V = find_nearest_vector(p, field, true);
 
     // calculate gradients
     vector V_x = x_partial(p, field);

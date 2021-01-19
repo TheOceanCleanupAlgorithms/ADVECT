@@ -91,8 +91,10 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | V | (time, depth, lat, lon) | numeric | meridional component of velocity (m/s), positive north. |
 | W | (time, depth, lat, lon) | numeric | vertical component of velocity (m/s), positive up. |
 
-### Surface Wind
-Encoded as a netcdf dataset, and must adhere to the following specifications:
+### 10m Wind
+Encoded as a netcdf dataset.  Note that the near-surface, turbulent wind-mixing algorithm assumes that each wind data is an average over a timeframe of ~1 day, as it assumes the sea state is fully developed based on the closest wind observation.  If you pass in wind data with sub-daily intervals along the time dimension, the wind mixing will become less realistic.
+
+Must adhere to the following specifications:
 
 #### Dimensions
 | Name | Data Type | Description |

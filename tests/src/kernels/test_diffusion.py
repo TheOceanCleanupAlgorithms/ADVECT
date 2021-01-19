@@ -59,7 +59,7 @@ def test_diffusion(plot=False):
     rng = np.random.default_rng(seed=0)
     p_depth = rng.uniform(-1e4, 0, 100000)
     dt = 1  # seconds
-    seed = rng.integers(1, 1 << 32 - 1, len(p_depth))  # for good random, must provide uniform seed in uint32 range
+    seed = rng.integers(1, (1 << 32) - 1, len(p_depth))  # for good random, must provide uniform seed in uint32 range
 
     # set up some arbitrary diffusivity profiles
     horizontal_diffusivity = np.linspace(1, 1500, 20)  # m^2 s^-1

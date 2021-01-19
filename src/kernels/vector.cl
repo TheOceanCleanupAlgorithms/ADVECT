@@ -7,6 +7,18 @@ vector add(vector a, vector b) {
     return res;
 }
 
+vector mul(vector v, double c) {
+    vector res = {
+        .x = c * v.x,
+        .y = c * v.y,
+        .z = c * v.z};
+    return res;
+}
+
+double magnitude(vector v) {
+    return sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2));
+}
+
 void resolve_and_sort(vector v, vector result[3]) {
     /* Split v into 3 vectors, one for each dimension.  Return these sorted by magnitude.
        Return type: vector[3] */

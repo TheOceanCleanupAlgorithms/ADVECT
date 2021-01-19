@@ -19,5 +19,6 @@ particle update_position(particle p, vector displacement_meters);
 void write_p(particle p, __global float *X_out, __global float *Y_out, __global float *Z_out, unsigned int out_timesteps, unsigned int out_idx);
 bool in_ocean(particle p, field3d field);
 grid_point find_nearest_neighbor(particle p, field3d field);
+vector find_nearest_vector(particle p, field3d field, bool zero_nans);
 
 #endif // PARTICLE

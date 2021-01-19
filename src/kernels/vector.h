@@ -8,6 +8,8 @@ typedef struct vector {
 } vector;
 
 vector add(vector a, vector b);
+vector mul(vector v, double c);
 void resolve_and_sort(vector v, vector result[3]);
+double magnitude(vector v);
 
 #endif // VECTOR
