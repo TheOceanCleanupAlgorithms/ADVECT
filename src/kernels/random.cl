@@ -1,5 +1,7 @@
 #include "random.h"
 
+double standard_normal(random_state *rstate);
+
 /* Opencl includes no RNG.  This generator adapted from wikipedia.  Make sure to seed it with
     something which is unique across threads, e.g. the global id.  But also it can't be zero.  So recommended
       would be the global id + 1.
@@ -20,10 +22,15 @@ double random_within_magnitude(double magnitude, random_state *rstate) {
     return random_in_range(-magnitude, magnitude, rstate);
 }
 
-
 double random_in_range(double low, double high, random_state *rstate) {
     /* returns a uniformly random number in the range (low, high) */
     return low + ((high - low) * random(rstate));
+}
+
+double random_normal(double mean, double std, random_state *rstate) {
+    /* return: a sample from normal distribution with mean "mean" and standard deviation "std" */
+    double standard_normal_sample = standard_normal(rstate);
+    return mean + (standard_normal_sample * std);
 }
 
 double standard_normal(random_state *rstate) {
