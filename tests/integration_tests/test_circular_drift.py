@@ -41,13 +41,17 @@ def compare_alg_drift(initial_radius: float, plot=False):
         },
     )
 
-    horizontal_eddy_diffusivity = xr.Dataset(
+    p0 = pd.DataFrame({'lon': [0], 'lat': [initial_radius], 'p_id': [0], 'depth': [0], 'radius': [.001], 'density': [1025], 'exit_code': [0]})
+    eddy_diffusivity = xr.Dataset(
         {"horizontal_diffusivity": ("z_hd", ([0])),
-         "vertical_diffusivity": ("z_vd", ([0]))},
+         "vertical_diffusivity": ("z_vd", ([0]))},  # neutral buoyancy
         coords={"z_hd": [0], "z_vd": [0]}
     )
+    density_profile = xr.Dataset(
+        {"seawater_density": ("z_sd", (p0.density.values))},  # neutral buoyancy
+        coords={"z_sd": [0]}
+    )
 
-    p0 = pd.DataFrame({'lon': [0], 'lat': [initial_radius], 'p_id': [0], 'depth': [0], 'radius': [.001], 'density': [1025], 'exit_code': [0]})
     dt = timedelta(seconds=30)
     time = pd.date_range(start='2000-01-01', end='2000-01-01T6:00:00', freq=dt)
     p0['release_date'] = time[0]
@@ -57,12 +61,16 @@ def compare_alg_drift(initial_radius: float, plot=False):
 
     euler = Kernel3D(current=current, wind=wind, p0=p0,
                      advect_time=time, save_every=save_every,
-                     advection_scheme=AdvectionScheme.eulerian, eddy_diffusivity=horizontal_eddy_diffusivity,
+                     advection_scheme=AdvectionScheme.eulerian,
+                     eddy_diffusivity=eddy_diffusivity,
+                     density_profile=density_profile,
                      windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
     taylor = Kernel3D(current=current, p0=p0, wind=wind,
                       advect_time=time, save_every=save_every,
-                      advection_scheme=AdvectionScheme.taylor2, eddy_diffusivity=horizontal_eddy_diffusivity,
+                      advection_scheme=AdvectionScheme.taylor2,
+                      eddy_diffusivity=eddy_diffusivity,
+                      density_profile=density_profile,
                       windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
     if plot:
