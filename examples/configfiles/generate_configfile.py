@@ -49,7 +49,7 @@ def generate_configfile(
     config.to_netcdf(out_path)
 
 
-# a sample configuration file, profiles are NOT based on true ocean state
+# a sample configuration file, diffusivity profiles are NOT based on true ocean state
 if __name__ == "__main__":
     # global lat/lon/time average of ocean density, calculated from HYCOM 2015 monthly Temp/Salinity data
     density_profile = np.array(  # kg m^-3

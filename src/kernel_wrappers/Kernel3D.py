@@ -243,6 +243,8 @@ class Kernel3D:
         # check eddy diffusion valid
         assert is_sorted_ascending(self.horizontal_eddy_diffusivity_z)
         assert is_sorted_ascending(self.vertical_eddy_diffusivity_z)
+
+        # check density profile valid
         assert is_sorted_ascending(self.density_profile_z)
 
         # check particle positions valid
