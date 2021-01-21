@@ -35,12 +35,12 @@ double sample_concentration_profile(double wind_speed_10m, double rise_velocity,
 double near_surface_diffusivity(double wind_speed_10m) {
     double wind_stress = calculate_wind_stress(wind_speed_10m);
     double significant_wave_height = calculate_significant_wave_height(wind_stress);
-    double frictional_water_velocity = sqrt(wind_stress/DENSITY_SEAWATER);  // Large and Pond (1981) eq. 2
+    double frictional_water_velocity = sqrt(wind_stress/SURFACE_SEAWATER_DENSITY);  // Large and Pond (1981) eq. 2
     return frictional_water_velocity * VON_KARMAN_CONSTANT * 1.5 * significant_wave_height;
 }
 
 double calculate_significant_wave_height(double wind_stress) {
-    double frictional_air_velocity = sqrt(wind_stress/DENSITY_SURFACE_AIR);  // Large and Pond (1981) eq. 2
+    double frictional_air_velocity = sqrt(wind_stress/SURFACE_AIR_DENSITY);  // Large and Pond (1981) eq. 2
     return fmin(
         fabs(.96 / ACC_GRAVITY * pow(WAVE_AGE, 1.5) * pow(frictional_air_velocity, 2)),  // Kukulka 2012, just after eq. 3
         MAX_RECORDED_SIGNIFICANT_WAVE_HEIGHT);  // the above equation generates unrealistically large waves for u10 > 20 m/s ish.
@@ -55,5 +55,5 @@ double calculate_wind_stress(double wind_speed_10m) {
     } else {
         C_D = .49e-3 + .065e-3 * wind_speed_10m;
     }
-    return DENSITY_SURFACE_AIR * C_D * pow(wind_speed_10m, 2);  // Smith 1998 eq. 1
+    return SURFACE_AIR_DENSITY * C_D * pow(wind_speed_10m, 2);  // Smith 1998 eq. 1
 }

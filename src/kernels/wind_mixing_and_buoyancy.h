@@ -9,7 +9,11 @@ the balance between these two forces than by treating them distinctly.
 #include "vector.h"
 #include "particle.h"
 #include "fields.h"
+#include "vertical_profile.h"
 
-vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, double dt, random_state *rstate, const bool wind_mixing_enabled);
+vector wind_mixing_and_buoyancy_transport(
+    particle p, field3d wind, vertical_profile density_profile,
+    double dt, random_state *rstate, const bool wind_mixing_enabled
+);
 
 #endif //WIND_MIXING_AND_BUOYANCY

@@ -1,7 +1,7 @@
 #include "buoyancy.h"
 #include "physical_constants.h"
 
-double buoyancy_vertical_velocity(double radius, double density) {
+double buoyancy_vertical_velocity(double radius, double density, double seawater_density) {
     /* calculate terminal velocity of a sphere with radius r and density rho
        due to density differential between particle and seawater,
        according to method in Dietrich 1982
@@ -9,13 +9,15 @@ double buoyancy_vertical_velocity(double radius, double density) {
         
        radius: of sphere (m)
        density: of sphere (kg m^-3)
+       seawater_density: of surrounding seawater (kg m^-3)
        
        return: terminal velocity of sphere due to buoyancy/drag force balance (positive up, m/s)
        If return is NAN, this indicates failure due to sphere radius being too large
         for this paramaterization.
     */
-    double D_star = fabs((density - DENSITY_SEAWATER) * ACC_GRAVITY * pow(2*radius, 3) /
-                    (DENSITY_SEAWATER * pow(KINEMATIC_VISCOSITY_SEAWATER, 2)));
+    double kinematic_viscosity_seawater = DYNAMIC_VISCOSITY_SEAWATER / seawater_density;
+    double D_star = fabs((density - seawater_density) * ACC_GRAVITY * pow(2*radius, 3) /
+                    (seawater_density * pow(kinematic_viscosity_seawater, 2)));
 
     double W_star;  // dimensionless settling velocity
     if (D_star < .05) {
@@ -33,6 +35,6 @@ double buoyancy_vertical_velocity(double radius, double density) {
     }
 
     // Dietrich 1982, eq. 5 rearranged
-    double settling_velocity = cbrt((W_star * (DENSITY_SEAWATER - density) * ACC_GRAVITY * KINEMATIC_VISCOSITY_SEAWATER) / DENSITY_SEAWATER);
+    double settling_velocity = cbrt((W_star * (seawater_density - density) * ACC_GRAVITY * kinematic_viscosity_seawater) / seawater_density);
     return -settling_velocity;
 }

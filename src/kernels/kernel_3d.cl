@@ -57,6 +57,10 @@ __kernel void advect(
     __global const double *vertical_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *vertical_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int vertical_eddy_diffusivity_len,
+    /* density profile */
+    __global const double *density_profile_z,  // depth coordinates, m, positive up, sorted ascending
+    __global const double *density_profile_values,    // density of seawater (kg m^-3)
+    const unsigned int density_profile_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -104,6 +108,11 @@ __kernel void advect(
         .z = vertical_eddy_diffusivity_z,
         .len = vertical_eddy_diffusivity_len};
 
+    vertical_profile density_profile = {
+        .values = density_profile_values,
+        .z = density_profile_z,
+        .len = density_profile_len};
+
     // loop timesteps
     particle p = {.id = global_id, .r = radius[global_id], .rho = density[global_id],
                   .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
@@ -142,7 +151,7 @@ __kernel void advect(
 
             // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
             vector wind_mixing_and_buoyancy_meters =
-                wind_mixing_and_buoyancy_transport(p, wind, dt, &rstate, !isnan(windage_multiplier));
+                wind_mixing_and_buoyancy_transport(p, wind, density_profile, dt, &rstate, !isnan(windage_multiplier));
             if (isnan(wind_mixing_and_buoyancy_meters.z)) {
                 exit_code[global_id] = PARTICLE_TOO_LARGE;
                 return;
