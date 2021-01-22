@@ -41,7 +41,11 @@ def compare_alg_drift(initial_radius: float, plot=False):
         },
     )
 
-    p0 = pd.DataFrame({'lon': [0], 'lat': [initial_radius], 'p_id': [0], 'depth': [0], 'radius': [.001], 'density': [1025], 'exit_code': [0]})
+    p0 = pd.DataFrame(
+        {'p_id': [0], 'lon': [0], 'lat': [initial_radius], 'depth': [0],
+         'radius': [.001], 'density': [1025], 'corey_shape_factor': [1],
+         'exit_code': [0]}
+    )
     eddy_diffusivity = xr.Dataset(
         {"horizontal_diffusivity": ("z_hd", ([0])),
          "vertical_diffusivity": ("z_vd", ([0]))},  # neutral buoyancy

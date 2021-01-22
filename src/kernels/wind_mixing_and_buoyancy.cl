@@ -17,7 +17,7 @@ vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, vertical_pro
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 
     double seawater_density = sample_profile(density_profile, p.z);
-    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, seawater_density);
+    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density);
     if (isnan(vertical_velocity)) {
         transport_meters.z = NAN;  // pass on failure flag
         return transport_meters;

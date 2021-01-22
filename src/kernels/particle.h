@@ -4,13 +4,14 @@
 #include "fields.h"
 
 typedef struct particle {
-    int id;
+    const int id;
     double x;
     double y;
     double z;
     double t;
-    double r;    // radius
-    double rho;  // density
+    const double r;    // radius
+    const double rho;  // density
+    const double CSF;  // Corey Shape Factor: a/sqrt(b*c), where a <= b <= c are the dimensions of the particle
 } particle;
 
 particle constrain_coordinates(particle p);

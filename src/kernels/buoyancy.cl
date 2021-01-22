@@ -5,17 +5,15 @@ double dimensionless_particle_diameter(double radius, double density, double sea
 double dimensionless_settling_velocity(double D_star, double CSF);
 
 double buoyancy_vertical_velocity(double radius, double density, double corey_shape_factor, double seawater_density) {
-    /* calculate terminal velocity of a sphere with radius r and density rho
-       due to density differential between particle and seawater,
-       according to method in Dietrich 1982
-       Density and kinematic viscosity of seawater are considered constant.
-        
-       radius: of sphere (m)
-       density: of sphere (kg m^-3)
-       seawater_density: of surrounding seawater (kg m^-3)
+    /* According to method in Dietrich 1982
+
+     * radius: nominal radius of particle (m)
+     * density: of particle (kg m^-3)
+     * corey_shape_factor: representation of particle shape (unitless, domain (.15, 1])
+     * seawater_density: of surrounding seawater (kg m^-3)
        
-       return: terminal velocity of sphere due to buoyancy/drag force balance (positive up, m/s)
-       If return is NAN, this indicates failure due to sphere radius being too large
+     * return: terminal velocity of sphere due to buoyancy/drag force balance (positive up, m/s)
+       If return is NAN, this indicates failure due to radius being too large
         for this paramaterization.
     */
     double kinematic_viscosity_seawater = DYNAMIC_VISCOSITY_SEAWATER / seawater_density;
@@ -42,13 +40,15 @@ double dimensionless_particle_diameter(double radius, double density, double sea
 double dimensionless_settling_velocity(double D_star, double CSF) {
     /* According to Dietrich 1982 eq. 8/9
      * D_star: dimensionless particle diameter, Dietrich 1982
-     * CSF: Corey Shape Factor, domain [.15, 1], per Dietrich 1982.
+     * CSF: Corey Shape Factor, domain (.15, 1], per Dietrich 1982.
      * returns: dimensionless settling velocity.  If NAN, D_star was outside domain (aka particle too big)
      */
     double R_1;  // this coefficient predicts settling velocity for a perfect sphere
-    if (D_star < .05) {
+    if (D_star == 0) {  // this happens if density differential is zero
+        return 0;
+    } else if (D_star < .05) {
         // Dietrich 1982, eq. 8
-        R_1 = log10(pow(D_star, 2) / 5832);
+        R_1 = log10(1.71e-4 * pow(D_star, 2));
     } else if (D_star <= 5e9) {
         // Dietrich 1982, eq. 9
         R_1 = -3.76715 +

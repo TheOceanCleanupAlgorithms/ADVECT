@@ -11,12 +11,14 @@ from pathlib import Path
 @click.option('-rho', 'density', required=False, default=1025)
 @click.option('-r', 'radius', required=False, default=.001)
 @click.option('-z', 'depth', required=False, default=0.0)
+@click.option('-csf', 'corey_shape_factor', required=False, default=.5)
 @click.option('-o', 'out_name', required=False, type=click.Path(exists=False, dir_okay=False),
               default='neutral.nc')
 def generate_sourcefile(
     num_particles: int,
     density: float,
     radius: float,
+    corey_shape_factor: float,
     depth: float,
     out_name: str,
 ):
@@ -24,6 +26,7 @@ def generate_sourcefile(
     :param num_particles: number of particles to generate
     :param density: density of particles, kg m^-3
     :param radius: radius of particles, m
+    :param corey_shape_factor: unitless representation of 3d shape: csf = a/sqrt(b*c), where a <= b <= c are the dimensions of the particle
     :param depth: starting depth of particles, m (positive up)
     :param out_name: sourcefile name
     :return:
@@ -43,6 +46,7 @@ def generate_sourcefile(
 
     p0['radius'] = radius
     p0['density'] = density
+    p0['corey_shape_factor'] = corey_shape_factor
 
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))

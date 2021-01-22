@@ -49,7 +49,8 @@ def test_buoyancy_vertical_velocity(plot=False):
     """check theory against observations in Kooi 2016, figure 4"""
     nsamples = 1000
     rng = np.random.default_rng(seed=1)
-    rho = rng.uniform(930, 970, nsamples)  # plastic density not stated; this mimics a selection of LDPE and HDPE
+    rho_min, rho_max = 930, 970
+    rho = rng.uniform(rho_min, rho_max, nsamples)  # plastic density not stated; this mimics a selection of LDPE and HDPE
 
     # in figure 2, we see pictures of fragments.  they all look like wafers, but smaller ones are more rounded.
     corey_shape_factor_small = .5/np.sqrt(1*1)  # figure 2a, looks like fragments are twice as long as they are thick
@@ -75,7 +76,8 @@ def test_buoyancy_vertical_velocity(plot=False):
 
     if plot:
         plt.figure(figsize=(8, 6))
-        plt.plot(np.concatenate([size_small, size_big])*1e3, np.concatenate([predicted_v_small, predicted_v_big]), '.', label='predictions (rho ~ U(930, 970))', color='tab:cyan', markersize=2)
+        plt.plot(np.concatenate([size_small, size_big])*1e3, np.concatenate([predicted_v_small, predicted_v_big]),
+                 '.', label=f'predictions (rho ~ U({rho_min}, {rho_max}) kg m^-3)', color='tab:cyan', markersize=2)
         plt.errorbar(np.mean(size_small)*1e3-.05, np.mean(predicted_v_small), np.std(predicted_v_small), capsize=3, color='tab:blue', zorder=3)
         plt.errorbar(np.mean(size_big)*1e3-.05, np.mean(predicted_v_big), np.std(predicted_v_big), capsize=3, color='tab:blue', label='prediction distribution', zorder=3)
         plt.errorbar(np.mean(size_small)*1e3+.05, v_small_mean, v_small_std, capsize=3, color='tab:green', zorder=3)

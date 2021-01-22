@@ -74,6 +74,7 @@ class Kernel3D:
         self.release_date = p0.release_date.values.astype('datetime64[s]').astype(np.float64)
         self.radius = p0.radius.values.astype(np.float64)
         self.density = p0.density.values.astype(np.float64)
+        self.corey_shape_factor = p0.corey_shape_factor.values.astype(np.float64)
         # advection time parameters
         self.start_time = np.float64(advect_time[0].timestamp())
         self.dt = np.float64(pd.Timedelta(advect_time.freq).total_seconds())
@@ -118,7 +119,7 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,\
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,\
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity,\
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity,\
             d_density_profile_z, d_density_profile_values = \
@@ -127,7 +128,7 @@ class Kernel3D:
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density,
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density, self.corey_shape_factor,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
               self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
               self.density_profile_z, self.density_profile_values,
@@ -151,7 +152,7 @@ class Kernel3D:
             d_wind_y, np.uint32(len(self.wind_y)),
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density,
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,
             self.advection_scheme, self.windage_multiplier,
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),
@@ -254,5 +255,7 @@ class Kernel3D:
         assert np.nanmin(self.y0) >= -90
         assert np.nanmax(self.z0) <= 0
 
+        # check corey shape factor valid
+        assert np.all((.15 < self.corey_shape_factor) & (self.corey_shape_factor <= 1))
         # check enum valid
         assert self.advection_scheme in (0, 1)
