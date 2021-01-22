@@ -42,7 +42,7 @@ double dimensionless_particle_diameter(double radius, double density, double sea
 double dimensionless_settling_velocity(double D_star, double CSF) {
     /* According to Dietrich 1982 eq. 8/9
      * D_star: dimensionless particle diameter, Dietrich 1982
-     * CSF: Corey Shape Factor, Dietrich 1982
+     * CSF: Corey Shape Factor, domain [.15, 1], per Dietrich 1982.
      * returns: dimensionless settling velocity.  If NAN, D_star was outside domain (aka particle too big)
      */
     double R_1;  // this coefficient predicts settling velocity for a perfect sphere
