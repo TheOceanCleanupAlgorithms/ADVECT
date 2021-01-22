@@ -22,7 +22,7 @@ def buoyancy_vertical_velocity(density: np.ndarray, radius: np.ndarray, corey_sh
         __global const double *CSF,
         __global double *out) {
         int id = get_global_id(0);
-        out[id] = buoyancy_vertical_velocity(radius[id], density[id], CSF[id]);
+        out[id] = buoyancy_vertical_velocity(radius[id], density[id], CSF[id], 1025);
     }
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
 

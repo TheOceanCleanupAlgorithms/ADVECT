@@ -26,6 +26,7 @@ def openCL_advect(current: xr.Dataset,
                   save_every: int,
                   advection_scheme: AdvectionScheme,
                   eddy_diffusivity: xr.Dataset,
+                  density_profile: xr.Dataset,
                   windage_multiplier: Optional[float],
                   memory_utilization: float,
                   platform_and_device: Tuple[int] = None,
@@ -42,6 +43,7 @@ def openCL_advect(current: xr.Dataset,
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: xarray Dataset storing vertical profiles of eddy diffusivities
+    :param density_profile: xarray Dataset storing vertical profile of seawater density
     :param windage_multiplier: multiplies the default windage, which is based on emerged area
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
@@ -80,10 +82,17 @@ def openCL_advect(current: xr.Dataset,
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
             print(f'  Loading currents and wind...')   # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = Kernel3D(current=current_chunk, wind=wind_chunk, p0=p0_chunk,
-                              advection_scheme=advection_scheme, eddy_diffusivity=eddy_diffusivity, windage_multiplier=windage_multiplier,
-                              advect_time=advect_time_chunk, save_every=save_every,
-                              context=context)
+            kernel = Kernel3D(
+                current=current_chunk,
+                wind=wind_chunk,
+                p0=p0_chunk,
+                advection_scheme=advection_scheme,
+                eddy_diffusivity=eddy_diffusivity,
+                density_profile=density_profile,
+                windage_multiplier=windage_multiplier,
+                advect_time=advect_time_chunk,
+                save_every=save_every,
+                context=context)
         P_chunk = kernel.execute()
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
 

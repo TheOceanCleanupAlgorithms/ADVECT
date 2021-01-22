@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Tuple, List
 
 from drivers.opencl_driver_3D import openCL_advect
-from io_tools.open_configfiles import get_eddy_diffusivity
+from io_tools.open_configfiles import load_eddy_diffusivity, load_density_profile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
 from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
@@ -116,7 +116,8 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
 
-    eddy_diffusivity = get_eddy_diffusivity(configfile_path=configfile_path)
+    eddy_diffusivity = load_eddy_diffusivity(configfile_path=configfile_path)
+    density_profile = load_density_profile(configfile_path=configfile_path)
 
     out_paths = openCL_advect(
         current=currents,
@@ -129,6 +130,7 @@ def run_advector(
         save_every=save_period,
         advection_scheme=scheme_enum,
         eddy_diffusivity=eddy_diffusivity,
+        density_profile=density_profile,
         windage_multiplier=windage_multiplier,
         platform_and_device=opencl_device,
         verbose=verbose,

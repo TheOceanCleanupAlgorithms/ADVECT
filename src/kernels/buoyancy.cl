@@ -1,10 +1,10 @@
 #include "buoyancy.h"
 #include "physical_constants.h"
 
-double dimensionless_particle_diameter(double radius, double density);
+double dimensionless_particle_diameter(double radius, double density, double seawater_density, double kinematic_viscosity_seawater);
 double dimensionless_settling_velocity(double D_star, double CSF);
 
-double buoyancy_vertical_velocity(double radius, double density, double corey_shape_factor) {
+double buoyancy_vertical_velocity(double radius, double density, double corey_shape_factor, double seawater_density) {
     /* calculate terminal velocity of a sphere with radius r and density rho
        due to density differential between particle and seawater,
        according to method in Dietrich 1982
@@ -12,28 +12,31 @@ double buoyancy_vertical_velocity(double radius, double density, double corey_sh
         
        radius: of sphere (m)
        density: of sphere (kg m^-3)
+       seawater_density: of surrounding seawater (kg m^-3)
        
        return: terminal velocity of sphere due to buoyancy/drag force balance (positive up, m/s)
        If return is NAN, this indicates failure due to sphere radius being too large
         for this paramaterization.
     */
-    double D_star = dimensionless_particle_diameter(radius, density);
+    double kinematic_viscosity_seawater = DYNAMIC_VISCOSITY_SEAWATER / seawater_density;
+    double D_star = dimensionless_particle_diameter(radius, density, seawater_density, kinematic_viscosity_seawater);
 
     double W_star = dimensionless_settling_velocity(D_star, corey_shape_factor);
 
     // Dietrich 1982, eq. 5 rearranged
-    double settling_velocity = cbrt((W_star * (DENSITY_SEAWATER - density) * ACC_GRAVITY * KINEMATIC_VISCOSITY_SEAWATER) / DENSITY_SEAWATER);
+    double settling_velocity = cbrt((W_star * (seawater_density - density) * ACC_GRAVITY * kinematic_viscosity_seawater) / seawater_density);
     return -settling_velocity;
 }
 
-double dimensionless_particle_diameter(double radius, double density) {
+double dimensionless_particle_diameter(double radius, double density, double seawater_density, double kinematic_viscosity_seawater) {
     /* radius: particle radius (m)
      * density: particle density (kg m^-3)
+     * seawater_density: (kg m^-3)
+     * kinematic_viscosity_seawater: (m^2 s^-1)
      * returns: dimensionless particle diameter, according to Dietrich eq. 6
      */
-
-    return fabs((density - DENSITY_SEAWATER) * ACC_GRAVITY * pow(2*radius, 3) /
-                    (DENSITY_SEAWATER * pow(KINEMATIC_VISCOSITY_SEAWATER, 2)));
+    return fabs((density - seawater_density) * ACC_GRAVITY * pow(2*radius, 3) /
+                    (seawater_density * pow(kinematic_viscosity_seawater, 2)));
 }
 
 double dimensionless_settling_velocity(double D_star, double CSF) {
@@ -56,8 +59,10 @@ double dimensionless_settling_velocity(double D_star, double CSF) {
     } else {
         return NAN;  // flag failure
     }
+
     double R_2 = log10(1 - ((1 - CSF)/0.85))  // this coefficient takes shape into account
                 - pow(1 - CSF, 2.3) * tanh(log10(D_star) - 4.6)
                 + 0.3 * (0.5 - CSF) * pow(1 - CSF, 2) * (log10(D_star) - 4.6);
+
     return pow(10, R_1 + R_2);
 }
