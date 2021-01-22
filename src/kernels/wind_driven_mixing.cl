@@ -16,7 +16,7 @@ double sample_concentration_profile(double wind_speed_10m, double rise_velocity,
     // requirement: rise velocity > 0
     // This equation comes from normalizing eq. 4 from z=MLD to z=0 into a PDF, integrating it into a CDF,
     // then inverting this CDF so that it can be sampled using inverse transform sampling.
-    // for 0 rise velocity, simply draw uniform in MLD (as full equation is undefined at z == 0)
+    // for 0 rise velocity, draw uniform depth in mixed layer (the inverted CDF asymptotes towards this behavior)
     double A_0 = near_surface_diffusivity(wind_speed_10m);
     double MLD = mixed_layer_depth(wind_speed_10m);
     if (rise_velocity < 0) {

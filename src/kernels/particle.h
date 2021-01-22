@@ -11,7 +11,7 @@ typedef struct particle {
     double t;
     const double r;    // radius
     const double rho;  // density
-    const double CSF;  // Corey Shape Factor: a/sqrt(b*c), where a <= b <= c are the dimensions of the particle
+    const double CSF;  // Corey Shape Factor: c/sqrt(a*b), where a >= b >= c are the dimensions of the particle
 } particle;
 
 particle constrain_coordinates(particle p);

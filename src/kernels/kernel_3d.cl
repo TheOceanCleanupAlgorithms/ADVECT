@@ -13,7 +13,7 @@
 #include "wind_mixing_and_buoyancy.cl"
 
 enum ExitCode {
-    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, PARTICLE_TOO_LARGE = 3, INVALID_ADVECTION_SCHEME = -1
+    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1
 };
 // positive codes are considered non-fatal, and are reported in outputfiles;
 // negative codes are considered fatal, cause host-program termination, and are reserved for internal use.
@@ -155,13 +155,10 @@ __kernel void advect(
             }
 
             // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
-            vector wind_mixing_and_buoyancy_meters =
-                wind_mixing_and_buoyancy_transport(p, wind, density_profile, dt, &rstate, !isnan(windage_multiplier));
-            if (isnan(wind_mixing_and_buoyancy_meters.z)) {
-                exit_code[global_id] = PARTICLE_TOO_LARGE;
-                return;
-            }
-            displacement_meters = add(displacement_meters, wind_mixing_and_buoyancy_meters);
+            displacement_meters = add(
+                displacement_meters,
+                wind_mixing_and_buoyancy_transport(p, wind, density_profile, dt, &rstate, !isnan(windage_multiplier))
+            );
 
             p = update_position_no_beaching(p, displacement_meters, current);
 

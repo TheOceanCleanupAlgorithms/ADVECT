@@ -26,7 +26,7 @@ def generate_sourcefile(
     :param num_particles: number of particles to generate
     :param density: density of particles, kg m^-3
     :param radius: radius of particles, m
-    :param corey_shape_factor: unitless representation of 3d shape: csf = a/sqrt(b*c), where a <= b <= c are the dimensions of the particle
+    :param corey_shape_factor: unitless representation of 3d shape
     :param depth: starting depth of particles, m (positive up)
     :param out_name: sourcefile name
     :return:

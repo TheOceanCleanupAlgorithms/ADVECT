@@ -13,8 +13,6 @@ double buoyancy_vertical_velocity(double radius, double density, double corey_sh
      * seawater_density: of surrounding seawater (kg m^-3)
        
      * return: terminal velocity of sphere due to buoyancy/drag force balance (positive up, m/s)
-       If return is NAN, this indicates failure due to radius being too large
-        for this paramaterization.
     */
     double kinematic_viscosity_seawater = DYNAMIC_VISCOSITY_SEAWATER / seawater_density;
     double D_star = dimensionless_particle_diameter(radius, density, seawater_density, kinematic_viscosity_seawater);
@@ -41,7 +39,6 @@ double dimensionless_settling_velocity(double D_star, double CSF) {
     /* According to Dietrich 1982 eq. 8/9
      * D_star: dimensionless particle diameter, Dietrich 1982
      * CSF: Corey Shape Factor, domain (.15, 1], per Dietrich 1982.
-     * returns: dimensionless settling velocity.  If NAN, D_star was outside domain (aka particle too big)
      */
     double R_1;  // this coefficient predicts settling velocity for a perfect sphere
     if (D_star == 0) {  // this happens if density differential is zero
@@ -49,15 +46,14 @@ double dimensionless_settling_velocity(double D_star, double CSF) {
     } else if (D_star < .05) {
         // Dietrich 1982, eq. 8
         R_1 = log10(1.71e-4 * pow(D_star, 2));
-    } else if (D_star <= 5e9) {
+    } else {  // technically only defined for D_star <= 5e9, but inaccuracy at high velocity is irrelevant, as particle
+                // will quickly travel to surface or bathymetry regardless.
         // Dietrich 1982, eq. 9
         R_1 = -3.76715 +
                1.92944 *     log10(D_star) -
                0.09815 * pow(log10(D_star), 2) -
                0.00575 * pow(log10(D_star), 3) +
                0.00056 * pow(log10(D_star), 4);
-    } else {
-        return NAN;  // flag failure
     }
 
     double R_2 = log10(1 - ((1 - CSF)/0.85))  // this coefficient takes shape into account
