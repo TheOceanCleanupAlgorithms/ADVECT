@@ -12,16 +12,11 @@ vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, vertical_pro
      * return: displacement (m) due to both wind mixing and particle buoyancy
      *  which form an equilibrium in the near-surface.  Outside of the near-surface, only buoyancy transport
      *  is considered.
-     *  If return is NAN, this means the particle radius is outside valid domain for the buoyancy transport paramaterization.
      */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 
     double seawater_density = sample_profile(density_profile, p.z);
-    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, seawater_density);
-    if (isnan(vertical_velocity)) {
-        transport_meters.z = NAN;  // pass on failure flag
-        return transport_meters;
-    }
+    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density);
 
     vector nearest_wind = find_nearest_vector(p, wind, true);
     double wind_speed_10m = magnitude(nearest_wind);
