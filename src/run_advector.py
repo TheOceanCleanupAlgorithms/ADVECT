@@ -120,7 +120,7 @@ def run_advector(
     eddy_diffusivity = load_eddy_diffusivity(configfile_path=configfile_path)
     density_profile = load_density_profile(configfile_path=configfile_path)
 
-    output_writer = OutputWriter(out_dir=Path(output_directory))
+    output_writer = OutputWriter(out_dir=Path(output_directory), configfile_path=Path(configfile_path))
 
     out_paths = openCL_advect(
         current=currents,

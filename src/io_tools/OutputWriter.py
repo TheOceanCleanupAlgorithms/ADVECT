@@ -8,13 +8,15 @@ from _version import __version__
 
 
 class OutputWriter:
-    def __init__(self, out_dir: Path):
+    def __init__(self, out_dir: Path, configfile_path: Path):
         if not out_dir.is_dir():
             out_dir.mkdir()
 
         self.folder_path = out_dir
         self.current_year = None
         self.paths = []
+
+        self.configfile_path = configfile_path
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -37,6 +39,10 @@ class OutputWriter:
             ds.title = "Trajectories of Floating Marine Debris"
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
+
+            config_group = ds.createGroup("configfile")
+            with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
+                copy_dataset(configfile, config_group)
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -102,3 +108,19 @@ class OutputWriter:
             exit_code = ds.variables["exit_code"]
             # overwrite with most recent codes; by design, nonzero codes cannot change
             exit_code[:] = chunk.exit_code.values
+
+
+def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
+    """adapted from https://stackoverflow.com/a/49592545"""
+    # copy global attributes
+    destination.setncatts(source.__dict__)
+    # copy dimensions
+    for name, dimension in source.dimensions.items():
+        destination.createDimension(name, (len(dimension) if not dimension.isunlimited() else None))
+    # copy variables
+    for name, variable in source.variables.items():
+        destination.createVariable(name, variable.datatype, variable.dimensions)
+        # copy variable attributes
+        destination[name].setncatts(source[name].__dict__)
+        # copy variable contents
+        destination[name][:] = source[name][:]
