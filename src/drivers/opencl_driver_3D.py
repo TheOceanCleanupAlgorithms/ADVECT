@@ -18,7 +18,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 
 def openCL_advect(current: xr.Dataset,
                   wind: xr.Dataset,
-                  out_dir: Path,
+                  output_writer: OutputWriter,
                   p0: xr.Dataset,
                   start_time: datetime.datetime,
                   dt: datetime.timedelta,
@@ -35,7 +35,7 @@ def openCL_advect(current: xr.Dataset,
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
-    :param out_dir: directory in which to save the outputfiles
+    :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
     :param dt: timestep duration
@@ -71,8 +71,7 @@ def openCL_advect(current: xr.Dataset,
                                advect_time=advect_time,
                                save_every=save_every)
 
-    writer = OutputWriter(out_dir=out_dir)
-    create_logger(out_dir / "warnings.log")
+    create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
     for i, (advect_time_chunk, current_chunk, wind_chunk) \
             in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks)):
@@ -103,7 +102,7 @@ def openCL_advect(current: xr.Dataset,
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
-        writer.write_output_chunk(P_chunk)
+        output_writer.write_output_chunk(P_chunk)
 
         p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
@@ -111,7 +110,7 @@ def openCL_advect(current: xr.Dataset,
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
-    return writer.paths
+    return output_writer.paths
 
 
 def create_logger(log_path: Path):
