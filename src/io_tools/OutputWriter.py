@@ -111,7 +111,10 @@ class OutputWriter:
 
 
 def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
-    """adapted from https://stackoverflow.com/a/49592545"""
+    """
+    copy the contents (attributes, dimensions, variables) of 'source' into 'destination.'
+    adapted from https://stackoverflow.com/a/49592545
+    """
     # copy global attributes
     destination.setncatts(source.__dict__)
     # copy dimensions
