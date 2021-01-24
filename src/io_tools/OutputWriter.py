@@ -8,7 +8,7 @@ from _version import __version__
 
 
 class OutputWriter:
-    def __init__(self, out_dir: Path, configfile_path: Path):
+    def __init__(self, out_dir: Path, configfile_path: Path, sourcefile_path: Path):
         if not out_dir.is_dir():
             out_dir.mkdir()
 
@@ -17,6 +17,7 @@ class OutputWriter:
         self.paths = []
 
         self.configfile_path = configfile_path
+        self.sourcefile_path = sourcefile_path
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -43,6 +44,10 @@ class OutputWriter:
             config_group = ds.createGroup("configfile")
             with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
                 copy_dataset(configfile, config_group)
+
+            sourcefile_group = ds.createGroup("sourcefile")
+            with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
+                copy_dataset(sourcefile, sourcefile_group)
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
