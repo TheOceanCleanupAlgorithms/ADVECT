@@ -12,13 +12,14 @@ from _version import __version__
 
 class OutputWriter:
     def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
-                 currents: xr.Dataset, wind: Optional[xr.Dataset]):
+                 currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
         """
         :param out_dir: directory to save outputfiles
         :param configfile_path: path to configfile
         :param sourcefile_path: path to sourcefile
         :param currents: dataset containing the ocean currents
         :param wind: dataset containing the winds
+        :param arguments_to_run_advector: dictionary containing info on the top-level API call, "run_advector.py::run_advector"
         """
         if not out_dir.is_dir():
             out_dir.mkdir()
@@ -31,6 +32,7 @@ class OutputWriter:
         self.sourcefile_path = sourcefile_path
         self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
         self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
+        self.arguments_to_run_advector = arguments_to_run_advector
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -53,6 +55,8 @@ class OutputWriter:
             ds.title = "Trajectories of Floating Marine Debris"
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
+            ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
+                           f"file are: {str(self.arguments_to_run_advector)}"
 
             # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
             config_group = ds.createGroup("configfile")

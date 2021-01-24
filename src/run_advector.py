@@ -89,6 +89,7 @@ def run_advector(
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
+    run_advector_arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
@@ -128,6 +129,7 @@ def run_advector(
         sourcefile_path=sourcefile_path,
         currents=currents,
         wind=wind if windage_multiplier is not None else None,
+        arguments_to_run_advector=run_advector_arguments,
     )
 
     out_paths = openCL_advect(
