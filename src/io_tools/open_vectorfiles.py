@@ -16,7 +16,7 @@ def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping:
     U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True)
     V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
     W = xr.open_mfdataset(sorted(glob.glob(w_path)), data_vars="minimal", parallel=True)
-    vectors = xr.merge((U, V, W))
+    vectors = xr.merge((U, V, W), combine_attrs="override")  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[['U', 'V', 'W']]  # drop any additional variables
     vectors = vectors.squeeze()  # remove any singleton dimensions

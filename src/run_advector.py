@@ -9,6 +9,7 @@ See src/data_specifications.md for detailed description of data format requireme
 """
 
 import datetime
+import xarray as xr
 from pathlib import Path
 from typing import Tuple, List
 
@@ -104,6 +105,7 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=sourcefile_format_enum,
     )
+
     currents = open_3D_vectorfield(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
@@ -122,8 +124,9 @@ def run_advector(
 
     output_writer = OutputWriter(
         out_dir=Path(output_directory),
-        configfile_path=Path(configfile_path),
-        sourcefile_path=Path(sourcefile_path),
+        configfile_path=configfile_path,
+        sourcefile_path=sourcefile_path,
+        currents_meta=xr.Dataset(currents.coords, attrs=currents.attrs),
     )
 
     out_paths = openCL_advect(

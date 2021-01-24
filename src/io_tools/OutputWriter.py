@@ -1,4 +1,7 @@
+import tempfile
 from pathlib import Path
+from typing import Tuple, List
+
 import xarray as xr
 import netCDF4
 import numpy as np
@@ -8,7 +11,15 @@ from _version import __version__
 
 
 class OutputWriter:
-    def __init__(self, out_dir: Path, configfile_path: Path, sourcefile_path: Path):
+    def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
+                 currents_meta: xr.Dataset):
+        """
+        :param out_dir: directory to save outputfiles
+        :param configfile_path: path to configfile
+        :param sourcefile_path: path to sourcefile
+        :param u_water_path: wildcard path to zonal current files
+        :param u_wind_path: wildcard path to zonal wind files
+        """
         if not out_dir.is_dir():
             out_dir.mkdir()
 
@@ -18,6 +29,7 @@ class OutputWriter:
 
         self.configfile_path = configfile_path
         self.sourcefile_path = sourcefile_path
+        self.currents_meta = currents_meta
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -48,6 +60,18 @@ class OutputWriter:
             sourcefile_group = ds.createGroup("sourcefile")
             with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
                 copy_dataset(sourcefile, sourcefile_group)
+
+            currents_meta_group = ds.createGroup("currents_meta")
+            currents_meta_group.setncattr(
+                "currents_meta_group_description",
+                "This group contains the coordinates of the fully concatenated currents "
+                "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                "from the first zonal current file in the dataset."
+            )
+            with tempfile.NamedTemporaryFile() as tmp:
+                self.currents_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
+                with netCDF4.Dataset(tmp.name, mode="r") as currents_meta:  # so we can open it with netCDF4
+                    copy_dataset(currents_meta, currents_meta_group)
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -113,6 +137,12 @@ class OutputWriter:
             exit_code = ds.variables["exit_code"]
             # overwrite with most recent codes; by design, nonzero codes cannot change
             exit_code[:] = chunk.exit_code.values
+
+    def _write_current_metadata(self, outputfile: netCDF4.Dataset):
+        """create group and write first file global attributes, and coordinates"""
+        current_metadata = outputfile.createGroup("current_metadata")
+
+        return outputfile
 
 
 def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
