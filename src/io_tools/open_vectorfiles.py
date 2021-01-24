@@ -43,7 +43,7 @@ def open_2D_vectorfield(u_path: str, v_path: str, variable_mapping: Optional[dic
     """
     U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True)
     V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
-    vectors = xr.merge((U, V))
+    vectors = xr.merge((U, V), combine_attrs="override")  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[['U', 'V']]  # drop any additional variables
     vectors = vectors.squeeze()  # remove any singleton dimensions

@@ -126,7 +126,8 @@ def run_advector(
         out_dir=Path(output_directory),
         configfile_path=configfile_path,
         sourcefile_path=sourcefile_path,
-        currents_meta=xr.Dataset(currents.coords, attrs=currents.attrs),
+        currents=currents,
+        wind=wind if windage_multiplier is not None else None,
     )
 
     out_paths = openCL_advect(

@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from typing import Tuple, List
+from typing import Optional
 
 import xarray as xr
 import netCDF4
@@ -12,13 +12,13 @@ from _version import __version__
 
 class OutputWriter:
     def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
-                 currents_meta: xr.Dataset):
+                 currents: xr.Dataset, wind: Optional[xr.Dataset]):
         """
         :param out_dir: directory to save outputfiles
         :param configfile_path: path to configfile
         :param sourcefile_path: path to sourcefile
-        :param u_water_path: wildcard path to zonal current files
-        :param u_wind_path: wildcard path to zonal wind files
+        :param currents: dataset containing the ocean currents
+        :param wind: dataset containing the winds
         """
         if not out_dir.is_dir():
             out_dir.mkdir()
@@ -29,7 +29,8 @@ class OutputWriter:
 
         self.configfile_path = configfile_path
         self.sourcefile_path = sourcefile_path
-        self.currents_meta = currents_meta
+        self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
+        self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -53,6 +54,7 @@ class OutputWriter:
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
 
+            # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
             config_group = ds.createGroup("configfile")
             with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
                 copy_dataset(configfile, config_group)
@@ -73,6 +75,20 @@ class OutputWriter:
                 with netCDF4.Dataset(tmp.name, mode="r") as currents_meta:  # so we can open it with netCDF4
                     copy_dataset(currents_meta, currents_meta_group)
 
+            if self.wind_meta is not None:
+                wind_meta_group = ds.createGroup("wind_meta")
+                wind_meta_group.setncattr(
+                    "wind_meta_group_description",
+                    "This group contains the coordinates of the fully concatenated 10-meter wind "
+                    "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                    "from the first zonal wind file in the dataset."
+                )
+                with tempfile.NamedTemporaryFile() as tmp:
+                    self.wind_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
+                    with netCDF4.Dataset(tmp.name, mode="r") as wind_meta:  # so we can open it with netCDF4
+                        copy_dataset(wind_meta, wind_meta_group)
+
+            # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
 
