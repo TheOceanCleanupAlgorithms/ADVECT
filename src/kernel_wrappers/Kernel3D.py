@@ -3,6 +3,7 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+import warnings
 import numpy as np
 import pyopencl as cl
 import time
@@ -257,5 +258,15 @@ class Kernel3D:
 
         # check corey shape factor valid
         assert np.all((.15 < self.corey_shape_factor) & (self.corey_shape_factor <= 1))
+
         # check enum valid
         assert self.advection_scheme in (0, 1)
+
+        # issue warning if wind timestep is smaller than one day
+        if np.any(np.diff(self.wind_t) < pd.Timedelta(days=1).total_seconds()):
+            print(np.diff(self.wind_t)/3600)
+            warnings.warn(
+                "Timestep of wind data is less than a day.  The kernel assumes a fully developed sea state from each "
+                "wind datum; short timesteps mean this is a bad assumption.  Use wind data averaged over a longer "
+                "timestep, or complain to the developers (or both)."
+            )
