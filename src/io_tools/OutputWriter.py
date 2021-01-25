@@ -52,12 +52,6 @@ class OutputWriter:
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
-            ds.title = "Trajectories of Floating Marine Debris"
-            ds.institution = "The Ocean Cleanup"
-            ds.source = f"ADVECTOR Version {__version__}"
-            ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
-                           f"file are: {str(self.arguments_to_run_advector)}"
-
             # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
             config_group = ds.createGroup("configfile")
             with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
@@ -93,6 +87,20 @@ class OutputWriter:
                         copy_dataset(wind_meta, wind_meta_group)
 
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
+            ds.title = "Trajectories of Floating Marine Debris"
+            ds.institution = "The Ocean Cleanup"
+            ds.source = f"ADVECTOR Version {__version__}"
+            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
+                             "through ADVECTOR.  This file also contains several other groups: " \
+                             f"{config_group.name}, which is a copy of the configfile passed to ADVECTOR, " \
+                             f"{sourcefile_group.name}, which is a copy of the sourcefile passed to ADVECTOR, " \
+                             f"{currents_meta_group.name}, which contains the coordinates of the current dataset passed " \
+                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
+                             f"{wind_meta_group.name}, which contains the coordinates of the wind dataset passed to " \
+                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+            ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
+                           f"file are: {str(self.arguments_to_run_advector)}"
+
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
 
