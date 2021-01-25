@@ -9,7 +9,6 @@ See src/data_specifications.md for detailed description of data format requireme
 """
 
 import datetime
-import xarray as xr
 from pathlib import Path
 from typing import Tuple, List
 
@@ -89,7 +88,7 @@ def run_advector(
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
-    run_advector_arguments = locals()
+    arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
@@ -129,7 +128,7 @@ def run_advector(
         sourcefile_path=sourcefile_path,
         currents=currents,
         wind=wind if windage_multiplier is not None else None,
-        arguments_to_run_advector=run_advector_arguments,
+        arguments_to_run_advector=arguments,
     )
 
     out_paths = openCL_advect(

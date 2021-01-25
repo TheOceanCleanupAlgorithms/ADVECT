@@ -56,6 +56,7 @@ NetCDF-4 added support for hierarchical groups within netCDF datasets; each grou
 | sourcefile | a copy of the sourcefile passed to ADVECTOR |
 | currents_meta | contains the coordinates of the current dataset passed to ADVECTOR, as well as the global attributes from the first zonal current file |
 | wind_meta | contains the coordinates of the wind dataset passed to ADVECTOR, as well as the global attributes from the first zonal wind file |
+
 We will only give detailed specifications on the contents of the root group, as this is the primary data product; the others exist for the sake of fully describing the model configuration which produced the outputfile.
 
 ### Root Group

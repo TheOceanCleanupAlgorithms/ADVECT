@@ -166,12 +166,6 @@ class OutputWriter:
             # overwrite with most recent codes; by design, nonzero codes cannot change
             exit_code[:] = chunk.exit_code.values
 
-    def _write_current_metadata(self, outputfile: netCDF4.Dataset):
-        """create group and write first file global attributes, and coordinates"""
-        current_metadata = outputfile.createGroup("current_metadata")
-
-        return outputfile
-
 
 def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
     """
