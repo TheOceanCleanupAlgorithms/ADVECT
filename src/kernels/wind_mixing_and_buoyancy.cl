@@ -2,7 +2,10 @@
 #include "wind_driven_mixing.h"
 #include "buoyancy.h"
 
-vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, vertical_profile density_profile, double dt, random_state *rstate, const bool wind_mixing_enabled) {
+vector wind_mixing_and_buoyancy_transport(
+    particle p, field3d wind, vertical_profile density_profile,
+    const double max_wave_height, const double wave_mixing_depth_factor,
+    double dt, random_state *rstate, const bool wind_mixing_enabled) {
     /* p: the particle whose transport we're considering
      * wind: 10 meter wind vector field (m/s)
      * dt: the timestep (s)
@@ -20,14 +23,17 @@ vector wind_mixing_and_buoyancy_transport(particle p, field3d wind, vertical_pro
 
     vector nearest_wind = find_nearest_vector(p, wind, true);
     double wind_speed_10m = magnitude(nearest_wind);
-    if (wind_mixing_enabled && (vertical_velocity >= 0) && (p.z > mixed_layer_depth(wind_speed_10m))) {
+    double MLD = mixed_layer_depth(wind_speed_10m, max_wave_height, wave_mixing_depth_factor);
+    if (wind_mixing_enabled && (vertical_velocity >= 0) && (p.z > MLD)) {
         // under these conditions, in the near surface with floating particles,
         // a stochastic steady state is assumed, a balance between rising and turbulent mixing.
         // a sample can be pulled from this steady state; this is where the dynamics will take the particle.
         // From this, the displacement can be calculated.  A bit backwards, but still physically sound, assuming
         // that the model timestep is larger than the timescale of mixing (~hours).
         // Note the timestep doesn't even enter into this calculation, because of this assumption.
-        double new_z = sample_concentration_profile(wind_speed_10m, vertical_velocity, rstate);
+        double new_z = sample_concentration_profile(
+            wind_speed_10m, vertical_velocity, max_wave_height, wave_mixing_depth_factor, rstate
+        );
 
         transport_meters.z = new_z - p.z;
     } else {

@@ -37,6 +37,8 @@ class Kernel3D:
             advection_scheme: AdvectionScheme,
             eddy_diffusivity: xr.Dataset,
             density_profile: xr.Dataset,
+            max_wave_height: float,
+            wave_mixing_depth_factor: float,
             windage_multiplier: Optional[float],
             context: cl.Context,
     ):
@@ -88,6 +90,8 @@ class Kernel3D:
         # physics
         self.advection_scheme = np.uint32(advection_scheme.value)
         self.windage_multiplier = np.float64(windage_multiplier)
+        self.max_wave_height = max_wave_height
+        self.wave_mixing_depth_factor = wave_mixing_depth_factor
         # eddy diffusivity
         self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
         self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
@@ -155,6 +159,7 @@ class Kernel3D:
             d_wind_U, d_wind_V,
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,
             self.advection_scheme, self.windage_multiplier,
+            np.float64(self.max_wave_height), np.float64(self.wave_mixing_depth_factor),
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),
             d_density_profile_z, d_density_profile_values, np.uint32(len(self.density_profile_values)),

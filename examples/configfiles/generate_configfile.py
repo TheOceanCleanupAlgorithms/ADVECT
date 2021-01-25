@@ -11,13 +11,12 @@ def generate_configfile(
     z_vd: np.ndarray,
     seawater_density: np.ndarray,
     z_sd: np.ndarray,
-    out_name: str,
+    max_wave_height: float = None,
+    wave_mixing_depth_factor: float = None,
+    out_name: str = "config.nc",
 ):
     """
     script to generate a configuration file given requisite parameters
-    :param horizontal_diffusivity: horizontal diffusivity at depth levels, m^2 s^-1
-    :param z_hd: depth levels
-    :param out_name: name at which to save config file
     """
     config = xr.Dataset(
         {
@@ -44,6 +43,11 @@ def generate_configfile(
             "institution": "The Ocean Cleanup",
         },
     )
+
+    if max_wave_height:
+        config["max_wave_height"] = max_wave_height
+    if wave_mixing_depth_factor:
+        config["wave_mixing_depth_factor"] = wave_mixing_depth_factor
 
     out_path = Path(__file__).parent / out_name
     config.to_netcdf(out_path)

@@ -68,6 +68,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
                      advection_scheme=AdvectionScheme.eulerian,
                      eddy_diffusivity=eddy_diffusivity,
                      density_profile=density_profile,
+                     max_wave_height=0, wave_mixing_depth_factor=0,
                      windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
     taylor = Kernel3D(current=current, p0=p0, wind=wind,
@@ -75,6 +76,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
                       advection_scheme=AdvectionScheme.taylor2,
                       eddy_diffusivity=eddy_diffusivity,
                       density_profile=density_profile,
+                      max_wave_height=0, wave_mixing_depth_factor=0,
                       windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
 
     if plot:

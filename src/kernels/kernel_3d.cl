@@ -52,6 +52,8 @@ __kernel void advect(
     /* physics */
     const unsigned int advection_scheme,
     const double windage_multiplier,  // if nan, disables windage
+    const double max_wave_height,     // caps parameterization of significant wave height based on wind speed
+    const double wave_mixing_depth_factor,  // max mixing depth = wave_mixing_depth_factor * significant wave height
     /* eddy diffusivity */
     __global const double *horizontal_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *horizontal_eddy_diffusivity_values,    // m^2 s^-1
@@ -157,7 +159,10 @@ __kernel void advect(
             // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
             displacement_meters = add(
                 displacement_meters,
-                wind_mixing_and_buoyancy_transport(p, wind, density_profile, dt, &rstate, !isnan(windage_multiplier))
+                wind_mixing_and_buoyancy_transport(
+                    p, wind, density_profile,
+                    max_wave_height, wave_mixing_depth_factor,
+                    dt, &rstate, !isnan(windage_multiplier))
             );
 
             p = update_position_no_beaching(p, displacement_meters, current);
