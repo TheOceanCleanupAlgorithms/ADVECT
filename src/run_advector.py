@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Tuple, List
 
 from drivers.opencl_driver_3D import openCL_advect
+from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import load_eddy_diffusivity, load_density_profile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
@@ -87,6 +88,7 @@ def run_advector(
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
+    arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
@@ -103,6 +105,7 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
         source_file_type=sourcefile_format_enum,
     )
+
     currents = open_3D_vectorfield(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
@@ -119,10 +122,19 @@ def run_advector(
     eddy_diffusivity = load_eddy_diffusivity(configfile_path=configfile_path)
     density_profile = load_density_profile(configfile_path=configfile_path)
 
+    output_writer = OutputWriter(
+        out_dir=Path(output_directory),
+        configfile_path=configfile_path,
+        sourcefile_path=sourcefile_path,
+        currents=currents,
+        wind=wind if windage_multiplier is not None else None,
+        arguments_to_run_advector=arguments,
+    )
+
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
-        out_dir=Path(output_directory),
+        output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,
         dt=timestep,

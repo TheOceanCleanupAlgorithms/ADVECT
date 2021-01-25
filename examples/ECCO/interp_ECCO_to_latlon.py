@@ -25,7 +25,7 @@ variables = {'EVEL': 'U',  # ECCO_native varname: [local varname, vertical grid 
 
 for ECCO_varname, local_varname in variables.items():
     print(f'Interpolating all {ECCO_varname} files...')
-    files = sorted(glob.glob(f'ECCO/ECCO_native/{ECCO_varname}*.nc'))
+    files = sorted(glob.glob(f'ECCO_native/{ECCO_varname}*.nc'))
     for file in tqdm(files):
         ds = xr.open_dataset(file)
 
@@ -42,13 +42,18 @@ for ECCO_varname, local_varname in variables.items():
                                         fill_value=np.NaN, mapping_method='nearest_neighbor')
             interp_levels.append(var_interp)
 
-        field_interpd_to_latlon = xr.DataArray(name=local_varname, data=np.array(interp_levels)[np.newaxis],
-                                               coords=[ds.time.values, ECCO_grid.Z.values,
-                                                       new_grid_lat[:, 0].astype('float32'),
-                                                       new_grid_lon[0].astype('float32')],
-                                               dims=['time', 'depth', 'lat', 'lon'])
+        field_interpd_to_latlon = xr.Dataset(
+            data_vars={local_varname: (["time", "depth", "lat", "lon"], np.array(interp_levels)[np.newaxis])},
+            coords={
+                "time": ds.time.values,
+                "depth": ECCO_grid.Z.values,
+                "lat": new_grid_lat[:, 0].astype('float64'),
+                "lon": new_grid_lon[0].astype('float64')
+            },
+        )
 
-        field_interpd_to_latlon.attrs = ds[ECCO_varname].attrs
+        field_interpd_to_latlon.attrs = ds.attrs
+        field_interpd_to_latlon[local_varname].attrs = ds[ECCO_varname].attrs
         field_interpd_to_latlon.time.attrs = ds.time.attrs
         field_interpd_to_latlon.depth.attrs = ECCO_grid.Z.attrs
         field_interpd_to_latlon.lat.attrs = {'units': 'degrees_north', 'long_name': 'latitude'}

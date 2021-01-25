@@ -1,4 +1,7 @@
+import tempfile
 from pathlib import Path
+from typing import Optional
+
 import xarray as xr
 import netCDF4
 import numpy as np
@@ -8,13 +11,28 @@ from _version import __version__
 
 
 class OutputWriter:
-    def __init__(self, out_dir: Path):
+    def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
+                 currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
+        """
+        :param out_dir: directory to save outputfiles
+        :param configfile_path: path to configfile
+        :param sourcefile_path: path to sourcefile
+        :param currents: dataset containing the ocean currents
+        :param wind: dataset containing the winds
+        :param arguments_to_run_advector: dictionary containing info on the top-level API call, "run_advector.py::run_advector"
+        """
         if not out_dir.is_dir():
             out_dir.mkdir()
 
         self.folder_path = out_dir
         self.current_year = None
         self.paths = []
+
+        self.configfile_path = configfile_path
+        self.sourcefile_path = sourcefile_path
+        self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
+        self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
+        self.arguments_to_run_advector = arguments_to_run_advector
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -34,9 +52,54 @@ class OutputWriter:
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
+            # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
+            config_group = ds.createGroup("configfile")
+            with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
+                copy_dataset(configfile, config_group)
+
+            sourcefile_group = ds.createGroup("sourcefile")
+            with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
+                copy_dataset(sourcefile, sourcefile_group)
+
+            currents_meta_group = ds.createGroup("currents_meta")
+            currents_meta_group.setncattr(
+                "currents_meta_group_description",
+                "This group contains the coordinates of the fully concatenated currents "
+                "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                "from the first zonal current file in the dataset."
+            )
+            with tempfile.NamedTemporaryFile() as tmp:
+                self.currents_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
+                with netCDF4.Dataset(tmp.name, mode="r") as currents_meta:  # so we can open it with netCDF4
+                    copy_dataset(currents_meta, currents_meta_group)
+
+            if self.wind_meta is not None:
+                wind_meta_group = ds.createGroup("wind_meta")
+                wind_meta_group.setncattr(
+                    "wind_meta_group_description",
+                    "This group contains the coordinates of the fully concatenated 10-meter wind "
+                    "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                    "from the first zonal wind file in the dataset."
+                )
+                with tempfile.NamedTemporaryFile() as tmp:
+                    self.wind_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
+                    with netCDF4.Dataset(tmp.name, mode="r") as wind_meta:  # so we can open it with netCDF4
+                        copy_dataset(wind_meta, wind_meta_group)
+
+            # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.title = "Trajectories of Floating Marine Debris"
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
+            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
+                             "through ADVECTOR.  This file also contains several other groups: " \
+                             f"{config_group.name}, which is a copy of the configfile passed to ADVECTOR, " \
+                             f"{sourcefile_group.name}, which is a copy of the sourcefile passed to ADVECTOR, " \
+                             f"{currents_meta_group.name}, which contains the coordinates of the current dataset passed " \
+                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
+                             f"{wind_meta_group.name}, which contains the coordinates of the wind dataset passed to " \
+                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+            ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
+                           f"file are: {str(self.arguments_to_run_advector)}"
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -102,3 +165,22 @@ class OutputWriter:
             exit_code = ds.variables["exit_code"]
             # overwrite with most recent codes; by design, nonzero codes cannot change
             exit_code[:] = chunk.exit_code.values
+
+
+def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
+    """
+    copy the contents (attributes, dimensions, variables) of 'source' into 'destination.'
+    adapted from https://stackoverflow.com/a/49592545
+    """
+    # copy global attributes
+    destination.setncatts(source.__dict__)
+    # copy dimensions
+    for name, dimension in source.dimensions.items():
+        destination.createDimension(name, (len(dimension) if not dimension.isunlimited() else None))
+    # copy variables
+    for name, variable in source.variables.items():
+        destination.createVariable(name, variable.datatype, variable.dimensions)
+        # copy variable attributes
+        destination[name].setncatts(source[name].__dict__)
+        # copy variable contents
+        destination[name][:] = source[name][:]
