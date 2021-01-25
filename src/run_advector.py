@@ -16,7 +16,7 @@ from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import load_eddy_diffusivity, load_density_profile
 from kernel_wrappers.Kernel3D import AdvectionScheme
-from io_tools.open_sourcefiles import SourceFileFormat, open_sourcefiles
+from io_tools.open_sourcefiles import open_sourcefiles
 from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
 
 
@@ -32,7 +32,6 @@ def run_advector(
     num_timesteps: int,
     advection_scheme: str = 'taylor2',
     save_period: int = 1,
-    sourcefile_format: str = 'advector',
     sourcefile_varname_map: dict = None,
     water_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
@@ -66,7 +65,6 @@ def run_advector(
         "eulerian" is the forward Euler method.
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
-    :param sourcefile_format: one of {"advector", "trashtracker"}.  See data_specifications.md for more details.
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
         data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
@@ -94,16 +92,10 @@ def run_advector(
     except KeyError:
         raise ValueError(f"Invalid argument advection_scheme; must be one of "
                          f"{set(scheme.name for scheme in AdvectionScheme)}.")
-    try:
-        sourcefile_format_enum = SourceFileFormat[sourcefile_format]
-    except KeyError:
-        raise ValueError(f"Invalid argument sourcefile_format; must be one of "
-                         f"{set(fmt.name for fmt in SourceFileFormat)}.")
 
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
-        source_file_type=sourcefile_format_enum,
     )
 
     currents = open_3D_vectorfield(
