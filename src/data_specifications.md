@@ -1,10 +1,7 @@
 # Data Specifications
 
 ## Sourcefiles
-Source files contain the initial state of particles, and are encoded as netcdf datasets.  Two formats of sourcefile are accepted: advector (default, native), and trashtracker (legacy support).
-
-### Advector Sourcefiles
-Advector sourcefiles adhere to the following dataset structure:
+Source files contain the initial state of particles, and are encoded as netcdf datasets.  They adhere to the following dataset structure:
 
 #### Dimensions
 
@@ -25,24 +22,6 @@ Advector sourcefiles adhere to the following dataset structure:
 | corey_shape_factor | (p_id) | numeric | Represents the shape of the particle.  Defined as c/sqrt(a*b), where a, b, and c are the longest, intermediate, and shortest perpendicular dimensions of the particle. |
 | release_date | (p_id) | datetime (CF- or ISO-compliant) | timestamp at which particle enters simulation |
 
-### TrashTracker Sourcefiles
-Trashtracker sourcefiles adhere to the following dataset structure:
-
-#### Dimensions
-
-| Name | Data Type | Description |
-| --- | --- | --- |
-| x | integer | indexes particles |
-
-#### Variables
-
-| Name | Dimensions | Data Type | Description |
-| --- | --- | --- | --- |
-| id | (x) | integer | numeric id of particle |
-| lon | (x) | numeric | initial longitude of particle, degrees E, any domain (will be coerced to [-180, 180) |
-| lat | (x) | numeric | initial latitude of particle, degrees N, domain [-90, 90] |
-| releaseDate | (x) | numeric, Matlab 'datenum' representation | timestamp at which particle enters simulation |
-| unsd | (x) | integer | UNSD M49 country code.  Currently ignored. |
 ## Outputfiles
 Outputfiles contain the particle trajectories computed by the model, as well as metadata which describe in detail the configuration of ADVECTOR which produced them.  They adhere to the following specifications:
 
