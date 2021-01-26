@@ -52,6 +52,7 @@ __kernel void advect(
     /* physics */
     const unsigned int advection_scheme,
     const double windage_multiplier,  // if nan, disables windage
+    const bool wind_mixing_enabled,   // toggle near-surface wind mixing
     const double max_wave_height,     // caps parameterization of significant wave height based on wind speed
     const double wave_mixing_depth_factor,  // max mixing depth = wave_mixing_depth_factor * significant wave height
     /* eddy diffusivity */
@@ -162,7 +163,7 @@ __kernel void advect(
                 wind_mixing_and_buoyancy_transport(
                     p, wind, density_profile,
                     max_wave_height, wave_mixing_depth_factor,
-                    dt, &rstate, !isnan(windage_multiplier))
+                    dt, &rstate, wind_mixing_enabled)
             );
 
             p = update_position_no_beaching(p, displacement_meters, current);

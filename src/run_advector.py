@@ -40,6 +40,7 @@ def run_advector(
     v_wind_path: str = None,
     wind_varname_map: dict = None,
     windage_multiplier: float = 1,
+    wind_mixing_enabled: bool = True,
     verbose: bool = False,
 ) -> List[str]:
     """
@@ -83,6 +84,7 @@ def run_advector(
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
+    :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
@@ -138,6 +140,7 @@ def run_advector(
         max_wave_height=max_wave_height,
         wave_mixing_depth_factor=wave_mixing_depth_factor,
         windage_multiplier=windage_multiplier,
+        wind_mixing_enabled=wind_mixing_enabled,
         platform_and_device=opencl_device,
         verbose=verbose,
         memory_utilization=memory_utilization,

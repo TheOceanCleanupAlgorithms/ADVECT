@@ -63,21 +63,15 @@ def compare_alg_drift(initial_radius: float, plot=False):
     save_every = 1
     wind = empty_2D_vectorfield()
 
-    euler = Kernel3D(current=current, wind=wind, p0=p0,
+    euler, taylor = [Kernel3D(current=current, wind=wind, p0=p0,
                      advect_time=time, save_every=save_every,
-                     advection_scheme=AdvectionScheme.eulerian,
+                     advection_scheme=scheme,
                      eddy_diffusivity=eddy_diffusivity,
                      density_profile=density_profile,
                      max_wave_height=0, wave_mixing_depth_factor=0,
-                     windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
-
-    taylor = Kernel3D(current=current, p0=p0, wind=wind,
-                      advect_time=time, save_every=save_every,
-                      advection_scheme=AdvectionScheme.taylor2,
-                      eddy_diffusivity=eddy_diffusivity,
-                      density_profile=density_profile,
-                      max_wave_height=0, wave_mixing_depth_factor=0,
-                      windage_multiplier=None, context=cl.create_some_context()).execute().squeeze()
+                     windage_multiplier=None, wind_mixing_enabled=False,
+                     context=cl.create_some_context()).execute().squeeze()
+                     for scheme in (AdvectionScheme.eulerian, AdvectionScheme.taylor2)]
 
     if plot:
         plt.figure(figsize=(8, 4))

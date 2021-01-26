@@ -40,6 +40,7 @@ class Kernel3D:
             max_wave_height: float,
             wave_mixing_depth_factor: float,
             windage_multiplier: Optional[float],
+            wind_mixing_enabled: bool,
             context: cl.Context,
     ):
         """convert convenient python objects to raw representation for kernel"""
@@ -88,8 +89,9 @@ class Kernel3D:
         self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
-        self.advection_scheme = np.uint32(advection_scheme.value)
-        self.windage_multiplier = np.float64(windage_multiplier)
+        self.advection_scheme = advection_scheme.value
+        self.windage_multiplier = windage_multiplier
+        self.wind_mixing_enabled = wind_mixing_enabled
         self.max_wave_height = max_wave_height
         self.wave_mixing_depth_factor = wave_mixing_depth_factor
         # eddy diffusivity
@@ -158,7 +160,7 @@ class Kernel3D:
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,
-            self.advection_scheme, self.windage_multiplier,
+            np.uint32(self.advection_scheme), np.float64(self.windage_multiplier), np.bool_(self.wind_mixing_enabled),
             np.float64(self.max_wave_height), np.float64(self.wave_mixing_depth_factor),
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),

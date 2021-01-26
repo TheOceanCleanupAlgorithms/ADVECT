@@ -31,6 +31,7 @@ def openCL_advect(
     max_wave_height: float,
     wave_mixing_depth_factor: float,
     windage_multiplier: Optional[float],
+    wind_mixing_enabled: bool,
     memory_utilization: float,
     platform_and_device: Tuple[int] = None,
     verbose=False,
@@ -97,6 +98,7 @@ def openCL_advect(
                 max_wave_height=max_wave_height,
                 wave_mixing_depth_factor=wave_mixing_depth_factor,
                 windage_multiplier=windage_multiplier,
+                wind_mixing_enabled=wind_mixing_enabled,
                 advect_time=advect_time_chunk,
                 save_every=save_every,
                 context=context)
