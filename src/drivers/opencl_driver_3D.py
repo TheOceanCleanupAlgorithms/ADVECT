@@ -16,21 +16,26 @@ from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
-def openCL_advect(current: xr.Dataset,
-                  wind: xr.Dataset,
-                  output_writer: OutputWriter,
-                  p0: xr.Dataset,
-                  start_time: datetime.datetime,
-                  dt: datetime.timedelta,
-                  num_timesteps: int,
-                  save_every: int,
-                  advection_scheme: AdvectionScheme,
-                  eddy_diffusivity: xr.Dataset,
-                  density_profile: xr.Dataset,
-                  windage_multiplier: Optional[float],
-                  memory_utilization: float,
-                  platform_and_device: Tuple[int] = None,
-                  verbose=False) -> List[Path]:
+def openCL_advect(
+    current: xr.Dataset,
+    wind: xr.Dataset,
+    output_writer: OutputWriter,
+    p0: xr.Dataset,
+    start_time: datetime.datetime,
+    dt: datetime.timedelta,
+    num_timesteps: int,
+    save_every: int,
+    advection_scheme: AdvectionScheme,
+    eddy_diffusivity: xr.Dataset,
+    density_profile: xr.Dataset,
+    max_wave_height: float,
+    wave_mixing_depth_factor: float,
+    windage_multiplier: Optional[float],
+    wind_mixing_enabled: bool,
+    memory_utilization: float,
+    platform_and_device: Tuple[int] = None,
+    verbose=False,
+) -> List[Path]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
@@ -44,6 +49,8 @@ def openCL_advect(current: xr.Dataset,
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: xarray Dataset storing vertical profiles of eddy diffusivities
     :param density_profile: xarray Dataset storing vertical profile of seawater density
+    :param max_wave_height: caps parameterization in kernel; see config_specifications.md
+    :param wave_mixing_depth_factor: scales depth of mixing in kernel; see config_specifications.md
     :param windage_multiplier: multiplies the default windage, which is based on emerged area
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
@@ -88,7 +95,10 @@ def openCL_advect(current: xr.Dataset,
                 advection_scheme=advection_scheme,
                 eddy_diffusivity=eddy_diffusivity,
                 density_profile=density_profile,
+                max_wave_height=max_wave_height,
+                wave_mixing_depth_factor=wave_mixing_depth_factor,
                 windage_multiplier=windage_multiplier,
+                wind_mixing_enabled=wind_mixing_enabled,
                 advect_time=advect_time_chunk,
                 save_every=save_every,
                 context=context)

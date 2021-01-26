@@ -49,3 +49,14 @@ The density of seawater in the real ocean varies across space and time.  Variati
 | --- | --- | --- | --- |
 | z_sd | (z_sd) | numeric | depth coordinate for seawater_density (m, positive up) (coordinate variable) |
 | seawater_density | (z_sd) | numeric | density of seawater (kg m^-3) |
+
+### Wind Mixing Constants
+The parameterization of wind mixing relies on a couple of physical constraints.  These are optional in the configfile, and they will be set to default values if not present.
+
+#### Scalar Variables
+It's recommended to leave these at their default values (i.e. don't include them in your config file) unless you have a good argument for your values.  These variables dramatically impact the wind-mixing component of the model.
+
+| Name | Data Type | Default Value | Description |
+| --- | --- | --- |--- |
+| max_wave_height | numeric | 20 | meters; maximum physically reasonable significant wave height; at very high wind speeds the formula which calculates these produces non-physical values, so a cap must be enforced.  The default 20 comes from the approximate world record as of 2020 (https://wmo.asu.edu/content/World-Highest-Wave-Buoy) |
+| wave_mixing_depth_factor | numeric | 10 | unitless; controls the maximum depth a particle can be mixed to by wave action, governed by max_depth = -(WAVE_MIXING_DEPTH_MULTIPLIER * significant_wave_height).  In the adopted wave-mixing model, the probability of mixing to a depth z decreases with depth, but is never zero.  This will occasionally result in nonphysical mixing to extreme depths.  Thus, the probability must be set to zero at some depth.  The natural formulation for this depth is as a scalar multiple of the wave height.  The default value of 10 is chosen based on results in moderate wind conditions from D'Asaro et al (2013) Figure 1.  Paired with the default max wave height of 20m, the default multiple produces a maximum mixing depth of 200m under the most extreme wind conditions, which is similar to the mixed layer depth of the NH Winter Atlantic/Pacific and of the Southern Ocean.

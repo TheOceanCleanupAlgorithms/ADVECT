@@ -1,5 +1,6 @@
 __pycache__
 examples/MERRA2_wind/MERRA2*
+examples/ncep_ncar_doe_ii/*.nc
 examples/outputfiles/*/
 examples/sourcefiles/*.nc
 examples/configfiles/*.nc

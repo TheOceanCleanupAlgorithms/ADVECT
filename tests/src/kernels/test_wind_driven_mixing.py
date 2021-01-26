@@ -22,7 +22,7 @@ def sample_concentration_profile(wind_10m: float, rise_velocity: float, nsamples
         random_state rstate = {.a = 1};
         for (unsigned int i=0; i<nsamples; i++) {
             random(&rstate);
-            out[i] = sample_concentration_profile(wind_10m, rise_velocity, &rstate);
+            out[i] = sample_concentration_profile(wind_10m, rise_velocity, 20, 10, &rstate);
         }
     }
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
@@ -96,7 +96,7 @@ def calculate_significant_wave_height(wind_stress: float) -> float:
         const double wind_stress,
         __global double *out) {
 
-        out[0] = calculate_significant_wave_height(wind_stress);
+        out[0] = calculate_significant_wave_height(wind_stress, 20);
     }
     """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
 

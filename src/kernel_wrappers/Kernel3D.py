@@ -3,6 +3,7 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+import warnings
 import numpy as np
 import pyopencl as cl
 import time
@@ -36,7 +37,10 @@ class Kernel3D:
             advection_scheme: AdvectionScheme,
             eddy_diffusivity: xr.Dataset,
             density_profile: xr.Dataset,
+            max_wave_height: float,
+            wave_mixing_depth_factor: float,
             windage_multiplier: Optional[float],
+            wind_mixing_enabled: bool,
             context: cl.Context,
     ):
         """convert convenient python objects to raw representation for kernel"""
@@ -85,8 +89,11 @@ class Kernel3D:
         self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
-        self.advection_scheme = np.uint32(advection_scheme.value)
-        self.windage_multiplier = np.float64(windage_multiplier)
+        self.advection_scheme = advection_scheme.value
+        self.windage_multiplier = windage_multiplier
+        self.wind_mixing_enabled = wind_mixing_enabled
+        self.max_wave_height = max_wave_height
+        self.wave_mixing_depth_factor = wave_mixing_depth_factor
         # eddy diffusivity
         self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
         self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
@@ -153,7 +160,8 @@ class Kernel3D:
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,
-            self.advection_scheme, self.windage_multiplier,
+            np.uint32(self.advection_scheme), np.float64(self.windage_multiplier), np.bool_(self.wind_mixing_enabled),
+            np.float64(self.max_wave_height), np.float64(self.wave_mixing_depth_factor),
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),
             d_density_profile_z, d_density_profile_values, np.uint32(len(self.density_profile_values)),
@@ -257,5 +265,15 @@ class Kernel3D:
 
         # check corey shape factor valid
         assert np.all((.15 < self.corey_shape_factor) & (self.corey_shape_factor <= 1))
+
         # check enum valid
         assert self.advection_scheme in (0, 1)
+
+        # issue warning if wind timestep is smaller than one day
+        if np.any(np.diff(self.wind_t) < pd.Timedelta(days=1).total_seconds()):
+            print(np.diff(self.wind_t)/3600)
+            warnings.warn(
+                "Timestep of wind data is less than a day.  The kernel assumes a fully developed sea state from each "
+                "wind datum; short timesteps mean this is a bad assumption.  Use wind data averaged over a longer "
+                "timestep, or complain to the developers (or both)."
+            )

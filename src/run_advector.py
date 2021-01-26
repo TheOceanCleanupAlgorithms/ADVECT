@@ -14,7 +14,7 @@ from typing import Tuple, List
 
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter
-from io_tools.open_configfiles import load_eddy_diffusivity, load_density_profile
+from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
 from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
@@ -40,6 +40,7 @@ def run_advector(
     v_wind_path: str = None,
     wind_varname_map: dict = None,
     windage_multiplier: float = 1,
+    wind_mixing_enabled: bool = True,
     verbose: bool = False,
 ) -> List[str]:
     """
@@ -83,6 +84,7 @@ def run_advector(
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
+    :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
@@ -111,8 +113,8 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
 
-    eddy_diffusivity = load_eddy_diffusivity(configfile_path=configfile_path)
-    density_profile = load_density_profile(configfile_path=configfile_path)
+    eddy_diffusivity, density_profile, max_wave_height, wave_mixing_depth_factor \
+        = unpack_configfile(configfile_path=configfile_path)
 
     output_writer = OutputWriter(
         out_dir=Path(output_directory),
@@ -135,7 +137,10 @@ def run_advector(
         advection_scheme=scheme_enum,
         eddy_diffusivity=eddy_diffusivity,
         density_profile=density_profile,
+        max_wave_height=max_wave_height,
+        wave_mixing_depth_factor=wave_mixing_depth_factor,
         windage_multiplier=windage_multiplier,
+        wind_mixing_enabled=wind_mixing_enabled,
         platform_and_device=opencl_device,
         verbose=verbose,
         memory_utilization=memory_utilization,
