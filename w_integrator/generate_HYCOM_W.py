@@ -58,10 +58,38 @@ W = xr.open_dataarray(out_path, chunks={"depth": 1}).sortby("depth", ascending=F
 W_smooth = W.coarsen(dim={"lat": 15, "lon": 15}, boundary="pad").mean()
 with ProgressBar():
     W_smooth.load()
-
+"""
 for i in range(10, len(W.depth)):
     fig, ax = plt.subplots(1, figsize=(16, 9))
     plot_W(W_smooth, level=i, clip=1e-3, ax=ax)
     plt.pause(.01)
     input()
     plt.close(fig)
+"""
+
+# compare with ECCO data
+from w_integrator import generate_ECCO_W
+
+ECCO_UV, ECCO_W_true = generate_ECCO_W.load_ECCO()
+ECCO_W = generate_ECCO_W.calculate_W(ECCO_UV).load()
+
+lat_extremes = (-60, 60)
+HYCOM_global = W_smooth.sel(lat=slice(*lat_extremes)).mean(dim=['lat', 'lon'])
+ECCO_global = ECCO_W.sel(lat=slice(*lat_extremes)).mean(dim=['lat', 'lon'])
+ECCO_global_true = ECCO_W_true.sel(lat=slice(*lat_extremes)).mean(dim=['lat', 'lon'])
+
+plt.figure()
+plt.plot(HYCOM_global, HYCOM_global.depth, label='hycom')
+plt.plot(ECCO_global, ECCO_global.depth, label='ecco calc')
+plt.plot(ECCO_global_true, ECCO_global_true.depth, label='ecco true')
+plt.legend()
+
+HYCOM_tropics = W_smooth.sel(lat=slice(-10, 10)).mean(dim=['lat', 'lon'])
+ECCO_tropics = ECCO_W.sel(lat=slice(-10, 10)).mean(dim=['lat', 'lon'])
+ECCO_tropics_true = ECCO_W_true.sel(lat=slice(-10, 10)).mean(dim=['lat', 'lon'])
+
+plt.figure()
+plt.plot(HYCOM_tropics, HYCOM_tropics.depth, label='hycom')
+plt.plot(ECCO_tropics, ECCO_tropics.depth, label='ecco calc')
+plt.plot(ECCO_tropics_true, ECCO_tropics_true.depth, label='ecco true')
+plt.legend()
