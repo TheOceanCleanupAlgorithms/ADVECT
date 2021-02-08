@@ -95,7 +95,7 @@ bool in_ocean(particle p, field3d field) {
         -- William Shakespeare */
     grid_point gp = find_nearest_neighbor(p, field);
     vector V = index_vector_field(field, gp, false);
-    bool isnan = (isnan(V.x) || isnan(V.y) || isnan(V.z));
+    bool has_nan_coord = (isnan(V.x) || isnan(V.y) || isnan(V.z));
     bool too_deep = p.z < field.z_floor;
-    return !(isnan || too_deep);
+    return !(has_nan_coord || too_deep);
 }
