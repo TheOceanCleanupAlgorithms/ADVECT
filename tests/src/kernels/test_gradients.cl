@@ -21,7 +21,7 @@ __kernel void test_partials(
     const double p_y,
     const double p_z,
     const double p_t,
-    const bool x_is_circular,
+    const unsigned int x_is_circular,
     __global double *partials) {
     
     field3d field = {.x = field_x, .y = field_y, .z = field_z, .t = field_t,

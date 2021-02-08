@@ -9,8 +9,6 @@
         with the derivative defined in a circular manner.
 */
 
-__constant vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
-
 vector calculate_partial(grid_point lower, grid_point higher, double spacing, field3d field) {
     vector V_higher = index_vector_field(field, higher, true);
     vector V_lower = index_vector_field(field, lower, true);
@@ -38,6 +36,7 @@ vector x_partial(particle p, field3d field) {
     // if x is circular, assumed if p is outside domain, it is "between" points.
     if (!in_domain(p.x, field.x, field.x_len)) {
         if (!field.x_is_circular) { // p outside valid domain
+            vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
             return UNDEFINED;
         } else {  // p is assumed above last, below first (bc x circular)
             lower.x_idx = field.x_len - 1;
@@ -60,6 +59,7 @@ vector y_partial(particle p, field3d field) {
      * units: (m/s) / m
      */
     if (!in_domain(p.y, field.y, field.y_len)) {  // position outside of domain
+        vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
         return UNDEFINED;
     }
 
@@ -81,6 +81,7 @@ vector z_partial(particle p, field3d field) {
      * units: (m/s) / m
      */
     if (!in_domain(p.z, field.z, field.z_len)) {  // position outside of domain
+        vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
         return UNDEFINED;
     }
 
@@ -102,6 +103,7 @@ vector t_partial(particle p, field3d field) {
      * units: (m/s) / s
      */
     if (!in_domain(p.t, field.t, field.t_len)) {  // position outside of domain
+        vector UNDEFINED = {.x = NAN, .y = NAN, .z = NAN};
         return UNDEFINED;
     }
 
