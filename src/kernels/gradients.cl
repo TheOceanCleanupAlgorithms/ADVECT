@@ -9,8 +9,6 @@
         with the derivative defined in a circular manner.
 */
 
-__constant vector UNDEFINED = {.x = NAN, .y = NAN};
-
 vector calculate_partial(grid_point lower, grid_point higher, double spacing, field2d field) {
     vector V_higher = index_vector_field(field, higher, true);
     vector V_lower = index_vector_field(field, lower, true);
@@ -55,6 +53,7 @@ vector y_partial(particle p, field2d field) {
      * units: (m/s) / m
      */
     if (!in_domain(p.y, field.y, field.y_len)) {  // position outside of domain
+        vector UNDEFINED = {.x = NAN, .y = NAN};
         return UNDEFINED;
     }
 
@@ -76,6 +75,7 @@ vector t_partial(particle p, field2d field) {
      * units: (m/s) / s
      */
     if (!in_domain(p.t, field.t, field.t_len)) {  // position outside of domain
+        vector UNDEFINED = {.x = NAN, .y = NAN};
         return UNDEFINED;
     }
 
