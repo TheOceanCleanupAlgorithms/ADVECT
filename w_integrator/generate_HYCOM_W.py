@@ -31,8 +31,10 @@ def compute_W():
     W_calc = integrator.generate_vertical_velocity(UV, verbose=True)
     W_calc = W_calc.expand_dims()  # add time back in
 
+    encoding = {'W': {'_FillValue': -30000, 'scale_factor': 0.000001, 'dtype': np.int16}}
+
     with ProgressBar():
-        W_calc.to_netcdf(out_path)
+        W_calc.to_netcdf(out_path, encoding=encoding)
 
 
 def plot_W(W, level, clip, ax=None):
@@ -53,6 +55,7 @@ def plot_W(W, level, clip, ax=None):
         f"HYCOM GLBy Vertical Velocity, 2020-01-01T00, depth={float(W.depth.isel(depth=level)): .0f}m"
     )
 
+compute_W()
 
 W = xr.open_dataarray(out_path, chunks={"depth": 1}).sortby("depth", ascending=False)
 W_smooth = W.coarsen(dim={"lat": 15, "lon": 15}, boundary="pad").mean()
