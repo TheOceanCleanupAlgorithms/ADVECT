@@ -84,20 +84,25 @@ def test_diffusion(plot=False):
     np.testing.assert_allclose(true_std[0][1:], bin_std[:, 0][1:], rtol=.1)  # bin at bottom edge is thrown off by boundary, ignore
 
     if plot:
-        fig, ax = plt.subplots(2, 1, figsize=(9, 9))
+        fig, ax = plt.subplots(2, 2, figsize=(9, 9), gridspec_kw={'width_ratios': [2, 1]}, sharey=True)
         for i, j in ((0, 0), (1, 2)):
-            ax[i].plot(drift[:, j], p_depth, '.', markersize=.5, label='particles')
-            ax[i].plot(np.zeros_like(z_grid), z_grid, label='expected mean', linewidth=2)
-            ax[i].plot(bin_mean[:, j], z_grid, label='100m bin mean', linewidth=2)
-            ax[i].plot(true_std[i], z_grid, label='expected std', linewidth=2)
-            ax[i].plot(bin_std[:, j], z_grid, label='100m bin std', linewidth=2)
-            ax[i].set_ylim([min(z_grid), max(z_grid)])
-            ax[i].set_ylabel('depth (m)')
-        ax[0].legend()
-        ax[0].set_xlabel(f'lon displacement in {dt} seconds (m)')
-        ax[0].set_title('Depth-dependent diffusivity test')
-        ax[1].set_xlabel(f'depth displacement in {dt} seconds (m)')
+            ax[i][0].plot(drift[:, j], p_depth, '.', markersize=.5, label='particles')
+            ax[i][0].plot(np.zeros_like(z_grid), z_grid, label='expected mean', linewidth=2)
+            ax[i][0].plot(bin_mean[:, j], z_grid, label='100m bin mean', linewidth=2)
+            ax[i][0].plot(true_std[i], z_grid, label='expected std', linewidth=2)
+            ax[i][0].plot(bin_std[:, j], z_grid, label='100m bin std', linewidth=2)
+            ax[i][0].set_ylim([min(z_grid), max(z_grid)])
+            ax[i][0].set_ylabel('depth (m)')
 
+        ax[0, 0].legend()
+        ax[0, 0].set_xlabel(f'lon displacement in {dt} seconds (m)')
+        ax[0, 0].set_title('Depth-dependent diffusivity test')
+        ax[1, 0].set_xlabel(f'depth displacement in {dt} seconds (m)')
+
+        ax[0, 1].plot(horizontal_diffusivity, z_hd)
+        ax[0, 1].set_xlabel('horizontal diffusivity ($m^2$ $s^{-1}$)')
+        ax[1, 1].plot(vertical_diffusivity, z_vd)
+        ax[1, 1].set_xlabel('vertical diffusivity ($m^2$ $s^{-1}$)')
 
 if __name__ == '__main__':
     test_diffusion(plot=True)
