@@ -22,6 +22,7 @@ def chunk_advection_params(device_bytes: int, current: xr.Dataset, wind: xr.Data
                                                                 out_timesteps=len(out_time) - 1)
 
     num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))  # minimum chunking to potentially fit RAM
+
     if num_chunks > len(current.time):
         raise RuntimeError('Particles take up too much device memory; not enough space for even one field timestep. '
                            'Decrease number of particles and try again.')
@@ -63,9 +64,9 @@ def estimate_memory_bytes(current: xr.Dataset, wind: xr.Dataset, num_particles: 
                           ) -> Tuple[int, int, int]:
     """This estimates total memory needed for the buffers.
     There's a bit more needed for the scalar arguments, but this is tiny"""
-    current_bytes = (3 * 4 * np.prod(current.U.shape) +  # three 32-bit fields
+    current_bytes = (3 * 4 * np.prod(current.U.shape, dtype=np.int64) +  # three 32-bit fields
                      8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))  # the 4 64-bit coordinate arrays
-    wind_bytes = (2 * 4 * np.prod(wind.U.shape) +  # two 32-bit fields
+    wind_bytes = (2 * 4 * np.prod(wind.U.shape, dtype=np.int64) +  # two 32-bit fields
                   8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
     output_bytes = (3 * 4 * num_particles * out_timesteps +  # three 32-bit variables for each particle for each timestep
                     1 * num_particles)  # one byte holding error code for each particle
