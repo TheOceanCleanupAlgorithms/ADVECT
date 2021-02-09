@@ -19,8 +19,6 @@ def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping:
     vectors = xr.merge((U, V, W), combine_attrs="override")  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[['U', 'V', 'W']]  # drop any additional variables
-    vectors = vectors.squeeze()  # remove any singleton dimensions
-
     assert set(vectors.dims) == {'lat', 'lon', 'time', 'depth'}, f"Unexpected/missing dimension(s) ({vectors.dims})"
 
     # convert longitude [0, 360] --> [-180, 180]
@@ -29,6 +27,11 @@ def open_3D_vectorfield(u_path: str, v_path: str, w_path: str, variable_mapping:
         with dask.config.set(**{'array.slicing.split_large_chunks': True}):
             vectors['lon'] = ((vectors.lon + 180) % 360) - 180
             vectors = vectors.sortby('lon')
+
+    # convert positive-down depth to positive-up if necessary
+    if np.all(vectors.depth >= 0):
+        vectors['depth'] = -1 * vectors.depth
+
     with dask.config.set(**{'array.slicing.split_large_chunks': True}):
         vectors = vectors.sortby('depth', ascending=True)  # depth required to be ascending sorted
 

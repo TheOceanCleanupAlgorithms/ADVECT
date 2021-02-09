@@ -25,7 +25,7 @@ def random(seed: int, num_samples: int) -> np.ndarray:
     out = np.zeros(num_samples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
 
-    prg.test_random(CL_QUEUE, (1,), None, np.uint64(seed), np.uint64(num_samples), d_out)
+    prg.test_random(CL_QUEUE, (1,), None, np.uint32(seed), np.uint32(num_samples), d_out)
     CL_QUEUE.finish()
 
     cl.enqueue_copy(CL_QUEUE, out, d_out)
@@ -77,8 +77,8 @@ def random_in_range(low: float, high: float, seed: int, num_samples: int) -> np.
         CL_QUEUE, (1,), None,
         np.float64(low),
         np.float64(high),
-        np.uint64(seed),
-        np.uint64(num_samples),
+        np.uint32(seed),
+        np.uint32(num_samples),
         d_out)
     CL_QUEUE.finish()
 
@@ -124,8 +124,8 @@ def standard_normal(seed: int, num_samples: int) -> np.ndarray:
 
     prg.test_standard_normal(
         CL_QUEUE, (1,), None,
-        np.uint64(seed),
-        np.uint64(num_samples),
+        np.uint32(seed),
+        np.uint32(num_samples),
         d_out)
     CL_QUEUE.finish()
 
@@ -176,8 +176,8 @@ def random_normal(mean: float, std: float, seed: int, num_samples: int) -> np.nd
         CL_QUEUE, (1,), None,
         np.float64(mean),
         np.float64(std),
-        np.uint64(seed),
-        np.uint64(num_samples),
+        np.uint32(seed),
+        np.uint32(num_samples),
         d_out)
     CL_QUEUE.finish()
 

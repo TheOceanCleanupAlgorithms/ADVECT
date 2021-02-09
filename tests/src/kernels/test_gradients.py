@@ -60,7 +60,7 @@ def calculate_partials(p: dict, field: dict, x_is_circular: bool = False) -> np.
         np.float64(p["y"]),
         np.float64(p["z"]),
         np.float64(p["t"]),
-        np.bool_(x_is_circular),
+        np.uint32(x_is_circular),
         d_partials_out,
     )
     CL_QUEUE.finish()

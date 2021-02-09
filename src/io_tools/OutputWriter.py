@@ -1,3 +1,4 @@
+import os
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -68,19 +69,21 @@ class OutputWriter:
                 "dataset, after it has been loaded into ADVECTOR, and global attributes "
                 "from the first zonal current file in the dataset."
             )
-            with tempfile.NamedTemporaryFile() as tmp:
-                self.currents_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
-                with netCDF4.Dataset(tmp.name, mode="r") as currents_meta:  # so we can open it with netCDF4
-                    copy_dataset(currents_meta, currents_meta_group)
 
+            tmp_currents_path = self.folder_path / "currents_meta_tmp.nc"
+            self.currents_meta.to_netcdf(tmp_currents_path)  # save xr.Dataset to temp file
+            with netCDF4.Dataset(tmp_currents_path, mode="r") as currents_meta:  # so we can open it with netCDF4
+                copy_dataset(currents_meta, currents_meta_group)
+            os.remove(tmp_currents_path)
+
+            wind_meta_group = ds.createGroup("wind_meta")
+            wind_meta_group.setncattr(
+                "wind_meta_group_description",
+                "This group contains the coordinates of the fully concatenated 10-meter wind "
+                "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                "from the first zonal wind file in the dataset."
+            )
             if self.wind_meta is not None:
-                wind_meta_group = ds.createGroup("wind_meta")
-                wind_meta_group.setncattr(
-                    "wind_meta_group_description",
-                    "This group contains the coordinates of the fully concatenated 10-meter wind "
-                    "dataset, after it has been loaded into ADVECTOR, and global attributes "
-                    "from the first zonal wind file in the dataset."
-                )
                 with tempfile.NamedTemporaryFile() as tmp:
                     self.wind_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
                     with netCDF4.Dataset(tmp.name, mode="r") as wind_meta:  # so we can open it with netCDF4

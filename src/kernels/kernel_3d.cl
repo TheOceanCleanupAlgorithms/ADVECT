@@ -37,6 +37,7 @@ __kernel void advect(
     const unsigned int wind_x_len,          // 1 <= wind_x_len <= UINT_MAX + 1
     __global const double *wind_y,          // lat, Deg N (-90 to 90), uniform spacing
     const unsigned int wind_y_len,          // 1 <= wind_y_len <= UINT_MAX + 1
+    __global const double *wind_z,          // assumed singleton array, height of surface wind field (m)
     __global const double *wind_t,          // time, seconds since epoch, uniform spacing
     const unsigned int wind_t_len,          // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,           // m / s, shape=(t, y, x) flattened, 32 bit to save space
@@ -52,7 +53,7 @@ __kernel void advect(
     /* physics */
     const unsigned int advection_scheme,
     const double windage_multiplier,  // if nan, disables windage
-    const bool wind_mixing_enabled,   // toggle near-surface wind mixing
+    const unsigned int wind_mixing_enabled,   // 0: false, 1:true; toggle near-surface wind mixing
     const double max_wave_height,     // caps parameterization of significant wave height based on wind speed
     const double wave_mixing_depth_factor,  // max mixing depth = wave_mixing_depth_factor * significant wave height
     /* eddy diffusivity */
@@ -94,8 +95,7 @@ __kernel void advect(
     current.x_is_circular = x_is_circular(current);
 
     // turn 2d wind into 3d wind with singleton z
-    double wind_z[1] = {0.0};
-    field3d wind = {.x = wind_x, .y = wind_y, .z = (__global double *)wind_z, .t = wind_t,
+    field3d wind = {.x = wind_x, .y = wind_y, .z = wind_z, .t = wind_t,
                     .x_len = wind_x_len, .y_len = wind_y_len, .z_len = 1, .t_len = wind_t_len,
                     .x_spacing = calculate_spacing(wind_x, wind_x_len),
                     .y_spacing = calculate_spacing(wind_y, wind_y_len),
