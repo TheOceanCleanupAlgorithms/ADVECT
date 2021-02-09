@@ -248,6 +248,7 @@ class Kernel3D:
         assert min(self.wind_y) >= -90
         assert 1 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_y)
+        assert len(self.wind_z) == 1
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_t)
 
