@@ -140,7 +140,7 @@ def generate_vertical_velocity(
             dlon_at_lat_bnds[1:].reshape((1, -1)) * np.diff(z_bnds).reshape((-1, 1))
         ).astype(np.float32),
     )
-    ds["rho"] = ("depth", (rho_profile.interp(z_sd=UV.depth).values).astype(np.float32))
+    ds["rho"] = ("depth", (rho_profile.interp(depth=UV.depth).values).astype(np.float32))
 
     # do ze calculation!
     horizontal_mass_flux = ds["rho"] * (
@@ -181,8 +181,8 @@ def generate_vertical_velocity(
     )
 
     rho_z_bnds = (
-        rho_profile.interp(z_sd=z_bnds)
-        .rename({"z_sd": "depth_bnds"})
+        rho_profile.interp(depth=z_bnds)
+        .rename({"depth": "depth_bnds"})
         .astype(np.float32)
     )
     w_trad = vertical_mass_flux / (rho_z_bnds * (ds["A_topbottom"]))

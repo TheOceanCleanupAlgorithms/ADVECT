@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dask.diagnostics import ProgressBar
 
-from w_integrator import integrator, generate_ECCO_W
+from INTEGRATOR import integrator, generate_ECCO_W
 
 
 def compute_W(hycom_path, out_path, coarsen=True):

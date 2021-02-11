@@ -8,3 +8,5 @@ This is a tool which calculates an oceanic vertical velocity field (W), given zo
 `generate_ECCO_W.py` is a script which, provided you have the right files (or modify the paths), demonstrates usage, and plots a comparison between the W calculated from ECCO U/V with the W provided by ECCO directly.  The high correspondence is a good confirmation of the quality of the method.
 
 `w_integration_methodology.ipynb` contains a detailed description of the mathematical method used to integrate the continuity equation.
+
+`seawater_denity_profile.nc` holds a profile of seawater density versus depth for use in advector.py.  Values calculated from 2015 monthly Temp/Salinity data from HYCOM.

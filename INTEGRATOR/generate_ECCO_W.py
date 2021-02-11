@@ -2,7 +2,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from dask.diagnostics import ProgressBar
 
-from w_integrator import integrator
+from INTEGRATOR import integrator
 
 
 def load_ECCO(u_path, v_path, w_path):
