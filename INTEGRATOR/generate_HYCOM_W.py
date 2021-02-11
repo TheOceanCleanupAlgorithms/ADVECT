@@ -9,7 +9,7 @@ from dask.diagnostics import ProgressBar
 from w_integrator import integrator, generate_ECCO_W
 
 
-def compute_W(hycom_path, out_path):
+def compute_W(hycom_path, out_path, coarsen=True):
     UV = (
         xr.open_dataset(hycom_path).squeeze().rename({"water_u": "U", "water_v": "V"})
     )
@@ -24,10 +24,17 @@ def compute_W(hycom_path, out_path):
     cell_center_depth = cell_top_depth - cell_widths / 2
     UV = UV.assign_coords({"depth": cell_center_depth})
 
+    if coarsen:
+        print('Coarsening UV...')
+        UV = UV.coarsen(dim={"lat": 50, "lon": 25}, boundary="pad").mean()
+        UV = UV.interp(lat=np.arange(-80, 81), lon=np.arange(0, 360))
+        with ProgressBar():
+            UV.load()
+
     W_calc = integrator.generate_vertical_velocity(UV, verbose=False)
     W_calc = W_calc.expand_dims()  # add time back in
 
-    encoding = {'HYCOM_W': {'_FillValue': -30000, 'scale_factor': 0.000001, 'dtype': np.int16}}
+    encoding = {'W': {'_FillValue': -30000, 'scale_factor': 0.000001, 'dtype': np.int16}}
 
     with ProgressBar():
         W_calc.to_netcdf(out_path, encoding=encoding)
@@ -59,18 +66,18 @@ hycom_w_out_path = dataset_path.parent / ("W_calc_from_" + dataset_path.name)
 
 if not os.path.exists(hycom_w_out_path):
     print('computing hycom vertical velocity...')
-    compute_W(dataset_path, hycom_w_out_path)
+    compute_W(dataset_path, hycom_w_out_path, coarsen=True)
 
 print('loading & coarsening hycom vertical velocity...')
 HYCOM_W = xr.open_dataarray(hycom_w_out_path, chunks={"depth": 1}).sortby("depth", ascending=False)
-HYCOM_W_coarse = HYCOM_W.coarsen(dim={"lat": 25, "lon": 12}, boundary="pad").mean()
+HYCOM_W_coarse = HYCOM_W.coarsen(dim={"lat": 50, "lon": 25}, boundary="pad").mean()
 with ProgressBar():
     HYCOM_W_coarse.load()
 
 print('loading & coarsening hycom horizontal velocities...')
 HYCOM_UV = xr.open_dataset(dataset_path, chunks={"depth": 1}).squeeze().rename({"water_u": "U", "water_v": "V"})
 HYCOM_UV['depth'] = -1 * HYCOM_UV.depth
-HYCOM_UV_coarse = HYCOM_UV.coarsen(dim={"lat": 25, "lon": 12}, boundary="pad").mean()
+HYCOM_UV_coarse = HYCOM_UV.coarsen(dim={"lat": 50, "lon": 25}, boundary="pad").mean()
 with ProgressBar():
     HYCOM_UV_coarse.load()
 
@@ -81,7 +88,7 @@ ECCO_UV = ECCO_UV.sortby('depth', ascending=False)
 
 
 def plot_W_levels(W, clip=None):
-    for i in range(10, len(W.depth)):
+    for i in range(len(W.depth)):
         fig, ax = plt.subplots(1, figsize=(16, 9))
         plot_W(W, level=i, clip=clip, ax=ax)
         plt.pause(.01)
@@ -122,3 +129,42 @@ def plot_profile_comparisons_between_lats(lat_bnds: tuple):
 # plot_profile_comparisons_between_lats((-5, 5))  # tropics
 # plot_profile_comparisons_between_lats((40, 50))  # midlats NH
 # plot_profile_comparisons_between_lats((-50, -40)) # midlats SH
+
+
+def compare_horizontals(var='U'):
+    """does a comparison of horizontal velocities between ecco and hycom
+    :param var: one of {'U', 'V'}
+    """
+    for depth in HYCOM_UV.depth:
+        integrator.compare_Ws(('ECCO '+var, ECCO_UV[var]), ('HYCOM '+var, HYCOM_UV_coarse[var].roll(lon=len(HYCOM_UV_coarse.lon)//2, roll_coords=False)), depth=depth, clip=2)
+        plt.pause(.01)
+        input()
+        plt.close()
+
+
+def compare_vertical():
+    """does a comparison of vertical velocities between ecco and hycom
+    """
+    for depth in HYCOM_W_coarse.depth:
+        integrator.compare_Ws(('ECCO W', ECCO_W), ('HYCOM W', HYCOM_W_coarse.roll(lon=len(HYCOM_UV_coarse.lon)//2, roll_coords=False)),
+                              depth=depth, clip=5e-4)
+        plt.pause(.01)
+        input()
+        plt.close()
+
+
+# compare_horizontals('U')
+# compare_horizontals('V')
+
+
+def vertical_profiles_spaghet(lat=0):
+    fig, ax = plt.subplots(1, 2, sharex='all', sharey='all')
+    ax[0].plot(HYCOM_W_coarse.sel(lat=lat, method='nearest').transpose('depth', 'lon'), HYCOM_W_coarse.depth, alpha=.1)
+    ax[0].set_title('HYCOM')
+    ax[1].plot(ECCO_W.sel(lat=lat, method='nearest').transpose('depth', 'lon'), ECCO_W.depth, alpha=.1)
+    ax[1].set_title('ECCO')
+    ax[0].set_xlabel('W (m/s)')
+    ax[1].set_xlabel('W (m/s)')
+    ax[0].set_ylabel('depth (m)')
+    ax[0].set_xlim(-max(np.abs(ax[0].get_xlim())), max(np.abs(ax[0].get_xlim())))  # aka center x=0
+    fig.suptitle(f'Vertical Profiles of Vertical Velocity at Latitude={lat} N')

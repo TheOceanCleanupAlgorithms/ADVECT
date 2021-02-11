@@ -8,30 +8,36 @@ from typing import Tuple
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
-from dask.diagnostics import ProgressBar
 
 
-rho_profile = xr.open_dataset("../examples/configfiles/config.nc")["seawater_density"]
-# this should get hard-coded in better
+rho_profile = xr.open_dataarray("./seawater_density_profile.nc")
 
 
 def generate_vertical_velocity(
     UV: xr.Dataset,
+    auto_chunk=True,
     verbose: bool = False,
 ):
     """
     :param UV: xarray Dataset containing 3d zonal and meridional current
         expected dimensions: {'depth' (ascending), 'lat' (uniform spacing), 'lon' (uniform spacing)}
         expected variables: {'U', 'V'}
+    :param auto_chunk: whether or not to chunk UV by depth levels.  Disable if you want to do your own chunking
     :param verbose: extra printing
     :return:
     """
 
-    np.testing.assert_allclose(np.diff(UV.lon), np.mean(np.diff(UV.lon)), rtol=0.001)
-    np.testing.assert_allclose(np.diff(UV.lat), np.mean(np.diff(UV.lat)), rtol=0.001)
-    assert np.all(np.diff(UV.depth) > 0)
+    # check assumptions about data coordinates
+    np.testing.assert_allclose(
+        np.diff(UV.lon), np.mean(np.diff(UV.lon)), rtol=0.001
+    )  # lon uniformly spaced
+    np.testing.assert_allclose(
+        np.diff(UV.lat), np.mean(np.diff(UV.lat)), rtol=0.001
+    )  # lat uniformly spaced
+    assert np.all(np.diff(UV.depth) > 0)  # depth ascending
 
-    UV = UV.chunk({"depth": 1})  # convert to dask arrays chunked by depth levels
+    if auto_chunk:
+        UV = UV.chunk({"depth": 1})  # convert to dask arrays chunked by depth levels
     # Step 1
     if verbose:
         print("calculating velocities at the boundaries between cells")
@@ -118,15 +124,21 @@ def generate_vertical_velocity(
     )
     ds["A_topbottom"] = (
         "lat",
-        (dlat * ((dlon_at_lat_bnds[:-1] + dlon_at_lat_bnds[1:]) / 2)).astype(np.float32),
+        (dlat * ((dlon_at_lat_bnds[:-1] + dlon_at_lat_bnds[1:]) / 2)).astype(
+            np.float32
+        ),
     )  # area as if grid cells are trapezoids, decent approximation
     ds["A_south"] = (
         ("depth", "lat"),
-        (dlon_at_lat_bnds[:-1].reshape((1, -1)) * np.diff(z_bnds).reshape((-1, 1))).astype(np.float32),
+        (
+            dlon_at_lat_bnds[:-1].reshape((1, -1)) * np.diff(z_bnds).reshape((-1, 1))
+        ).astype(np.float32),
     )
     ds["A_north"] = (
         ("depth", "lat"),
-        (dlon_at_lat_bnds[1:].reshape((1, -1)) * np.diff(z_bnds).reshape((-1, 1))).astype(np.float32),
+        (
+            dlon_at_lat_bnds[1:].reshape((1, -1)) * np.diff(z_bnds).reshape((-1, 1))
+        ).astype(np.float32),
     )
     ds["rho"] = ("depth", (rho_profile.interp(z_sd=UV.depth).values).astype(np.float32))
 
@@ -168,7 +180,11 @@ def generate_vertical_velocity(
         .assign_coords({"depth_bnds": z_bnds})
     )
 
-    rho_z_bnds = rho_profile.interp(z_sd=z_bnds).rename({"z_sd": "depth_bnds"}).astype(np.float32)
+    rho_z_bnds = (
+        rho_profile.interp(z_sd=z_bnds)
+        .rename({"z_sd": "depth_bnds"})
+        .astype(np.float32)
+    )
     w_trad = vertical_mass_flux / (rho_z_bnds * (ds["A_topbottom"]))
 
     if verbose:
@@ -188,7 +204,9 @@ def generate_vertical_velocity(
     # this correction decreases linearly with depth, such that the correction at the column floor is 0, thus preserving
     # the bottom boundary condition as well.
     w_c = (
-        (true_w_surface - w_trad.isel(depth_bnds=-1)) * (h - w_trad["depth_bnds"].astype(np.float32)) / h
+        (true_w_surface - w_trad.isel(depth_bnds=-1))
+        * (h - w_trad["depth_bnds"].astype(np.float32))
+        / h
     )  # linear correction of profile enforcing w(z=0) = 0
     w_adj = w_trad + w_c
 
@@ -197,7 +215,8 @@ def generate_vertical_velocity(
     )
 
     W_orig_grid.name = "W"
-    # should add attributes here too...
+    W_orig_grid.attrs["units"] = "m/s"
+    W_orig_grid.attrs["positive"] = "up"
     return W_orig_grid
 
 
@@ -220,15 +239,13 @@ def dlon_to_meters(dlon: np.ndarray, lat: np.ndarray):
 
 def compare_Ws(W1: Tuple, W2: Tuple, depth: float, clip=None):
     if clip is None:
-        clip = float(
-            5 * np.std((W1[1].sel(depth=depth, method='nearest')))
-        )
+        clip = float(5 * np.std((W1[1].sel(depth=depth, method="nearest"))))
     fig, axes = plt.subplots(2, 1, figsize=(10, 8))
     for ax, (name, W) in zip(axes, (W1, W2)):
         cf = ax.contourf(
             W.lon,
             W.lat,
-            W.sel(depth=depth, method='nearest').clip(-clip, clip),
+            W.sel(depth=depth, method="nearest").clip(-clip, clip),
             cmap="bwr",
             levels=30,
             vmin=-clip,
@@ -236,5 +253,7 @@ def compare_Ws(W1: Tuple, W2: Tuple, depth: float, clip=None):
         )
         cbar = plt.colorbar(cf, ax=ax)
         cbar.ax.set_ylabel("W (m/s)")
-        ax.set_title(f"{name} (z = {float(W.depth.sel(depth=depth, method='nearest')): .0f} m)")
+        ax.set_title(
+            f"{name} (z = {float(W.depth.sel(depth=depth, method='nearest')): .0f} m)"
+        )
     plt.tight_layout()
