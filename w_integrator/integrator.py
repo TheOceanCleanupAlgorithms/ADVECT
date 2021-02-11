@@ -218,7 +218,11 @@ def dlon_to_meters(dlon: np.ndarray, lat: np.ndarray):
     return dlon * 111111 * np.cos(np.deg2rad(lat))
 
 
-def compare_Ws(W1: Tuple, W2: Tuple, depth: float, clip=1e-4):
+def compare_Ws(W1: Tuple, W2: Tuple, depth: float, clip=None):
+    if clip is None:
+        clip = float(
+            5 * np.std((W1[1].sel(depth=depth, method='nearest')))
+        )
     fig, axes = plt.subplots(2, 1, figsize=(10, 8))
     for ax, (name, W) in zip(axes, (W1, W2)):
         cf = ax.contourf(
