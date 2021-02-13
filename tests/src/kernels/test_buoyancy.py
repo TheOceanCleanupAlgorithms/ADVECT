@@ -159,7 +159,7 @@ def compare_lebreton_2018(plot=False):
         rise_velocity_binned.append(p['rise_velocity'][(bnds[0] < p['size_class']) & (p['size_class'] < bnds[1])])
 
     if plot:
-        fig, ax = plt.subplots(2, 1, sharex='all', sharey='all', figsize=(8, 6))
+        fig, ax = plt.subplots(2, 1, sharex='all', figsize=(8, 6))
         ax[0].bxp(
             bxpstats=[
                 {"whislo": whislo, "q1": q1, "med": med, "q3": q3, "whishi": whishi}
@@ -169,23 +169,24 @@ def compare_lebreton_2018(plot=False):
             widths=np.diff(size_classes, axis=1) * 1e2,
             showfliers=False,
         )
-        ax[0].set_title('Boxplot from Lebreton 2018 figure S2, plastic type H')
-
-        ax[1].boxplot(
-            x=[rv * 1e2 for rv in rise_velocity_binned],
-            positions=size_classes.mean(axis=1) * 1e2,
-            widths=np.diff(size_classes, axis=1) * 1e2,
-            sym="",
-        )
-        ax[1].set_title('Boxplot of Modeled Particles')
-        for axis in ax:
-            axis.set_ylabel('rise velocity (cm $s^{-1}$)')
-            axis.plot(p['size_class'] * 1e2, p['rise_velocity'] * 1e2, '.', alpha=.1, markersize=3, label='modeled particles')
-        ax[0].plot(size_classes.mean(axis=1) * 1e2, [1e2 * np.median(rv) for rv in rise_velocity_binned], '--', color='tab:blue', label='modeled median')
+        ax[0].plot(p['size_class'] * 1e2, p['rise_velocity'] * 1e2, '.', alpha=.1, markersize=3, label='modeled particles')
+        x = size_classes.mean(axis=1) * 1e2
+        modeled_median = np.array([1e2 * np.median(rv) for rv in rise_velocity_binned])
+        ax[0].plot(x, modeled_median, '--', color='tab:blue', label='modeled median')
         ax[0].legend()
-        ax[1].set_xlabel('size class (cm)')
+        ax[0].set_title('Boxplot from Lebreton 2018 figure S2, plastic type H')
+        ax[0].set_ylabel('w (rise velocity) (cm $s^{-1}$)')
         ax[0].set_xscale('log')
         ax[0].set_yscale('log')
+
+        data_median = boxplot_shapes[:, 2] * 1e2
+        ax[1].plot(x, (modeled_median - data_median)/data_median)
+
+        ax[1].set_title('Relative Error of Medians')
+        ax[1].set_xlabel('size class (cm)')
+        ax[1].set_ylabel('$(w_{model} - w_{data})/w_{data}$')
+        ax[1].set_ylim([0, 2])
+
 
 
 if __name__ == "__main__":
