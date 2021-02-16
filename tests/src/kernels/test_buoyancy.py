@@ -1,7 +1,6 @@
 import pyopencl as cl
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats
 
 from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
 
@@ -45,7 +44,7 @@ def buoyancy_vertical_velocity(density: np.ndarray, radius: np.ndarray, corey_sh
     return out
 
 
-def test_buoyancy_vertical_velocity(plot=False):
+def test_kooi_2016(plot=False):
     """check theory against observations in Kooi 2016, figure 4"""
     nsamples = 1000
     rng = np.random.default_rng(seed=1)
@@ -96,5 +95,100 @@ def test_buoyancy_vertical_velocity(plot=False):
     assert v_big_std / 2 < np.std(predicted_v_big) < v_big_std * 2
 
 
+def compare_lebreton_2018(plot=False):
+    """compare theory against observations in Lebreton 2018, figure S2, type H"""
+    # plot data from lebreton 2018
+    size_classes = np.array([
+            [.05, .15],
+            [.15, .5],
+            [.5, 1.5],
+            [1.5, 5],
+            [5, 10],
+            [10, 50],
+            [50, 100],  # technically upper bound undefined
+    ]) * 1e-2  # units: cm (raw) converted to m
+    # boxplots extracted from figure S2, type H
+    boxplot_shapes = np.array([  # [lower whisker, 1st quartile, median, 3rd quartile, upper whisker]
+            [0.220, 0.907, 1.310, 1.570, 2.446],
+            [0.925, 1.687, 2.208, 2.587, 3.630],
+            [1.617, 2.730, 3.606, 5.170, 7.526],
+            [1.430, 2.732, 4.469, 7.109, 13.580],
+            [1.317, 3.236, 5.248, 6.884, 12.009],
+            [2.845, 5.312, 6.809, 9.585, 14.922],
+            [3.479, 6.841, 9.096, 12.299, 16.290]
+    ]) * 1e-2  # units: cm s^-1 (raw) converted to m s^-1
+
+    # now we'll generate a sample of plastic that seems similar enough.
+    p = {}
+    nsamples = 100000
+    rng = np.random.default_rng(seed=1)
+    rho_min, rho_max = 930, 970
+    p['rho'] = rng.uniform(rho_min, rho_max, nsamples)  # plastic density not stated; this mimics a selection of LDPE and HDPE
+
+    # we're going to generate solid rectangular prisms; we'll generate all kinds of shapes and sizes.
+    p['dims'] = np.sort(
+        rng.lognormal(mean=np.mean(np.log(size_classes/2)), sigma=4, size=(nsamples, 3)),
+        axis=1,
+    )
+
+    # from the dimensions, we can calculate a shape factor and a nominal radius.
+    p['csf'] = p['dims'][:, 0] / np.sqrt(p['dims'][:, 1] * p['dims'][:, 2])
+    p['r'] = np.cbrt(
+        3 / (4 * np.pi) * np.prod(p['dims'], axis=1)
+    )  # calculate p volumes, then get radius of equivalent sphere
+
+    # now we need to reject particles with CSF <= .15 (because that's outside our model domain),
+    # and dims outside the boxplot domain (from the lognormal size picking)
+    valid_mask = (
+        (p['csf'] > .15) &
+        (np.max(p['dims'], axis=1) < np.max(size_classes)) &
+        (np.min(p['dims'], axis=1) > np.min(size_classes))
+    )
+    for key, value in p.items():
+        p[key] = p[key][valid_mask]
+
+    # and we can calculate rise velocity for all our particles!
+    p['rise_velocity'] = buoyancy_vertical_velocity(p['rho'], p['r'], p['csf'])
+
+    # now, we need to calculate a "size class" of our particle.  I think longest dimension is probably best for this.
+    p['size_class'] = p['dims'][:, 2]
+
+    # now we separate into size classes:
+    rise_velocity_binned = []
+    for bnds in size_classes:
+        rise_velocity_binned.append(p['rise_velocity'][(bnds[0] < p['size_class']) & (p['size_class'] < bnds[1])])
+
+    if plot:
+        fig, ax = plt.subplots(2, 1, sharex='all', figsize=(8, 6))
+        ax[0].bxp(
+            bxpstats=[
+                {"whislo": whislo, "q1": q1, "med": med, "q3": q3, "whishi": whishi}
+                for (whislo, q1, med, q3, whishi) in boxplot_shapes * 1e2
+            ],
+            positions=size_classes.mean(axis=1) * 1e2,
+            widths=np.diff(size_classes, axis=1) * 1e2,
+            showfliers=False,
+        )
+        ax[0].plot(p['size_class'] * 1e2, p['rise_velocity'] * 1e2, '.', alpha=.1, markersize=3, label='modeled particles')
+        x = size_classes.mean(axis=1) * 1e2
+        modeled_median = np.array([1e2 * np.median(rv) for rv in rise_velocity_binned])
+        ax[0].plot(x, modeled_median, '--', color='tab:blue', label='modeled median')
+        ax[0].legend()
+        ax[0].set_title('Boxplot from Lebreton 2018 figure S2, plastic type H')
+        ax[0].set_ylabel('w (rise velocity) (cm $s^{-1}$)')
+        ax[0].set_xscale('log')
+        ax[0].set_yscale('log')
+
+        data_median = boxplot_shapes[:, 2] * 1e2
+        ax[1].plot(x, (modeled_median - data_median)/data_median)
+
+        ax[1].set_title('Relative Error of Medians')
+        ax[1].set_xlabel('size class (cm)')
+        ax[1].set_ylabel('$(w_{model} - w_{data})/w_{data}$')
+        ax[1].set_ylim([0, 2])
+
+
+
 if __name__ == "__main__":
-    test_buoyancy_vertical_velocity(plot=True)
+    test_kooi_2016(plot=True)
+    compare_lebreton_2018(plot=True)
