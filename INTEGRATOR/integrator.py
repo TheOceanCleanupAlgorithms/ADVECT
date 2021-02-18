@@ -3,6 +3,8 @@ The INTEGRATOR
 Tool for integrating zonal/meridional current into vertical current using conservation of mass.
 See w_integration_methodology.ipynb for an explanation of the math/methodology.
 """
+from pathlib import Path
+
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ def generate_vertical_velocity(
 ) -> xr.DataArray:
     """
     :param UV: xarray Dataset containing 3d zonal and meridional current
-        expected coordinates: {'depth' (ascending), 'lat' (uniform spacing), 'lon' (uniform spacing)}
+        expected coordinates: {'depth' (positive up, ascending), 'lat' (uniform spacing), 'lon' (uniform spacing)}
         expected variables: {'U', 'V'}
         Coordinates must reference cell centers.
     :param auto_chunk: whether or not to chunk UV by depth levels.  Disable if you want to do your own chunking
@@ -25,7 +27,7 @@ def generate_vertical_velocity(
     :return: xarray DataArray containing vertical current, 'W'; same coordinates as UV.
     """
     # load density profile
-    rho_profile = xr.open_dataarray("./seawater_density_profile.nc")
+    rho_profile = xr.open_dataarray(Path(__file__).parent / "seawater_density_profile.nc")
 
     # check assumptions about data coordinates
     np.testing.assert_allclose(
@@ -34,6 +36,7 @@ def generate_vertical_velocity(
     np.testing.assert_allclose(
         np.diff(UV.lat), np.mean(np.diff(UV.lat)), rtol=0.001
     )  # lat uniformly spaced
+    assert np.all(UV.depth <= 0)  # depth positive up
     assert np.all(np.diff(UV.depth) > 0)  # depth ascending
 
     # depth can't be zero, as cell center can't be zero unless top cell is infinitely thin
@@ -47,17 +50,17 @@ def generate_vertical_velocity(
     # ----- Step 1 ----- #
     if verbose:
         print("Step 1: Calculating mass flux into every cell due to U/V...")
-    lat_bnds, lon_bnds, depth_bnds = calculate_cell_bnds(UV)
-    U_at_lon_bnds = interpolate_U_to_lon_bnds(UV.U, lon_bnds)
-    V_at_lat_bnds = interpolate_V_to_lat_bnds(UV.V, lat_bnds)
+    lat_bnds, lon_bnds, depth_bnds = _calculate_cell_bnds(UV)
+    U_at_lon_bnds = _interpolate_U_to_lon_bnds(UV.U, lon_bnds)
+    V_at_lat_bnds = _interpolate_V_to_lat_bnds(UV.V, lat_bnds)
 
-    m_vars = collect_variables_for_mass_flux(
+    m_vars = _collect_variables_for_mass_flux(
         UV=UV,
         U_at_lon_bnds=U_at_lon_bnds,
         V_at_lat_bnds=V_at_lat_bnds,
         rho_profile=rho_profile,
     )
-    geo = collect_grid_geometry(
+    geo = _collect_grid_geometry(
         UV=UV, lat_bnds=lat_bnds, lon_bnds=lon_bnds, depth_bnds=depth_bnds
     )
     if UV.chunks:  # copy the dask coordinate chunking from UV to ds, if exists
@@ -79,7 +82,7 @@ def generate_vertical_velocity(
         .rename({"depth": "depth_bnds"})
         .assign_coords({"depth_bnds": depth_bnds[1:]})
     )
-    vertical_mass_flux = restore_ocean_domain(vertical_mass_flux, UV, depth_bnds)
+    vertical_mass_flux = _restore_ocean_domain(vertical_mass_flux, UV, depth_bnds)
 
     # convert mass flux to vertical velocity
     rho_z_bnds = (
@@ -93,7 +96,7 @@ def generate_vertical_velocity(
     if verbose:
         print("Adjusting profile to satisfy boundary condition at surface...")
     # aka calculate adjoint profile with no weight on continuity
-    w_adj = apply_adjunct_method(w_trad=w_trad, w_at_surface=0)
+    w_adj = _apply_adjunct_method(w_trad=w_trad, w_at_surface=0)
 
     # interpolate to depth gridding of UV
     W_orig_grid = w_adj.interp(depth_bnds=UV.depth.values).rename(
@@ -106,7 +109,7 @@ def generate_vertical_velocity(
     return W_orig_grid
 
 
-def calculate_cell_bnds(UV: xr.Dataset):
+def _calculate_cell_bnds(UV: xr.Dataset):
     """
     :param UV: Dataset with coordinates (lat, lon, depth)
     :return: tuple (lat_bnds, lon_bnds, depth_bnds), all numpy arrays
@@ -129,7 +132,7 @@ def calculate_cell_bnds(UV: xr.Dataset):
     return lat_bnds, lon_bnds, depth_bnds
 
 
-def interpolate_U_to_lon_bnds(U: xr.DataArray, lon_bnds) -> xr.DataArray:
+def _interpolate_U_to_lon_bnds(U: xr.DataArray, lon_bnds) -> xr.DataArray:
     U_at_lon_bnds = U.interp(
         lon=lon_bnds[1:-1],
     ).rename({"lon": "lon_bnds"})
@@ -150,7 +153,7 @@ def interpolate_U_to_lon_bnds(U: xr.DataArray, lon_bnds) -> xr.DataArray:
     )
 
 
-def interpolate_V_to_lat_bnds(V: xr.DataArray, lat_bnds) -> xr.DataArray:
+def _interpolate_V_to_lat_bnds(V: xr.DataArray, lat_bnds) -> xr.DataArray:
     # coordinates of V_at_lat_bnds: (depth, lat_bnds, lon)
     V_at_lat_bnds = V.interp(lat=lat_bnds, kwargs={"fill_value": 0}).rename(
         {"lat": "lat_bnds"}
@@ -160,7 +163,7 @@ def interpolate_V_to_lat_bnds(V: xr.DataArray, lat_bnds) -> xr.DataArray:
     return V_at_lat_bnds
 
 
-def collect_variables_for_mass_flux(UV, U_at_lon_bnds, V_at_lat_bnds, rho_profile):
+def _collect_variables_for_mass_flux(UV, U_at_lon_bnds, V_at_lat_bnds, rho_profile):
     m_vars = xr.Dataset(coords=UV.coords)
     # we offset the bounds arrays a bit so that we wind up with things the same shape as the cell grid; each value
     # thus corresponds to the flux across the west (e.g.) boundary of a particular grid cell
@@ -196,12 +199,12 @@ def collect_variables_for_mass_flux(UV, U_at_lon_bnds, V_at_lat_bnds, rho_profil
     return m_vars
 
 
-def collect_grid_geometry(UV, lat_bnds, lon_bnds, depth_bnds):
+def _collect_grid_geometry(UV, lat_bnds, lon_bnds, depth_bnds):
     geometry = xr.Dataset(coords=UV.coords)
     # get the areas of the various grid cell faces
     # assuming lat/lon are equally spaced arrays
-    dlat = dlat_to_meters(np.diff(lat_bnds).mean())  # meters
-    dlon_at_lat_bnds = dlon_to_meters(np.diff(lon_bnds).mean(), lat_bnds)  # meters
+    dlat = _dlat_to_meters(np.diff(lat_bnds).mean())  # meters
+    dlon_at_lat_bnds = _dlon_to_meters(np.diff(lon_bnds).mean(), lat_bnds)  # meters
     geometry["A_eastwest"] = (
         "depth",
         (dlat * np.diff(depth_bnds)).astype(np.float32),
@@ -229,7 +232,7 @@ def collect_grid_geometry(UV, lat_bnds, lon_bnds, depth_bnds):
     return geometry
 
 
-def restore_ocean_domain(vertical_mass_flux: xr.Dataset, UV: xr.Dataset, depth_bnds):
+def _restore_ocean_domain(vertical_mass_flux: xr.Dataset, UV: xr.Dataset, depth_bnds):
     """clean up the vertical mass flux domain.
     1. add a layer of zeros at the model floor
     2. set mass flux = NAN at boundaries which aren't in the ocean domain according to UV
@@ -262,7 +265,7 @@ def restore_ocean_domain(vertical_mass_flux: xr.Dataset, UV: xr.Dataset, depth_b
     return vertical_mass_flux
 
 
-def apply_adjunct_method(w_trad: xr.Dataset, w_at_surface: float):
+def _apply_adjunct_method(w_trad: xr.Dataset, w_at_surface: float):
     # get the ocean depth at the bottom of every lat/lon vertical column by looking for the first non-null element in
     # each column.  The idxmax doesn't handle columns on continents correctly (as they are entirely null elements);
     # the .where takes care of these cells.
@@ -283,7 +286,7 @@ def apply_adjunct_method(w_trad: xr.Dataset, w_at_surface: float):
     return w_trad + w_c
 
 
-def dlat_to_meters(dlat: np.ndarray):
+def _dlat_to_meters(dlat: np.ndarray):
     """
     :param dlat: displacement in latitude (degrees N)
     :return: length of displacement in meters
@@ -291,7 +294,7 @@ def dlat_to_meters(dlat: np.ndarray):
     return dlat * 111111
 
 
-def dlon_to_meters(dlon: np.ndarray, lat: np.ndarray):
+def _dlon_to_meters(dlon: np.ndarray, lat: np.ndarray):
     """
     :param dlon: displacement in longitude (degrees E)
     :param lat: latitude of displacement (degrees N)
