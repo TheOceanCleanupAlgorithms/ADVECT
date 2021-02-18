@@ -249,10 +249,14 @@ def restore_ocean_domain(vertical_mass_flux: xr.Dataset, UV: xr.Dataset, depth_b
 
     # mask such that flux is only valid if either cell above or below the flux across cell boundary is an ocean cell
     vertical_mass_flux = vertical_mass_flux.where(
-        ~xr.concat((UV.U.isel(depth=0), UV.U), dim="depth")
-        .isnull()
-        .rename({"depth": "depth_bnds"})
-        .assign_coords({"depth_bnds": depth_bnds})
+        (
+            ~xr.concat((UV.U.isel(depth=0), UV.U), dim="depth")
+            .isnull()
+            .assign_coords({"depth": depth_bnds})
+            | ~xr.concat((UV.U, UV.U.isel(depth=-1)), dim="depth")
+            .isnull()
+            .assign_coords({"depth": depth_bnds})
+        ).rename({"depth": "depth_bnds"})
     )
 
     return vertical_mass_flux
