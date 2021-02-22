@@ -1,6 +1,6 @@
 ## Forcing Data Specifications
 
-ADVECTOR requires three forcing datasets: Ocean Current Velocity, 10m Wind Velocity, and Seasonal Seawater Density.
+ADVECTOR requires three forcing datasets: Ocean Current Velocity, 10m Wind Velocity, and Seawater Density.
 
 ### Ocean Current Velocity
 Encoded as a netcdf dataset, and must adhere to the following specifications:
@@ -46,8 +46,8 @@ Must adhere to the following specifications:
 | V | (lon, lat, time) | numeric | meridional component of velocity (m/s), positive north.
 
 
-### Seasonal Seawater Density
-This dataset should provide the seasonal density of seawater (that is, the average density across many years) on a global 3d grid.  The resolution along the time dimension is unspecified; monthly averages could be used, or daily, or any such configuration, so long as the time coordinate is formatted as specified below.  Encoded as a netcdf dataset, and must adhere to the following specifications:
+### Seawater Density
+Encoded as a netcdf dataset, and must adhere to the following specifications:
 
 #### Dimensions
 | Name | Data Type | Description |
@@ -63,7 +63,7 @@ This dataset should provide the seasonal density of seawater (that is, the avera
 | lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
 | lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
 | depth | (depth) | numeric | depth of grid cell centers, meters, positive up (coordinate variable).  Values must be sorted but can have arbitrary spacing. |
-| time | (time) | numeric | seconds elapsed since January 01.  (coordinate variable). Values must be sorted and equally spaced. |
+| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
 | rho | (time, depth, lat, lon) | numeric | seasonal density of seawater (kg m^-3)
 
 
