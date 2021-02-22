@@ -1,4 +1,4 @@
-# Configfile Specifications
+## Configfile Specifications
 
 Configfiles encode ADVECTOR's physical parameterizations by means of a netcdf dataset.  As of now, they just contain vertical profiles of eddy diffusivity.  In the future, they may also contain scalar physics parameters, or other paramaterizations.  This document details the required netcdf dataset structure within a configfile.
 

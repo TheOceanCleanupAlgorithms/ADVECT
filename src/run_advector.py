@@ -5,7 +5,7 @@ To use, create a python script within this repo, import this file, and execute. 
     run_advector(...)
 See examples/HYCOM_advect_2d.py for an example usage.
 See function docstring below for detailed descriptions of all arguments.
-See src/data_specifications.md for detailed description of data format requirements.
+See src/forcing_data_specifications.md for detailed description of data format requirements.
 """
 
 import datetime
@@ -46,14 +46,14 @@ def run_advector(
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
     :param configfile_path: path to the configfile netcdf file.
         See config_specifications.md for details
     :param output_directory: directory which will be populated with the outfiles.
         Existing files in this directory may be overwritten.
-        See data_specifications.md for outputfile format details.
+        See forcing_data_specifications.md for outputfile format details.
     :param u_water_path: wildcard path to the zonal current files.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
     :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
@@ -67,7 +67,7 @@ def run_advector(
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
+        forcing_data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
