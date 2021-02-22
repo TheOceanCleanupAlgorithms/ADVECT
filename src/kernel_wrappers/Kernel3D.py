@@ -31,12 +31,12 @@ class Kernel3D:
             self,
             current: xr.Dataset,
             wind: xr.Dataset,
+            density: xr.Dataset,
             p0: xr.Dataset,
             advect_time: pd.DatetimeIndex,
             save_every: int,
             advection_scheme: AdvectionScheme,
             eddy_diffusivity: xr.Dataset,
-            density_profile: xr.Dataset,
             max_wave_height: float,
             wave_mixing_depth_factor: float,
             windage_multiplier: Optional[float],
@@ -72,13 +72,20 @@ class Kernel3D:
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
         self.wind_z = np.zeros(1, dtype=np.float64)  # to indicate surface wind
+        # density vector field
+        density = density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+        self.density_x = density.lon.values.astype(np.float64)
+        self.density_y = density.lat.values.astype(np.float64)
+        self.density_z = density.depth.values.astype(np.float64)
+        self.density_t = density.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+        self.density_values = density.rho.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
         # particle initialization
         self.x0 = p0.lon.values.astype(np.float32)
         self.y0 = p0.lat.values.astype(np.float32)
         self.z0 = p0.depth.values.astype(np.float32)
         self.release_date = p0.release_date.values.astype('datetime64[s]').astype(np.float64)
         self.radius = p0.radius.values.astype(np.float64)
-        self.density = p0.density.values.astype(np.float64)
+        self.p_density = p0.density.values.astype(np.float64)
         self.corey_shape_factor = p0.corey_shape_factor.values.astype(np.float64)
         # advection time parameters
         self.start_time = np.float64(advect_time[0].timestamp())
@@ -100,9 +107,6 @@ class Kernel3D:
         self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
         self.vertical_eddy_diffusivity_z = eddy_diffusivity.z_vd.values.astype(np.float64)
         self.vertical_eddy_diffusivity_values = eddy_diffusivity.vertical_diffusivity.values.astype(np.float64)
-        # density profile
-        self.density_profile_z = density_profile.z_sd.values.astype(np.float64)
-        self.density_profile_values = density_profile.seawater_density.values.astype(np.float64)
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 
@@ -127,19 +131,19 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_z, d_wind_t, d_wind_U, d_wind_V, \
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,\
+            d_density_x, d_density_y, d_density_z, d_density_t, d_density_values, \
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_p_density, d_corey_shape_factor,\
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity,\
-            d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity,\
-            d_density_profile_z, d_density_profile_values = \
+            d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity = \
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
-              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density, self.corey_shape_factor,
+              self.density_x, self.density_y, self.density_t, self.density_z, self.density_values,
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.p_density, self.corey_shape_factor,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
               self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
-              self.density_profile_z, self.density_profile_values,
               ))
         d_X_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.X_out)
         d_Y_out = cl.Buffer(self.context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=self.Y_out)
@@ -161,12 +165,16 @@ class Kernel3D:
             d_wind_z,
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
-            d_x0, d_y0, d_z0, d_release_date, d_radius, d_density, d_corey_shape_factor,
+            d_density_x, np.uint32(len(self.density_x)),
+            d_density_y, np.uint32(len(self.density_y)),
+            d_density_z, np.uint32(len(self.density_z)),
+            d_density_t, np.uint32(len(self.density_t)),
+            d_density_values,
+            d_x0, d_y0, d_z0, d_release_date, d_radius, d_p_density, d_corey_shape_factor,
             np.uint32(self.advection_scheme), np.float64(self.windage_multiplier), np.uint32(self.wind_mixing_enabled),
             np.float64(self.max_wave_height), np.float64(self.wave_mixing_depth_factor),
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity, np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity, np.uint32(len(self.vertical_eddy_diffusivity_values)),
-            d_density_profile_z, d_density_profile_values, np.uint32(len(self.density_profile_values)),
             self.start_time, self.dt, self.ntimesteps, self.save_every,
             d_X_out, d_Y_out, d_Z_out,
             d_exit_codes
@@ -252,12 +260,23 @@ class Kernel3D:
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_t)
 
+        # check density field valid
+        assert max(self.density_x) <= 180
+        assert min(self.density_x) >= -180
+        assert 1 <= len(self.density_x) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced_ascending(self.density_x)
+        assert max(self.density_y) <= 90
+        assert min(self.density_y) >= -90
+        assert 1 <= len(self.density_y) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced_ascending(self.density_y)
+        assert max(self.density_z) <= 0
+        assert is_sorted_ascending(self.density_z)
+        assert 1 <= len(self.density_t) <= cl_const.UINT_MAX + 1
+        assert is_sorted_ascending(self.density_t)
+
         # check eddy diffusion valid
         assert is_sorted_ascending(self.horizontal_eddy_diffusivity_z)
         assert is_sorted_ascending(self.vertical_eddy_diffusivity_z)
-
-        # check density profile valid
-        assert is_sorted_ascending(self.density_profile_z)
 
         # check particle positions valid
         assert np.nanmax(self.x0) < 180
