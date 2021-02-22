@@ -42,13 +42,23 @@ __kernel void advect(
     const unsigned int wind_t_len,          // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,           // m / s, shape=(t, y, x) flattened, 32 bit to save space
     __global const float *wind_V,           // m / s
+    /* seawater density field */
+    __global const double *density_x,       // lon, Deg E (-180 to 180), uniform spacing, ascending,
+    const unsigned int density_x_len,       // 1 <= density_x_len <= UINT_MAX + 1
+    __global const double *density_y,       // lat, Deg N (-90 to 90), uniform spacing, ascending
+    const unsigned int density_y_len,       // 1 <= density_y_len <= UINT_MAX + 1
+    __global const double *density_z,       // depth, meters, positive up, sorted ascending
+    const unsigned int density_z_len,       // 1 <= density_z_len <= UINT_MAX + 1
+    __global const double *density_t,       // time, seconds since epoch, sorted ascending
+    const unsigned int density_t_len,       // 1 <= density_t_len <= UINT_MAX + 1
+    __global const float *density_values,        // kg m^-3, shape=(t, z, y, x) flattened, 32 bit to save space
     /* particle initialization */
     __global const float *x0,               // lon, Deg E (-180 to 180)
     __global const float *y0,               // lat, Deg N (-90 to 90)
     __global const float *z0,               // depth, m, positive up, <= 0
     __global const double *release_date,    // unix timestamp
     __global const double *radius,          // particle radius, m
-    __global const double *density,         // particle density, kg m^-3
+    __global const double *p_density,         // particle density, kg m^-3
     __global const double *corey_shape_factor,  // particle shape factor, unitless, must be in (.15, 1]
     /* physics */
     const unsigned int advection_scheme,
@@ -63,10 +73,6 @@ __kernel void advect(
     __global const double *vertical_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *vertical_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int vertical_eddy_diffusivity_len,
-    /* density profile */
-    __global const double *density_profile_z,  // depth coordinates, m, positive up, sorted ascending
-    __global const double *density_profile_values,    // density of seawater (kg m^-3)
-    const unsigned int density_profile_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -104,6 +110,15 @@ __kernel void advect(
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
 
+    field3d density = {.x = density_x, .y = density_y, .z = density_z, .t = density_t,
+                     .x_len = density_x_len, .y_len = density_y_len, .z_len = density_z_len, .t_len = density_t_len,
+                     .x_spacing = calculate_spacing(density_x, density_x_len),
+                     .y_spacing = calculate_spacing(density_y, density_y_len),
+                     .t_spacing = NAN,
+                     .U = density_values, .V = 0, .W = 0,
+                     .z_floor = calculate_coordinate_floor(density_z, density_z_len)};  // bottom edge of lowest layer
+    density.x_is_circular = x_is_circular(density);
+
     vertical_profile horizontal_eddy_diffusivity_profile = {
         .values = horizontal_eddy_diffusivity_values,
         .z = horizontal_eddy_diffusivity_z,
@@ -114,13 +129,8 @@ __kernel void advect(
         .z = vertical_eddy_diffusivity_z,
         .len = vertical_eddy_diffusivity_len};
 
-    vertical_profile density_profile = {
-        .values = density_profile_values,
-        .z = density_profile_z,
-        .len = density_profile_len};
-
     particle p = {
-        .id = global_id, .r = radius[global_id], .rho = density[global_id], .CSF = corey_shape_factor[global_id],
+        .id = global_id, .r = radius[global_id], .rho = p_density[global_id], .CSF = corey_shape_factor[global_id],
         .x = x0[global_id], .y = y0[global_id], .z = z0[global_id], .t = start_time};
 
     random_state rstate = {.a = ((unsigned int) p.id) + 1};  // for eddy diffusivity; must be unique across kernels, and nonzero.
@@ -161,7 +171,7 @@ __kernel void advect(
             displacement_meters = add(
                 displacement_meters,
                 wind_mixing_and_buoyancy_transport(
-                    p, wind, density_profile,
+                    p, wind, density,
                     max_wave_height, wave_mixing_depth_factor,
                     dt, &rstate, wind_mixing_enabled)
             );

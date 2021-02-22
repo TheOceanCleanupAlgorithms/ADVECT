@@ -140,7 +140,7 @@ class Kernel3D:
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
-              self.density_x, self.density_y, self.density_t, self.density_z, self.density_values,
+              self.density_x, self.density_y, self.density_z, self.density_t, self.density_values,
               self.x0, self.y0, self.z0, self.release_date, self.radius, self.p_density, self.corey_shape_factor,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
               self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
@@ -209,12 +209,16 @@ class Kernel3D:
                          self.current_U.nbytes + self.current_V.nbytes + self.current_W.nbytes)
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
-        particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.release_date.nbytes +
+        density_bytes = (self.density_x.nbytes + self.density_y.nbytes + self.density_z.nbytes + self.density_t.nbytes +
+                         self.density_values.nbytes)
+        particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.z0.nbytes + self.release_date.nbytes +
+                          self.p_density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
-        print(f'Particle Positions: {particle_bytes / 1e6:10.3f} MB')
-        print(f'Total:              {(current_bytes + wind_bytes + particle_bytes) / 1e6:10.3f} MB')
+        print(f'Density:            {density_bytes / 1e6:10.3f} MB')
+        print(f'Particle State: {particle_bytes / 1e6:10.3f} MB')
+        print(f'Total:              {(current_bytes + wind_bytes + density_bytes + particle_bytes) / 1e6:10.3f} MB')
         print('')
 
     def print_execution_time(self):
@@ -245,7 +249,7 @@ class Kernel3D:
         assert max(self.current_z) <= 0
         assert is_sorted_ascending(self.current_z)
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.current_t)
+        assert is_sorted_ascending(self.current_t)
 
         # check wind field valid
         assert max(self.wind_x) <= 180
@@ -258,7 +262,7 @@ class Kernel3D:
         assert is_uniformly_spaced_ascending(self.wind_y)
         assert len(self.wind_z) == 1
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.wind_t)
+        assert is_sorted_ascending(self.wind_t)
 
         # check density field valid
         assert max(self.density_x) <= 180

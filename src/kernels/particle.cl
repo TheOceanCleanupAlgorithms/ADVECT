@@ -81,7 +81,9 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
     neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
     neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
     neighbor.z_idx = find_nearest_neighbor_idx_non_uniform(p.z, field.z, field.z_len);
-    neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
+    neighbor.t_idx = isnan(field.t_spacing) ?
+        find_nearest_neighbor_idx_non_uniform(p.t, field.t, field.t_len) :
+        find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
     return neighbor;
 }
 

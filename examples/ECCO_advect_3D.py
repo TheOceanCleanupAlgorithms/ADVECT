@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
 
-sourcefile = 'sourcefiles/neutral.nc'
+sourcefile = 'sourcefiles/dense.nc'
 if __name__ == '__main__':
     out_paths = run_advector(
         output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme='taylor2',
         windage_multiplier=WINDAGE_MULTIPLIER,
-        wind_mixing_enabled=True,
+        wind_mixing_enabled=False,
         verbose=True,
         opencl_device=(0, 0),
         memory_utilization=.4,

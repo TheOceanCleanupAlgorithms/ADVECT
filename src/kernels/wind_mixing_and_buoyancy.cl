@@ -3,7 +3,7 @@
 #include "buoyancy.h"
 
 vector wind_mixing_and_buoyancy_transport(
-    particle p, field3d wind, vertical_profile density_profile,
+    particle p, field3d wind, field3d density,
     const double max_wave_height, const double wave_mixing_depth_factor,
     double dt, random_state *rstate, const bool wind_mixing_enabled) {
     /* p: the particle whose transport we're considering
@@ -18,7 +18,8 @@ vector wind_mixing_and_buoyancy_transport(
      */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 
-    double seawater_density = sample_profile(density_profile, p.z);
+    double seawater_density = find_nearest_vector(p, density, false).x;
+    // TODO this ^ will be nan if the particle gets outside the density grid; need a smarter function that finds nearest non-nan grid cell for better boundary handling
     double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density);
 
     vector nearest_wind = find_nearest_vector(p, wind, true);

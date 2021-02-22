@@ -12,7 +12,7 @@ the balance between these two forces than by treating them distinctly.
 #include "vertical_profile.h"
 
 vector wind_mixing_and_buoyancy_transport(
-    particle p, field3d wind, vertical_profile density_profile,
+    particle p, field3d wind, field3d density,
     const double max_wave_height, const double wave_mixing_depth_factor,
     double dt, random_state *rstate, const bool wind_mixing_enabled
 );

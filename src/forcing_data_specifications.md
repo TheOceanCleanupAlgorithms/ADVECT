@@ -19,7 +19,7 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
 | lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
 | depth | (depth) | numeric | depth of grid cell centers, meters, positive up (coordinate variable).  Values must be sorted but can have arbitrary spacing. |
-| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
+| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and ascending. |
 | U | (time, depth, lat, lon) | numeric | zonal component of velocity (m/s), positive east.
 | V | (time, depth, lat, lon) | numeric | meridional component of velocity (m/s), positive north. |
 | W | (time, depth, lat, lon) | numeric | vertical component of velocity (m/s), positive up. |
@@ -41,7 +41,7 @@ Must adhere to the following specifications:
 | --- | --- | --- | --- |
 | lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
 | lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
-| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
+| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and ascending. |
 | U | (lon, lat, time) | numeric | zonal component of velocity (m/s), positive east.
 | V | (lon, lat, time) | numeric | meridional component of velocity (m/s), positive north.
 
@@ -63,7 +63,7 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | lon | (lon) | numeric | longitude of grid cell centers, degrees E, domain [-180, 180) (coordinate variable).  Values must be sorted and equally spaced. |
 | lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
 | depth | (depth) | numeric | depth of grid cell centers, meters, positive up (coordinate variable).  Values must be sorted but can have arbitrary spacing. |
-| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and equally spaced. |
+| time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and ascending. |
 | rho | (time, depth, lat, lon) | numeric | seasonal density of seawater (kg m^-3)
 
 
