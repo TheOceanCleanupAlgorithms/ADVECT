@@ -28,7 +28,7 @@ def compare_HYCOM_GLORYS():
     HYCOM, HYCOM_W, HYCOM_W_coarse = load_HYCOM()
     GLORYS, GLORYS_W, GLORYS_W_coarse = load_GLORYS()
 
-    compare_Ws(HYCOM_W_coarse, "HYCOM_W", GLORYS_W_coarse, "GLORYS_W_coarse")
+    compare_Ws(HYCOM_W_coarse, "HYCOM_W_coarse", GLORYS_W_coarse, "GLORYS_W_coarse")
 
 
 def compare_Ws(W1, name1, W2, name2):
@@ -139,3 +139,9 @@ def load_HYCOM():
         ).mean()
 
     return HYCOM, HYCOM_W, HYCOM_W_coarse
+
+
+def plot_speed_vertical_profile(UV, name):
+    spd = (UV.U**2 + UV.V**2)**.5
+    prof = spd.mean(dim=['lat', 'lon'])
+    plt.plot(prof, prof.depth, label=name)
