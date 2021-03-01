@@ -25,5 +25,6 @@ unsigned int find_nearest_neighbor_idx_non_uniform(double value, __global const 
 double calculate_spacing(__global const double *arr, const unsigned int arr_len);
 double calculate_coordinate_floor(__global const double *arr, const unsigned int arr_len);
 bool x_is_circular(field3d field);
+vector find_nearby_non_null_vector(grid_point gp, field3d field);
 
 #endif // FIELDS

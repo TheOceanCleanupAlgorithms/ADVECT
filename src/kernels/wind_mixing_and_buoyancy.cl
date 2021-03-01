@@ -15,11 +15,15 @@ vector wind_mixing_and_buoyancy_transport(
      * return: displacement (m) due to both wind mixing and particle buoyancy
      *  which form an equilibrium in the near-surface.  Outside of the near-surface, only buoyancy transport
      *  is considered.
+     *  If density data cannot be found near for the particle, flags failure by returning a vector with NAN components.
      */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 
-    double seawater_density = find_nearest_vector(p, density, false).x;
-    // TODO this ^ will be nan if the particle gets outside the density grid; need a smarter function that finds nearest non-nan grid cell for better boundary handling
+    double seawater_density = find_nearby_non_null_vector(p, density).x;
+    if (isnan(seawater_density)) {
+        vector failure = {.x = NAN, .y = NAN, .z = NAN};
+        return failure;
+    }
     double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density);
 
     vector nearest_wind = find_nearest_vector(p, wind, true);

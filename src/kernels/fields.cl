@@ -78,3 +78,87 @@ bool x_is_circular(field3d field) {
     double tolerance = .001;
     return (fabs(constrain_longitude_to_valid_domain(field.x[field.x_len - 1] + field.x_spacing) - field.x[0]) < tolerance);
 }
+
+bool field_element_is_null(field3d field, grid_point gp) {
+    /* returns true if any component of the vector at gp in field is null, and the field defines that component.
+      I.e., the element containing vector v can be null even if v.z is nan, if field.W is not defined.*/
+    vector v = index_vector_field(field, gp, false);
+    return (
+        (isnan(v.x) && field.U != 0) ||
+        (isnan(v.y) && field.V != 0) ||
+        (isnan(v.z) && field.W != 0)
+    );
+}
+
+
+vector find_nearby_non_null_vector(grid_point gp, field3d field) {
+    /* This function returns some non-null vector from "field" which is nearby grid cell "gp".
+        It finds this nearby vector by exploring the x/y dimensions using an expanding cross/corners search.
+        Visual explanation, where the numbers represent the order in which each cell is explored:
+        ...                 ...
+            16     13    17
+                8  5  9
+            10  2  1  3  11
+                6  4  7
+            14     12    15
+        ...                 ...
+        There is no guarantee that the returned vector is the absolute closest vector,
+            but this sacrifices accuracy for speed, and is still a decent heuristic.
+        If this search explores the whole grid and finds no valid vectors, it returns a vector with NAN components.
+    */
+    // simplest case: element at gp is non-null
+    if (!field_element_is_null(field, gp)) {
+        return index_vector_field(field, gp, false);
+    }
+
+    // element at gp is null; we must explore the grid!
+    // we will explore outwards with radius "r", as far as guarantees we explore the whole grid extent
+    unsigned int max_radius = field.x_is_circular ?
+                              max(field.x_len / 2, field.y_len) :
+                              max(field.x_len, field.y_len);
+    for (unsigned int r = 1; r <= max_radius; r++) {
+        // try neighbors in longitude
+        for (int sign = -1; sign <= 1; sign += 2) {
+            long new_x = gp.x_idx + sign*r;
+            if (field.x_is_circular) {
+                new_x = (gp.x_idx + sign*r + field.x_len) % field.x_len;
+            } else {
+                new_x = gp.x_idx + sign*r;
+                if ((new_x < 0) || (new_x > field.x_len - 1)) continue;
+            }
+            grid_point gp_dx = {.x_idx = (unsigned int) new_x, .y_idx = gp.y_idx, .z_idx = gp.z_idx, .t_idx = gp.t_idx};
+            if (!field_element_is_null(field, gp_dx)) {
+                return index_vector_field(field, gp_dx, false);
+            }
+        }
+        // try neighbors in latitude
+        for (int sign = -1; sign <= 1; sign += 2) {
+            long new_y = gp.y_idx + sign*r;
+            if ((new_y < 0) || (new_y > field.y_len - 1)) continue;
+            grid_point gp_dy = {.x_idx = gp.x_idx, .y_idx = (unsigned int) new_y, .z_idx = gp.z_idx, .t_idx = gp.t_idx};
+            if (!field_element_is_null(field, gp_dy)) {
+                return index_vector_field(field, gp_dy, false);
+            }
+        }
+        for (int lon_sign = -1; lon_sign <= 1; lon_sign += 2) {
+            long new_x = gp.x_idx + lon_sign*r;
+            if (field.x_is_circular) {
+                new_x = (gp.x_idx + lon_sign*r + field.x_len) % field.x_len;
+            } else {
+                new_x = gp.x_idx + lon_sign*r;
+                if ((new_x < 0) || (new_x > field.x_len - 1)) continue;
+            }
+            for (int lat_sign = -1; lat_sign <= 1; lat_sign += 2) {
+                long new_y = gp.y_idx + lat_sign*r;
+                if ((new_y < 0) || (new_y > field.y_len - 1)) continue;
+                grid_point gp_corner = {.x_idx = (unsigned int) new_x, .y_idx = (unsigned int) new_y,
+                                        .z_idx = gp.z_idx, .t_idx = gp.t_idx};
+                if (!field_element_is_null(field, gp_corner)) {
+                    return index_vector_field(field, gp_corner, false);
+                }
+            }
+        }
+    }
+    vector failure = {.x = NAN, .y = NAN, .z = NAN};
+    return failure;
+}
