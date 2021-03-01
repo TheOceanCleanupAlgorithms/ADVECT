@@ -12,7 +12,7 @@ OPTIONAL_VARIABLES_WITH_DEFAULTS = {
 def unpack_configfile(configfile_path: str) -> Tuple[xr.Dataset, float, float]:
     """
     :param configfile_path: path to configfile
-    return: (eddy diffusivity, density profile, max wave height, wave mixing depth factor)
+    return: (eddy diffusivity, max wave height, wave mixing depth factor)
     """
     configfile = xr.open_dataset(configfile_path)
     for var in EDDY_DIFFUSIVITY_VARIABLES:

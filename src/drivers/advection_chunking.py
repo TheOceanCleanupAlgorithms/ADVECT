@@ -13,7 +13,7 @@ def chunk_advection_params(
     device_bytes: int,
     current: xr.Dataset,
     wind: xr.Dataset,
-    density: xr.Dataset,
+    seawater_density: xr.Dataset,
     num_particles: int,
     advect_time: pd.DatetimeIndex,
     save_every: int,
@@ -23,11 +23,13 @@ def chunk_advection_params(
     # each element of out_time marks a time at which the driver will return particle position
 
     # estimate total size of memory we need to eventually run through the device
-    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(current=current,
-                                                                wind=wind,
-                                                                density=density,
-                                                                num_particles=num_particles,
-                                                                out_timesteps=len(out_time) - 1)
+    field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(
+        current=current,
+        wind=wind,
+        seawater_density=seawater_density,
+        num_particles=num_particles,
+        out_timesteps=len(out_time) - 1,
+    )
 
     num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))  # minimum chunking to potentially fit RAM
 
@@ -49,34 +51,40 @@ def chunk_advection_params(
         # give subsequent time chunks overlapping endpoints.  This is because the final reported value
         # from a computation will be fed to the next computation as the start point, at the same time.
 
-        advect_time_chunks = [advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
-                              for out_time_chunk in out_time_chunks]
-
-        current_chunks = [current.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-                          for out_time_chunk in out_time_chunks]
-        wind_chunks = [wind.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-                       for out_time_chunk in out_time_chunks]
-        density_chunks = [density.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-                          for out_time_chunk in out_time_chunks]
-
+        advect_time_chunks = [
+            advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
+            for out_time_chunk in out_time_chunks
+        ]
+        current_chunks = [
+            current.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
+            for out_time_chunk in out_time_chunks
+        ]
+        wind_chunks = [
+            wind.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
+            for out_time_chunk in out_time_chunks
+        ]
+        seawater_density_chunks = [
+            seawater_density.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
+            for out_time_chunk in out_time_chunks
+        ]
         if all(sum(estimate_memory_bytes(current=current_chunk,
                                          wind=wind_chunk,
-                                         density=density_chunk,
+                                         seawater_density=seawater_density_chunk,
                                          num_particles=num_particles,
                                          out_timesteps=len(out_time_chunk)-1)) < device_bytes
-               for current_chunk, wind_chunk, density_chunk, out_time_chunk in zip(current_chunks, wind_chunks, density_chunks, out_time_chunks)):
+               for current_chunk, wind_chunk, seawater_density_chunk, out_time_chunk in zip(current_chunks, wind_chunks, seawater_density_chunks, out_time_chunks)):
             break
         num_chunks += 1
 
-    return advect_time_chunks, current_chunks, wind_chunks, density_chunks
+    return advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks
 
 
 def estimate_memory_bytes(
     current: xr.Dataset,
     wind: xr.Dataset,
-    density: xr.Dataset,
+    seawater_density: xr.Dataset,
     num_particles: int,
-    out_timesteps: int
+    out_timesteps: int,
 ) -> Tuple[int, int, int]:
     """This estimates total memory needed for the buffers.
     There's a bit more needed for the scalar arguments, but this is tiny"""
@@ -84,9 +92,11 @@ def estimate_memory_bytes(
                      8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))  # the 4 64-bit coordinate arrays
     wind_bytes = (2 * 4 * np.prod(wind.U.shape, dtype=np.int64) +  # two 32-bit fields
                   8 * (len(wind.lon) + len(wind.lat) + len(wind.time)))  # the 3 64-bit coordinate arrays
-    density_bytes = (1 * 4 * np.prod(density.rho.shape, dtype=np.int64) +
-                     8 * (len(current.lon) + len(current.lat) + len(current.depth) + len(current.time)))
+    seawater_density_bytes = (
+        1 * 4 * np.prod(seawater_density.rho.shape, dtype=np.int64) +
+        8 * (len(seawater_density.lon) + len(seawater_density.lat) + len(seawater_density.depth) + len(seawater_density.time))
+    )
     output_bytes = (3 * 4 * num_particles * out_timesteps +  # three 32-bit variables for each particle for each timestep
                     1 * num_particles)  # one byte holding error code for each particle
     p0_bytes = 3 * 4 * num_particles  # three 32-bit variables for each particle
-    return (current_bytes + wind_bytes + density_bytes), output_bytes, p0_bytes
+    return (current_bytes + wind_bytes + seawater_density_bytes), output_bytes, p0_bytes

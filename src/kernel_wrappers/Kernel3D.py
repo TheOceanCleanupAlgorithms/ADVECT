@@ -31,7 +31,7 @@ class Kernel3D:
             self,
             current: xr.Dataset,
             wind: xr.Dataset,
-            density: xr.Dataset,
+            seawater_density: xr.Dataset,
             p0: xr.Dataset,
             advect_time: pd.DatetimeIndex,
             save_every: int,
@@ -72,13 +72,13 @@ class Kernel3D:
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
         self.wind_z = np.zeros(1, dtype=np.float64)  # to indicate surface wind
-        # density vector field
-        density = density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
-        self.density_x = density.lon.values.astype(np.float64)
-        self.density_y = density.lat.values.astype(np.float64)
-        self.density_z = density.depth.values.astype(np.float64)
-        self.density_t = density.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-        self.density_values = density.rho.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+        # seawater_density vector field
+        seawater_density = seawater_density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+        self.seawater_density_x = seawater_density.lon.values.astype(np.float64)
+        self.seawater_density_y = seawater_density.lat.values.astype(np.float64)
+        self.seawater_density_z = seawater_density.depth.values.astype(np.float64)
+        self.seawater_density_t = seawater_density.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+        self.seawater_density_values = seawater_density.rho.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
         # particle initialization
         self.x0 = p0.lon.values.astype(np.float32)
         self.y0 = p0.lat.values.astype(np.float32)
@@ -131,7 +131,8 @@ class Kernel3D:
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
             d_wind_x, d_wind_y, d_wind_z, d_wind_t, d_wind_U, d_wind_V, \
-            d_density_x, d_density_y, d_density_z, d_density_t, d_density_values, \
+            d_seawater_density_x, d_seawater_density_y, d_seawater_density_z, d_seawater_density_t, \
+            d_seawater_density_values, \
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_p_density, d_corey_shape_factor,\
             d_horizontal_eddy_diffusivity_z, d_horizontal_eddy_diffusivity,\
             d_vertical_eddy_diffusivity_z, d_vertical_eddy_diffusivity = \
@@ -140,7 +141,8 @@ class Kernel3D:
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W,
               self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
-              self.density_x, self.density_y, self.density_z, self.density_t, self.density_values,
+              self.seawater_density_x, self.seawater_density_y, self.seawater_density_z, self.seawater_density_t,
+              self.seawater_density_values,
               self.x0, self.y0, self.z0, self.release_date, self.radius, self.p_density, self.corey_shape_factor,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
               self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
@@ -165,11 +167,11 @@ class Kernel3D:
             d_wind_z,
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
-            d_density_x, np.uint32(len(self.density_x)),
-            d_density_y, np.uint32(len(self.density_y)),
-            d_density_z, np.uint32(len(self.density_z)),
-            d_density_t, np.uint32(len(self.density_t)),
-            d_density_values,
+            d_seawater_density_x, np.uint32(len(self.seawater_density_x)),
+            d_seawater_density_y, np.uint32(len(self.seawater_density_y)),
+            d_seawater_density_z, np.uint32(len(self.seawater_density_z)),
+            d_seawater_density_t, np.uint32(len(self.seawater_density_t)),
+            d_seawater_density_values,
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_p_density, d_corey_shape_factor,
             np.uint32(self.advection_scheme), np.float64(self.windage_multiplier), np.uint32(self.wind_mixing_enabled),
             np.float64(self.max_wave_height), np.float64(self.wave_mixing_depth_factor),
@@ -209,16 +211,19 @@ class Kernel3D:
                          self.current_U.nbytes + self.current_V.nbytes + self.current_W.nbytes)
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
                       self.wind_U.nbytes + self.wind_V.nbytes)
-        density_bytes = (self.density_x.nbytes + self.density_y.nbytes + self.density_z.nbytes + self.density_t.nbytes +
-                         self.density_values.nbytes)
+        seawater_density_bytes = (
+            self.seawater_density_x.nbytes + self.seawater_density_y.nbytes +
+            self.seawater_density_z.nbytes + self.seawater_density_t.nbytes +
+            self.seawater_density_values.nbytes
+        )
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.z0.nbytes + self.release_date.nbytes +
                           self.p_density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
-        print(f'Density:            {density_bytes / 1e6:10.3f} MB')
-        print(f'Particle State: {particle_bytes / 1e6:10.3f} MB')
-        print(f'Total:              {(current_bytes + wind_bytes + density_bytes + particle_bytes) / 1e6:10.3f} MB')
+        print(f'Seawater Density:   {seawater_density_bytes / 1e6:10.3f} MB')
+        print(f'Particle State:     {particle_bytes / 1e6:10.3f} MB')
+        print(f'Total:              {(current_bytes + wind_bytes + seawater_density_bytes + particle_bytes) / 1e6:10.3f} MB')
         print('')
 
     def print_execution_time(self):
@@ -264,19 +269,19 @@ class Kernel3D:
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_sorted_ascending(self.wind_t)
 
-        # check density field valid
-        assert max(self.density_x) <= 180
-        assert min(self.density_x) >= -180
-        assert 1 <= len(self.density_x) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.density_x)
-        assert max(self.density_y) <= 90
-        assert min(self.density_y) >= -90
-        assert 1 <= len(self.density_y) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.density_y)
-        assert max(self.density_z) <= 0
-        assert is_sorted_ascending(self.density_z)
-        assert 1 <= len(self.density_t) <= cl_const.UINT_MAX + 1
-        assert is_sorted_ascending(self.density_t)
+        # check seawater density field valid
+        assert max(self.seawater_density_x) <= 180
+        assert min(self.seawater_density_x) >= -180
+        assert 1 <= len(self.seawater_density_x) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced_ascending(self.seawater_density_x)
+        assert max(self.seawater_density_y) <= 90
+        assert min(self.seawater_density_y) >= -90
+        assert 1 <= len(self.seawater_density_y) <= cl_const.UINT_MAX + 1
+        assert is_uniformly_spaced_ascending(self.seawater_density_y)
+        assert max(self.seawater_density_z) <= 0
+        assert is_sorted_ascending(self.seawater_density_z)
+        assert 1 <= len(self.seawater_density_t) <= cl_const.UINT_MAX + 1
+        assert is_sorted_ascending(self.seawater_density_t)
 
         # check eddy diffusion valid
         assert is_sorted_ascending(self.horizontal_eddy_diffusivity_z)

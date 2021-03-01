@@ -64,7 +64,7 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | lat | (lat) | numeric | latitude of grid cell centers, degrees E, domain [-90, 90] (coordinate variable).  Values must be sorted and equally spaced. |
 | depth | (depth) | numeric | depth of grid cell centers, meters, positive up (coordinate variable).  Values must be sorted but can have arbitrary spacing. |
 | time | (time) | datetime (CF- or ISO-compliant) | time coordinate of field (coordinate variable). Values must be sorted and ascending. |
-| rho | (time, depth, lat, lon) | numeric | seasonal density of seawater (kg m^-3)
+| rho | (time, depth, lat, lon) | numeric | density of seawater (kg m^-3)
 
 
 Notes:

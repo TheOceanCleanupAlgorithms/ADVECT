@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
 
-sourcefile = 'sourcefiles/dense.nc'
+sourcefile = 'sourcefiles/neutral.nc'
 if __name__ == '__main__':
     out_paths = run_advector(
         output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
@@ -20,7 +20,7 @@ if __name__ == '__main__':
         w_water_path='ECCO/ECCO_interp/W_2015*.nc',
         u_wind_path='ncep_ncar_doe_ii/uwnd.10m.gauss.2015.nc',
         v_wind_path='ncep_ncar_doe_ii/vwnd.10m.gauss.2015.nc',
-        density_path='ECCO/ECCO_interp/RHO_2015.nc',
+        seawater_density_path='ECCO/ECCO_interp/RHO_2015.nc',
         wind_varname_map={'uwnd': 'U', 'vwnd': 'V'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         save_period=24,
         advection_scheme='taylor2',
         windage_multiplier=WINDAGE_MULTIPLIER,
-        wind_mixing_enabled=False,
+        wind_mixing_enabled=True,
         verbose=True,
         opencl_device=(0, 0),
         memory_utilization=.4,

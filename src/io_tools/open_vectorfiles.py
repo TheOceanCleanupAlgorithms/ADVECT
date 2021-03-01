@@ -45,9 +45,9 @@ def open_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optio
     )
 
 
-def open_density(density_path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
+def open_seawater_density(path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
     return open_3d_field(
-        paths=[density_path],
+        paths=[path],
         varnames={"rho"},
         variable_mapping=variable_mapping,
     )

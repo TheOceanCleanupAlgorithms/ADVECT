@@ -17,7 +17,7 @@ from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
-from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_currents, open_density
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_currents, open_seawater_density
 
 
 def run_advector(
@@ -27,7 +27,7 @@ def run_advector(
     u_water_path: str,
     v_water_path: str,
     w_water_path: str,
-    density_path: str,
+    seawater_density_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -35,7 +35,7 @@ def run_advector(
     save_period: int = 1,
     sourcefile_varname_map: dict = None,
     water_varname_map: dict = None,
-    density_varname_map: dict = None,
+    seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: str = None,
@@ -58,7 +58,7 @@ def run_advector(
         See forcing_data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
     :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
-    :param density_path: wildcard path to the seawater density files.
+    :param seawater_density_path: wildcard path to the seawater seawater_density files.
         See forcing_data_specifications.md for data requirements.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
         Any particles which are scheduled to be released prior to this date will be released at this date.
@@ -73,7 +73,7 @@ def run_advector(
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
         forcing_data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
-    :param density_varname_map: mapping from names in density files to standard names.  See 'sourcefile_varname_map'.
+    :param seawater_density_varname_map: mapping from names in seawater_density files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -109,8 +109,8 @@ def run_advector(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
-    density = open_density(
-        density_path=density_path, variable_mapping=density_varname_map,
+    seawater_density = open_seawater_density(
+        path=seawater_density_path, variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
@@ -137,7 +137,7 @@ def run_advector(
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
-        density=density,
+        seawater_density=seawater_density,
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,

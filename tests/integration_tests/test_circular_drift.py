@@ -51,7 +51,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
          "vertical_diffusivity": ("z_vd", ([0]))},  # neutral buoyancy
         coords={"z_hd": [0], "z_vd": [0]}
     )
-    density = xr.Dataset(
+    seawater_density = xr.Dataset(
         {"rho": (["lat", "lon", "depth", "time"], np.full((1, 1, 1, 1), p0.density[0]))},
         coords={
             "lon": [0],
@@ -72,7 +72,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
                      advect_time=time, save_every=save_every,
                      advection_scheme=scheme,
                      eddy_diffusivity=eddy_diffusivity,
-                     density=density,
+                     seawater_density=seawater_density,
                      max_wave_height=0, wave_mixing_depth_factor=0,
                      windage_multiplier=None, wind_mixing_enabled=False,
                      context=cl.create_some_context()).execute().squeeze()

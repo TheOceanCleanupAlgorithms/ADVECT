@@ -19,7 +19,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 def openCL_advect(
     current: xr.Dataset,
     wind: xr.Dataset,
-    density: xr.Dataset,
+    seawater_density: xr.Dataset,
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
@@ -40,7 +40,7 @@ def openCL_advect(
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
-    :param density: xarray Dataset storing seawater density field.
+    :param seawater_density: xarray Dataset storing seawater density field.
     :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
@@ -72,19 +72,19 @@ def openCL_advect(
 
     # get the minimum RAM available on the specified compute devices.
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
-    advect_time_chunks, current_chunks, wind_chunks, density_chunks = \
+    advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks = \
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
                                wind=wind,
-                               density=density,
+                               seawater_density=seawater_density,
                                num_particles=num_particles,
                                advect_time=advect_time,
                                save_every=save_every)
 
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
-    for i, (advect_time_chunk, current_chunk, wind_chunk, density_chunk) \
-            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, density_chunks)):
+    for i, (advect_time_chunk, current_chunk, wind_chunk, seawater_density_chunk) \
+            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
@@ -94,7 +94,7 @@ def openCL_advect(
             kernel = Kernel3D(
                 current=current_chunk,
                 wind=wind_chunk,
-                density=density_chunk,
+                seawater_density=seawater_density_chunk,
                 p0=p0_chunk,
                 advection_scheme=advection_scheme,
                 eddy_diffusivity=eddy_diffusivity,

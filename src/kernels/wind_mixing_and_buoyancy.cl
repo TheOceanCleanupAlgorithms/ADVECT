@@ -3,7 +3,7 @@
 #include "buoyancy.h"
 
 vector wind_mixing_and_buoyancy_transport(
-    particle p, field3d wind, field3d density,
+    particle p, field3d wind, field3d seawater_density,
     const double max_wave_height, const double wave_mixing_depth_factor,
     double dt, random_state *rstate, const bool wind_mixing_enabled) {
     /* p: the particle whose transport we're considering
@@ -19,12 +19,12 @@ vector wind_mixing_and_buoyancy_transport(
      */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 
-    double seawater_density = find_nearby_non_null_vector(p, density).x;
-    if (isnan(seawater_density)) {
+    double seawater_density_near_p = find_nearby_non_null_vector(p, seawater_density).x;
+    if (isnan(seawater_density_near_p)) {
         vector failure = {.x = NAN, .y = NAN, .z = NAN};
         return failure;
     }
-    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density);
+    double vertical_velocity = buoyancy_vertical_velocity(p.r, p.rho, p.CSF, seawater_density_near_p);
 
     vector nearest_wind = find_nearest_vector(p, wind, true);
     double wind_speed_10m = magnitude(nearest_wind);
