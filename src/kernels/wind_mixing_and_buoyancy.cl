@@ -15,7 +15,7 @@ vector wind_mixing_and_buoyancy_transport(
      * return: displacement (m) due to both wind mixing and particle buoyancy
      *  which form an equilibrium in the near-surface.  Outside of the near-surface, only buoyancy transport
      *  is considered.
-     *  If density data cannot be found near for the particle, flags failure by returning a vector with NAN components.
+     *  If density data cannot be found nearby the particle, flags failure by returning a vector with NAN components.
      */
     vector transport_meters = {.x = 0, .y = 0, .z = 0};
 

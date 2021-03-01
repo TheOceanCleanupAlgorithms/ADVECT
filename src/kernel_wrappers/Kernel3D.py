@@ -85,7 +85,7 @@ class Kernel3D:
         self.z0 = p0.depth.values.astype(np.float32)
         self.release_date = p0.release_date.values.astype('datetime64[s]').astype(np.float64)
         self.radius = p0.radius.values.astype(np.float64)
-        self.p_density = p0.density.values.astype(np.float64)
+        self.density = p0.density.values.astype(np.float64)
         self.corey_shape_factor = p0.corey_shape_factor.values.astype(np.float64)
         # advection time parameters
         self.start_time = np.float64(advect_time[0].timestamp())
@@ -143,7 +143,7 @@ class Kernel3D:
               self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
               self.seawater_density_x, self.seawater_density_y, self.seawater_density_z, self.seawater_density_t,
               self.seawater_density_values,
-              self.x0, self.y0, self.z0, self.release_date, self.radius, self.p_density, self.corey_shape_factor,
+              self.x0, self.y0, self.z0, self.release_date, self.radius, self.density, self.corey_shape_factor,
               self.horizontal_eddy_diffusivity_z, self.horizontal_eddy_diffusivity_values,
               self.vertical_eddy_diffusivity_z, self.vertical_eddy_diffusivity_values,
               ))
@@ -217,7 +217,7 @@ class Kernel3D:
             self.seawater_density_values.nbytes
         )
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.z0.nbytes + self.release_date.nbytes +
-                          self.p_density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
+                          self.density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
         print(f'Current:            {current_bytes / 1e6:10.3f} MB')
         print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')

@@ -13,7 +13,7 @@
 #include "wind_mixing_and_buoyancy.cl"
 
 enum ExitCode {
-    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, DENSITY_LOOKUP_FAILURE = 3, INVALID_ADVECTION_SCHEME = -1
+    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, SEAWATER_DENSITY_LOOKUP_FAILURE = 3, INVALID_ADVECTION_SCHEME = -1
 };
 // positive codes are considered non-fatal, and are reported in outputfiles;
 // negative codes are considered fatal, cause host-program termination, and are reserved for internal use.
@@ -173,7 +173,7 @@ __kernel void advect(
                 p, wind, seawater_density, max_wave_height, wave_mixing_depth_factor, dt, &rstate, wind_mixing_enabled
             );
             if (isnan(wind_mixing_and_buoyancy.x) && isnan(wind_mixing_and_buoyancy.y) && isnan(wind_mixing_and_buoyancy.z)) {
-                exit_code[global_id] = DENSITY_LOOKUP_FAILURE;
+                exit_code[global_id] = SEAWATER_DENSITY_LOOKUP_FAILURE;
                 return;
             }
             displacement_meters = add(displacement_meters, wind_mixing_and_buoyancy);
