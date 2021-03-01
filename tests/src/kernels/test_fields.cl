@@ -34,7 +34,7 @@ __kernel void test_field_element_is_null(
 }
 
 
-__kernel void test_find_nearby_non_null_vector(
+__kernel void test_double_cross_search(
     /* vector field */
     __global const double *x, const unsigned int x_len,
     __global const double *y, const unsigned int y_len,
@@ -62,7 +62,7 @@ __kernel void test_find_nearby_non_null_vector(
         .z_idx = z_idx,
         .t_idx = t_idx,
     };
-    vector nearby = find_nearby_non_null_vector(gp, field);
+    vector nearby = double_cross_search(gp, field);
     out[0] = nearby.x;
     out[1] = nearby.y;
     out[2] = nearby.z;

@@ -151,7 +151,7 @@ def test_field_element_is_null():
     assert not field_element_is_null(gp, UVW_undefined)
 
 
-def find_nearby_non_null_vector(gp: dict, field: dict, modular_x: bool = False) -> np.ndarray:
+def double_cross_search(gp: dict, field: dict, modular_x: bool = False) -> np.ndarray:
     """
     :param gp: grid point, keys {'x_idx', 'y_idx', 'z_idx', 't_idx}, values are ints
     :param field: 3d vector field, keys {'x', 'y', 'z', 't', 'U', 'V', 'W'}, values are ndarrays
@@ -161,7 +161,7 @@ def find_nearby_non_null_vector(gp: dict, field: dict, modular_x: bool = False) 
     out = np.zeros(3).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
 
-    CL_PROGRAM.test_find_nearby_non_null_vector(
+    CL_PROGRAM.test_double_cross_search(
         CL_QUEUE, (1,), None,
         d_field['x'], np.uint32(len(field['x'])),
         d_field['y'], np.uint32(len(field['y'])),
@@ -182,7 +182,7 @@ def find_nearby_non_null_vector(gp: dict, field: dict, modular_x: bool = False) 
     return out
 
 
-def test_find_nearby_non_null_vector():
+def test_double_cross_search():
     zero_gp = {'x_idx': 0, 'y_idx': 0, 'z_idx': 0, 't_idx': 0}
 
     # test singleton field with valid element at origin
@@ -191,14 +191,14 @@ def test_find_nearby_non_null_vector():
         'U': np.zeros(1),
     }
     np.testing.assert_array_equal(
-        find_nearby_non_null_vector(gp=zero_gp, field=valid_singleton_field),
+        double_cross_search(gp=zero_gp, field=valid_singleton_field),
         [0, np.nan, np.nan],
     )
 
     # test singleton field with invalid element at origin
     invalid_singleton_field = dict(valid_singleton_field, U=np.full(1, np.nan))
     np.testing.assert_array_equal(
-        find_nearby_non_null_vector(gp=zero_gp, field=invalid_singleton_field),
+        double_cross_search(gp=zero_gp, field=invalid_singleton_field),
         [np.nan, np.nan, np.nan],
     )
 
@@ -220,7 +220,7 @@ def test_find_nearby_non_null_vector():
         }
         for x, y, value in valids:
             empty_field['U'][y, x] = value
-        return find_nearby_non_null_vector(gp=origin, field=empty_field, modular_x=modular_x)[0]
+        return double_cross_search(gp=origin, field=empty_field, modular_x=modular_x)[0]
 
     for modular_x in (True, False):
         # check one above

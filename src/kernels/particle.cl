@@ -91,6 +91,10 @@ vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
     return index_vector_field(field, find_nearest_neighbor(p, field), zero_nans);
 }
 
+vector find_nearby_non_null_vector(particle p, field3d field) {
+    return double_cross_search(find_nearest_neighbor(p, field), field);
+}
+
 bool in_ocean(particle p, field3d field) {
     /* where'er you find the vector nan to be,
        you sure as heck can bet this ain't the sea.

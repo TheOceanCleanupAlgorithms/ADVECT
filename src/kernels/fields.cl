@@ -1,6 +1,8 @@
 #include "fields.h"
 #include "geography.h"
 
+bool field_element_is_null(field3d field, grid_point gp);
+
 unsigned int find_nearest_neighbor_idx(double value, __global const double *arr, const unsigned int arr_len, const double spacing) {
     /* assumptions:
         -- arr is sorted with uniform spacing.  Actually works on ascending or descending sorted arr.
@@ -91,7 +93,7 @@ bool field_element_is_null(field3d field, grid_point gp) {
 }
 
 
-vector find_nearby_non_null_vector(grid_point gp, field3d field) {
+vector double_cross_search(grid_point gp, field3d field) {
     /* This function returns some non-null vector from "field" which is nearby grid cell "gp".
         It finds this nearby vector by exploring the x/y dimensions using an expanding cross/corners search.
         Visual explanation, where the numbers represent the order in which each cell is explored:

@@ -167,7 +167,6 @@ __kernel void advect(
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }
 
-            // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
             vector wind_mixing_and_buoyancy = wind_mixing_and_buoyancy_transport(
                 p, wind, density, max_wave_height, wave_mixing_depth_factor, dt, &rstate, wind_mixing_enabled
             );

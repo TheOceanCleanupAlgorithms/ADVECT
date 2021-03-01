@@ -29,6 +29,7 @@ __kernel void test_taylor2(
                      .x_len = field_x_len, .y_len = field_y_len, .z_len = field_z_len, .t_len = field_t_len,
                      .x_spacing = calculate_spacing(field_x, field_x_len),
                      .y_spacing = calculate_spacing(field_y, field_y_len),
+                     .t_spacing = calculate_spacing(field_t, field_t_len),
                      .U = field_U, .V = field_V, .W = field_W,
                      .z_floor = calculate_coordinate_floor(field_z, field_z_len)};  // bottom edge of lowest layer
 
