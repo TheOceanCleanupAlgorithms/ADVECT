@@ -254,7 +254,7 @@ class Kernel3D:
         assert max(self.current_z) <= 0
         assert is_sorted_ascending(self.current_z)
         assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
-        assert is_sorted_ascending(self.current_t)
+        assert is_uniformly_spaced_ascending(self.current_t)
 
         # check wind field valid
         assert max(self.wind_x) <= 180
@@ -267,7 +267,7 @@ class Kernel3D:
         assert is_uniformly_spaced_ascending(self.wind_y)
         assert len(self.wind_z) == 1
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
-        assert is_sorted_ascending(self.wind_t)
+        assert is_uniformly_spaced_ascending(self.wind_t)
 
         # check seawater density field valid
         assert max(self.seawater_density_x) <= 180
