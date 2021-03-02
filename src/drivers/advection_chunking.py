@@ -55,18 +55,10 @@ def chunk_advection_params(
             advect_time[(out_time_chunk[0] <= advect_time) & (advect_time <= out_time_chunk[-1])]
             for out_time_chunk in out_time_chunks
         ]
-        current_chunks = [
-            current.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-            for out_time_chunk in out_time_chunks
-        ]
-        wind_chunks = [
-            wind.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-            for out_time_chunk in out_time_chunks
-        ]
-        seawater_density_chunks = [
-            seawater_density.sel(time=slice(out_time_chunk[0], out_time_chunk[-1]))
-            for out_time_chunk in out_time_chunks
-        ]
+        current_chunks = chunk_dataset(current, out_time_chunks)
+        wind_chunks = chunk_dataset(wind, out_time_chunks)
+        seawater_density_chunks = chunk_dataset(seawater_density, out_time_chunks)
+
         if all(sum(estimate_memory_bytes(current=current_chunk,
                                          wind=wind_chunk,
                                          seawater_density=seawater_density_chunk,
@@ -100,3 +92,18 @@ def estimate_memory_bytes(
                     1 * num_particles)  # one byte holding error code for each particle
     p0_bytes = 3 * 4 * num_particles  # three 32-bit variables for each particle
     return (current_bytes + wind_bytes + seawater_density_bytes), output_bytes, p0_bytes
+
+
+def chunk_dataset(dataset: xr.Dataset, out_time_chunks: List[pd.DatetimeIndex]) -> List[xr.Dataset]:
+    """
+    Returns a list of slices from dataset, corresponding to the data needed for each chunk in out_time_chunks
+    :param dataset: xarray Dataset with a "time" coordinate
+    :param out_time_chunks: a sequence of timestamps which each define the output times of a computation
+    :return:
+    """
+    dataset_chunks = []
+    for out_time in out_time_chunks:
+        start_time = dataset.time.sel(time=out_time[0], method='nearest')
+        end_time = dataset.time.sel(time=out_time[-1], method='nearest')
+        dataset_chunks.append(dataset.sel(time=slice(start_time, end_time)))  # this slice is guaranteed to be at least length 1
+    return dataset_chunks
