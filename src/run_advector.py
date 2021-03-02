@@ -5,7 +5,7 @@ To use, create a python script within this repo, import this file, and execute. 
     run_advector(...)
 See examples/HYCOM_advect_2d.py for an example usage.
 See function docstring below for detailed descriptions of all arguments.
-See src/data_specifications.md for detailed description of data format requirements.
+See src/forcing_data_specifications.md for detailed description of data format requirements.
 """
 
 import datetime
@@ -17,7 +17,7 @@ from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
-from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_3D_vectorfield
+from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_currents, open_seawater_density
 
 
 def run_advector(
@@ -27,6 +27,7 @@ def run_advector(
     u_water_path: str,
     v_water_path: str,
     w_water_path: str,
+    seawater_density_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -34,6 +35,7 @@ def run_advector(
     save_period: int = 1,
     sourcefile_varname_map: dict = None,
     water_varname_map: dict = None,
+    seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: str = None,
@@ -46,16 +48,18 @@ def run_advector(
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
     :param configfile_path: path to the configfile netcdf file.
         See config_specifications.md for details
     :param output_directory: directory which will be populated with the outfiles.
         Existing files in this directory may be overwritten.
-        See data_specifications.md for outputfile format details.
+        See forcing_data_specifications.md for outputfile format details.
     :param u_water_path: wildcard path to the zonal current files.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
     :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
+    :param seawater_density_path: wildcard path to the seawater seawater_density files.
+        See forcing_data_specifications.md for data requirements.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
         Any particles which are scheduled to be released prior to this date will be released at this date.
     :param timestep: python timedelta object denoting the duration of each advection timestep.
@@ -67,8 +71,9 @@ def run_advector(
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
+        forcing_data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
+    :param seawater_density_varname_map: mapping from names in seawater_density files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -100,8 +105,12 @@ def run_advector(
         variable_mapping=sourcefile_varname_map,
     )
 
-    currents = open_3D_vectorfield(
+    currents = open_currents(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
+    )
+
+    seawater_density = open_seawater_density(
+        path=seawater_density_path, variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
@@ -113,7 +122,7 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
 
-    eddy_diffusivity, density_profile, max_wave_height, wave_mixing_depth_factor \
+    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
         = unpack_configfile(configfile_path=configfile_path)
 
     output_writer = OutputWriter(
@@ -128,6 +137,7 @@ def run_advector(
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
+        seawater_density=seawater_density,
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,
@@ -136,7 +146,6 @@ def run_advector(
         save_every=save_period,
         advection_scheme=scheme_enum,
         eddy_diffusivity=eddy_diffusivity,
-        density_profile=density_profile,
         max_wave_height=max_wave_height,
         wave_mixing_depth_factor=wave_mixing_depth_factor,
         windage_multiplier=windage_multiplier,

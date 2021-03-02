@@ -19,6 +19,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 def openCL_advect(
     current: xr.Dataset,
     wind: xr.Dataset,
+    seawater_density: xr.Dataset,
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
@@ -27,7 +28,6 @@ def openCL_advect(
     save_every: int,
     advection_scheme: AdvectionScheme,
     eddy_diffusivity: xr.Dataset,
-    density_profile: xr.Dataset,
     max_wave_height: float,
     wave_mixing_depth_factor: float,
     windage_multiplier: Optional[float],
@@ -40,6 +40,7 @@ def openCL_advect(
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
     :param current: xarray Dataset storing current vector field/axes.
     :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
+    :param seawater_density: xarray Dataset storing seawater density field.
     :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
@@ -52,6 +53,7 @@ def openCL_advect(
     :param max_wave_height: caps parameterization in kernel; see config_specifications.md
     :param wave_mixing_depth_factor: scales depth of mixing in kernel; see config_specifications.md
     :param windage_multiplier: multiplies the default windage, which is based on emerged area
+    :param wind_mixing_enabled: toggle the wind mixing functionality
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :param verbose: determines whether to print buffer sizes and timing results
@@ -70,31 +72,32 @@ def openCL_advect(
 
     # get the minimum RAM available on the specified compute devices.
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
-    advect_time_chunks, current_chunks, wind_chunks = \
+    advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks = \
         chunk_advection_params(device_bytes=available_RAM,
                                current=current,
                                wind=wind,
+                               seawater_density=seawater_density,
                                num_particles=num_particles,
                                advect_time=advect_time,
                                save_every=save_every)
 
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
-    for i, (advect_time_chunk, current_chunk, wind_chunk) \
-            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks)):
+    for i, (advect_time_chunk, current_chunk, wind_chunk, seawater_density_chunk) \
+            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
         # create the kernel wrapper object, pass it arguments
         with ProgressBar():
-            print(f'  Loading currents and wind...')   # these get implicitly loaded when .values is called on current_chunk variables
+            print(f'  Loading forcing data...')   # these get implicitly loaded when .values is called on current_chunk variables
             kernel = Kernel3D(
                 current=current_chunk,
                 wind=wind_chunk,
+                seawater_density=seawater_density_chunk,
                 p0=p0_chunk,
                 advection_scheme=advection_scheme,
                 eddy_diffusivity=eddy_diffusivity,
-                density_profile=density_profile,
                 max_wave_height=max_wave_height,
                 wave_mixing_depth_factor=wave_mixing_depth_factor,
                 windage_multiplier=windage_multiplier,

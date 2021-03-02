@@ -3,28 +3,22 @@ from typing import Tuple
 import xarray as xr
 
 EDDY_DIFFUSIVITY_VARIABLES = {"z_hd", "horizontal_diffusivity", "z_vd", "vertical_diffusivity"}
-DENSITY_PROFILE_VARIABLES = {"z_sd", "seawater_density"}
 OPTIONAL_VARIABLES_WITH_DEFAULTS = {
     "max_wave_height": 20,  # meters
     "wave_mixing_depth_factor": 10,  # unitless
 }
 
 
-def unpack_configfile(configfile_path: str) -> Tuple[xr.Dataset, xr.Dataset, float, float]:
+def unpack_configfile(configfile_path: str) -> Tuple[xr.Dataset, float, float]:
     """
     :param configfile_path: path to configfile
-    return: (eddy diffusivity, density profile, max wave height, wave mixing depth factor)
+    return: (eddy diffusivity, max wave height, wave mixing depth factor)
     """
     configfile = xr.open_dataset(configfile_path)
     for var in EDDY_DIFFUSIVITY_VARIABLES:
         assert var in configfile.variables, f"configfile {configfile_path} missing variable '{var}'"
     eddy_diffusivity = configfile[list(EDDY_DIFFUSIVITY_VARIABLES)]
     eddy_diffusivity = eddy_diffusivity.sortby(["z_hd", "z_vd"], ascending=True)
-
-    for var in DENSITY_PROFILE_VARIABLES:
-        assert var in configfile.variables, f"configfile {configfile_path} missing variable '{var}'"
-    density_profile = configfile[list(DENSITY_PROFILE_VARIABLES)]
-    density_profile = density_profile.sortby(["z_sd"], ascending=True)
 
     if "max_wave_height" in configfile.variables:
         max_wave_height = float(configfile["max_wave_height"])
@@ -36,4 +30,4 @@ def unpack_configfile(configfile_path: str) -> Tuple[xr.Dataset, xr.Dataset, flo
     else:
         wave_mixing_depth_factor = OPTIONAL_VARIABLES_WITH_DEFAULTS["wave_mixing_depth_factor"]
 
-    return eddy_diffusivity, density_profile, max_wave_height, wave_mixing_depth_factor
+    return eddy_diffusivity, max_wave_height, wave_mixing_depth_factor

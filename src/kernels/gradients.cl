@@ -1,6 +1,9 @@
 #include "gradients.h"
 #include "geography.h"
 
+vector calculate_partial(grid_point lower, grid_point higher, double spacing, field3d field);
+bool in_domain(double position, __global const double *dim, const unsigned int dim_len);
+
 /*
     Derivatives are calculated as a finite difference between the two grid points which the particle lies between
         along a given coordinate.  Derivative exactly at gridpoint defined as gradient just above gridpoint (statistically unimportant).

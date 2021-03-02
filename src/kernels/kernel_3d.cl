@@ -13,7 +13,7 @@
 #include "wind_mixing_and_buoyancy.cl"
 
 enum ExitCode {
-    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, INVALID_ADVECTION_SCHEME = -1
+    SUCCESS = 0, NULL_LOCATION = 1, INVALID_LATITUDE = 2, SEAWATER_DENSITY_LOOKUP_FAILURE = 3, INVALID_ADVECTION_SCHEME = -1
 };
 // positive codes are considered non-fatal, and are reported in outputfiles;
 // negative codes are considered fatal, cause host-program termination, and are reserved for internal use.
@@ -42,6 +42,16 @@ __kernel void advect(
     const unsigned int wind_t_len,          // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,           // m / s, shape=(t, y, x) flattened, 32 bit to save space
     __global const float *wind_V,           // m / s
+    /* seawater density field */
+    __global const double *seawater_density_x,       // lon, Deg E (-180 to 180), uniform spacing, ascending,
+    const unsigned int seawater_density_x_len,       // 1 <= seawater_density_x_len <= UINT_MAX + 1
+    __global const double *seawater_density_y,       // lat, Deg N (-90 to 90), uniform spacing, ascending
+    const unsigned int seawater_density_y_len,       // 1 <= seawater_density_y_len <= UINT_MAX + 1
+    __global const double *seawater_density_z,       // depth, meters, positive up, sorted ascending
+    const unsigned int seawater_density_z_len,       // 1 <= seawater_density_z_len <= UINT_MAX + 1
+    __global const double *seawater_density_t,       // time, seconds since epoch, sorted ascending
+    const unsigned int seawater_density_t_len,       // 1 <= seawater_density_t_len <= UINT_MAX + 1
+    __global const float *seawater_density_values,        // kg m^-3, shape=(t, z, y, x) flattened, 32 bit to save space
     /* particle initialization */
     __global const float *x0,               // lon, Deg E (-180 to 180)
     __global const float *y0,               // lat, Deg N (-90 to 90)
@@ -63,10 +73,6 @@ __kernel void advect(
     __global const double *vertical_eddy_diffusivity_z,  // depth coordinates, m, positive up, sorted ascending
     __global const double *vertical_eddy_diffusivity_values,    // m^2 s^-1
     const unsigned int vertical_eddy_diffusivity_len,
-    /* density profile */
-    __global const double *density_profile_z,  // depth coordinates, m, positive up, sorted ascending
-    __global const double *density_profile_values,    // density of seawater (kg m^-3)
-    const unsigned int density_profile_len,
     /* advection time parameters */
     const double start_time,                // unix timestamp
     const double dt,                        // seconds
@@ -104,6 +110,17 @@ __kernel void advect(
                     .z_floor = 0};
     wind.x_is_circular = x_is_circular(wind);
 
+    field3d seawater_density = {
+        .x = seawater_density_x, .y = seawater_density_y, .z = seawater_density_z, .t = seawater_density_t,
+        .x_len = seawater_density_x_len, .y_len = seawater_density_y_len, .z_len = seawater_density_z_len, .t_len = seawater_density_t_len,
+        .x_spacing = calculate_spacing(seawater_density_x, seawater_density_x_len),
+        .y_spacing = calculate_spacing(seawater_density_y, seawater_density_y_len),
+        .t_spacing = NAN,
+        .U = seawater_density_values, .V = 0, .W = 0,
+        .z_floor = calculate_coordinate_floor(seawater_density_z, seawater_density_z_len),  // bottom edge of lowest layer
+    };
+    seawater_density.x_is_circular = x_is_circular(seawater_density);
+
     vertical_profile horizontal_eddy_diffusivity_profile = {
         .values = horizontal_eddy_diffusivity_values,
         .z = horizontal_eddy_diffusivity_z,
@@ -113,11 +130,6 @@ __kernel void advect(
         .values = vertical_eddy_diffusivity_values,
         .z = vertical_eddy_diffusivity_z,
         .len = vertical_eddy_diffusivity_len};
-
-    vertical_profile density_profile = {
-        .values = density_profile_values,
-        .z = density_profile_z,
-        .len = density_profile_len};
 
     particle p = {
         .id = global_id, .r = radius[global_id], .rho = density[global_id], .CSF = corey_shape_factor[global_id],
@@ -157,14 +169,14 @@ __kernel void advect(
                 displacement_meters = add(displacement_meters, windage_meters(p, wind, dt, windage_multiplier));
             }
 
-            // currently, wind mixing always enabled if there's wind data.  A separate flag could be passed instead...
-            displacement_meters = add(
-                displacement_meters,
-                wind_mixing_and_buoyancy_transport(
-                    p, wind, density_profile,
-                    max_wave_height, wave_mixing_depth_factor,
-                    dt, &rstate, wind_mixing_enabled)
+            vector wind_mixing_and_buoyancy = wind_mixing_and_buoyancy_transport(
+                p, wind, seawater_density, max_wave_height, wave_mixing_depth_factor, dt, &rstate, wind_mixing_enabled
             );
+            if (isnan(wind_mixing_and_buoyancy.x) && isnan(wind_mixing_and_buoyancy.y) && isnan(wind_mixing_and_buoyancy.z)) {
+                exit_code[global_id] = SEAWATER_DENSITY_LOOKUP_FAILURE;
+                return;
+            }
+            displacement_meters = add(displacement_meters, wind_mixing_and_buoyancy);
 
             p = update_position_no_beaching(p, displacement_meters, current);
 

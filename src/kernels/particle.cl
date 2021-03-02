@@ -81,12 +81,18 @@ grid_point find_nearest_neighbor(particle p, field3d field) {
     neighbor.x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing);
     neighbor.y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing);
     neighbor.z_idx = find_nearest_neighbor_idx_non_uniform(p.z, field.z, field.z_len);
-    neighbor.t_idx = find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
+    neighbor.t_idx = isnan(field.t_spacing) ?
+        find_nearest_neighbor_idx_non_uniform(p.t, field.t, field.t_len) :
+        find_nearest_neighbor_idx(p.t, field.t, field.t_len, field.t_spacing);
     return neighbor;
 }
 
 vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
     return index_vector_field(field, find_nearest_neighbor(p, field), zero_nans);
+}
+
+vector find_nearby_non_null_vector(particle p, field3d field) {
+    return double_cross_search(find_nearest_neighbor(p, field), field);
 }
 
 bool in_ocean(particle p, field3d field) {

@@ -12,10 +12,8 @@ dependencies:
   - pyopencl
   - matplotlib
   - cartopy
-  - scipy
   - tqdm
   - click
   - ecco_v4_py
   - pytest
-  - scipy
 prefix: /opt/miniconda3/envs/ADVECTOR
