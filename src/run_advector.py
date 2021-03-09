@@ -39,6 +39,7 @@ def run_advector(
     wind_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
     verbose: bool = False,
+    water_desampling_res: Optional[float] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -105,7 +106,7 @@ def run_advector(
         source_file_type=sourcefile_format_enum,
     )
     currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map
+        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map, desampling_res=water_desampling_res
     )
 
     if u_wind_path is not None and v_wind_path is not None:
