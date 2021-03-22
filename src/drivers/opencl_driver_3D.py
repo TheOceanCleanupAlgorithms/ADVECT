@@ -10,6 +10,7 @@ import pandas as pd
 
 from typing import Tuple, Optional, List
 from dask.diagnostics import ProgressBar
+from tqdm import tqdm
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
@@ -84,7 +85,7 @@ def openCL_advect(
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
     for i, (advect_time_chunk, current_chunk, wind_chunk, seawater_density_chunk) \
-            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)):
+            in tqdm(enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)), total=len(advect_time_chunks)):
         print(f'Chunk {i+1:3}/{len(current_chunks)}: '
               f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
 
