@@ -17,7 +17,12 @@ from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
-from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_currents, open_seawater_density
+from io_tools.open_vectorfiles import (
+    open_2D_vectorfield,
+    empty_2D_vectorfield,
+    open_currents,
+    open_seawater_density,
+)
 
 
 def run_advector(
@@ -31,7 +36,7 @@ def run_advector(
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
-    advection_scheme: str = 'taylor2',
+    advection_scheme: str = "taylor2",
     save_period: int = 1,
     sourcefile_varname_map: dict = None,
     water_varname_map: dict = None,
@@ -93,28 +98,43 @@ def run_advector(
     :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
+    print("---INITIALIZING DATASETS---")
     arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
-        raise ValueError(f"Invalid argument advection_scheme; must be one of "
-                         f"{set(scheme.name for scheme in AdvectionScheme)}.")
+        raise ValueError(
+            f"Invalid argument advection_scheme; must be one of "
+            f"{set(scheme.name for scheme in AdvectionScheme)}."
+        )
 
+    print("Opening Sourcefiles...")
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
     )
 
+    print("Opening Ocean Current Files...")
     currents = open_currents(
-        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
+        u_path=u_water_path,
+        v_path=v_water_path,
+        w_path=w_water_path,
+        variable_mapping=water_varname_map,
+        verbose=verbose,
     )
 
+    print("Opening Seawater Density Files...")
     seawater_density = open_seawater_density(
-        path=seawater_density_path, variable_mapping=seawater_density_varname_map,
+        path=seawater_density_path,
+        variable_mapping=seawater_density_varname_map,
+        verbose=verbose,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
-        assert windage_multiplier is not None, "Wind data must be accompanied by windage coefficient."
+        print("Opening Wind Files...")
+        assert (
+            windage_multiplier is not None
+        ), "Wind data must be accompanied by windage coefficient."
         wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
@@ -122,8 +142,10 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
 
-    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
-        = unpack_configfile(configfile_path=configfile_path)
+    print("Opening Configfile...")
+    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor = unpack_configfile(
+        configfile_path=configfile_path
+    )
 
     output_writer = OutputWriter(
         out_dir=Path(output_directory),
@@ -134,6 +156,7 @@ def run_advector(
         arguments_to_run_advector=arguments,
     )
 
+    print("---INITIATING ADVECTION---")
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
