@@ -92,7 +92,7 @@ vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
 }
 
 vector find_nearby_non_null_vector(particle p, field3d field) {
-    return double_cross_search(find_nearest_neighbor(p, field), field);
+    return double_jack_search(find_nearest_neighbor(p, field), field);
 }
 
 bool in_ocean(particle p, field3d field) {
