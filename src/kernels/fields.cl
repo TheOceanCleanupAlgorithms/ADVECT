@@ -93,17 +93,19 @@ bool field_element_is_null(field3d field, grid_point gp) {
 }
 
 
-vector double_cross_search(grid_point gp, field3d field) {
+vector double_jack_search(grid_point gp, field3d field) {
     /* This function returns some non-null vector from "field" which is nearby grid cell "gp".
-        It finds this nearby vector by exploring the x/y dimensions using an expanding cross/corners search.
+        It finds this nearby vector by exploring the x/y dimensions straight outward, and in diagonals, and exploring
+          the dimension straight outward.  In 3D this shape is a bit like a Toy Jack, but with two extra axes in the x/y
+          dimensions.  Hence, the Double Jack.
         Visual explanation, where the numbers represent the order in which each cell is explored:
-        ...                 ...
-            16     13    17
-                8  5  9
-            10  2  1  3  11
-                6  4  7
-            14     12    15
-        ...                 ...
+        ...                 ...                    ...                 ...
+            18     15    19       ^ y                         21               ^ z
+                8  5  9           |                           11               |
+            12  2  1  3  13          --> x             12  2  1  3  13          --> x
+                6  4  7                                       10
+            16     14    17                                   20
+        ...                 ...                    ...                 ...
         There is no guarantee that the returned vector is the absolute closest vector,
             but this sacrifices accuracy for speed, and is still a decent heuristic.
         If this search explores the whole grid and finds no valid vectors, it returns a vector with NAN components.
@@ -115,9 +117,10 @@ vector double_cross_search(grid_point gp, field3d field) {
 
     // element at gp is null; we must explore the grid!
     // we will explore outwards with radius "r", as far as guarantees we explore the whole grid extent
-    unsigned int max_radius = field.x_is_circular ?
-                              max(field.x_len / 2, field.y_len) :
-                              max(field.x_len, field.y_len);
+    unsigned int max_radius = max(
+        field.x_is_circular ? field.x_len / 2 : field.x_len,
+        max(field.y_len, field.z_len)
+    );
     for (unsigned int r = 1; r <= max_radius; r++) {
         // try neighbors in longitude
         for (int sign = -1; sign <= 1; sign += 2) {
@@ -142,6 +145,7 @@ vector double_cross_search(grid_point gp, field3d field) {
                 return index_vector_field(field, gp_dy, false);
             }
         }
+        // try corners
         for (int lon_sign = -1; lon_sign <= 1; lon_sign += 2) {
             long new_x = gp.x_idx + lon_sign*r;
             if (field.x_is_circular) {
@@ -158,6 +162,15 @@ vector double_cross_search(grid_point gp, field3d field) {
                 if (!field_element_is_null(field, gp_corner)) {
                     return index_vector_field(field, gp_corner, false);
                 }
+            }
+        }
+        // try neighbors in depth
+        for (int sign = -1; sign <= 1; sign += 2) {
+            long new_z = gp.z_idx + sign*r;
+            if ((new_z < 0) || (new_z > field.z_len - 1)) continue;
+            grid_point gp_dz = {.x_idx = gp.x_idx, .y_idx = gp.y_idx, .z_idx = (unsigned int) new_z, .t_idx = gp.t_idx};
+            if (!field_element_is_null(field, gp_dz)) {
+                return index_vector_field(field, gp_dz, false);
             }
         }
     }

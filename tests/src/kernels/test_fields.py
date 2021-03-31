@@ -151,7 +151,7 @@ def test_field_element_is_null():
     assert not field_element_is_null(gp, UVW_undefined)
 
 
-def double_cross_search(gp: dict, field: dict, modular_x: bool = False) -> np.ndarray:
+def double_jack_search(gp: dict, field: dict, modular_x: bool = False) -> np.ndarray:
     """
     :param gp: grid point, keys {'x_idx', 'y_idx', 'z_idx', 't_idx}, values are ints
     :param field: 3d vector field, keys {'x', 'y', 'z', 't', 'U', 'V', 'W'}, values are ndarrays
@@ -161,7 +161,7 @@ def double_cross_search(gp: dict, field: dict, modular_x: bool = False) -> np.nd
     out = np.zeros(3).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
 
-    CL_PROGRAM.test_double_cross_search(
+    CL_PROGRAM.test_double_jack_search(
         CL_QUEUE, (1,), None,
         d_field['x'], np.uint32(len(field['x'])),
         d_field['y'], np.uint32(len(field['y'])),
@@ -182,7 +182,7 @@ def double_cross_search(gp: dict, field: dict, modular_x: bool = False) -> np.nd
     return out
 
 
-def test_double_cross_search():
+def test_double_jack_search():
     zero_gp = {'x_idx': 0, 'y_idx': 0, 'z_idx': 0, 't_idx': 0}
 
     # test singleton field with valid element at origin
@@ -191,14 +191,14 @@ def test_double_cross_search():
         'U': np.zeros(1),
     }
     np.testing.assert_array_equal(
-        double_cross_search(gp=zero_gp, field=valid_singleton_field),
+        double_jack_search(gp=zero_gp, field=valid_singleton_field),
         [0, np.nan, np.nan],
     )
 
     # test singleton field with invalid element at origin
     invalid_singleton_field = dict(valid_singleton_field, U=np.full(1, np.nan))
     np.testing.assert_array_equal(
-        double_cross_search(gp=zero_gp, field=invalid_singleton_field),
+        double_jack_search(gp=zero_gp, field=invalid_singleton_field),
         [np.nan, np.nan, np.nan],
     )
 
@@ -220,14 +220,14 @@ def test_double_cross_search():
         }
         for x, y, value in valids:
             empty_field['U'][y, x] = value
-        return double_cross_search(gp=origin, field=empty_field, modular_x=modular_x)[0]
+        return double_jack_search(gp=origin, field=empty_field, modular_x=modular_x)[0]
 
     for modular_x in (True, False):
-        # check one above
+        # check one north
         assert not np.isnan(seek_a_point(origin=(4, 2), valids=[(4, 3, 0)], modular_x=modular_x))
-        # check one to the right
+        # check one east
         assert not np.isnan(seek_a_point(origin=(4, 2), valids=[(5, 2, 0)], modular_x=modular_x))
-        # check one down/left
+        # check one southwest
         assert not np.isnan(seek_a_point(origin=(4, 2), valids=[(3, 1, 0)], modular_x=modular_x))
         # check one far away
         assert not np.isnan(seek_a_point(origin=(0, 0), valids=[(10, 0, 0)], modular_x=modular_x))
@@ -240,6 +240,14 @@ def test_double_cross_search():
     # test modular x axis; point across modular divide should be closer
     assert seek_a_point(origin=(0, 2), valids=[(3, 2, 0), (10, 2, 1)], modular_x=True) == 1
 
-
-
-test_field_element_is_null()
+    # check one above
+    depth_field = {
+        'x': np.linspace(-10, 10, 11), 'y': np.linspace(-4, 4, 5),
+        'z': np.linspace(-2, 2, 5), 't': np.zeros(1),
+        'U': np.full((5, 5, 11), np.nan)
+    }
+    origin = dict(x_idx=5, y_idx=4, z_idx=1, t_idx=0)
+    depth_field["U"][2, 4, 5] = 0  # find point above
+    assert double_jack_search(gp=origin, field=depth_field)[0] == 0
+    depth_field["U"][0, 4, 5] = 1  # find point below before point above
+    assert double_jack_search(gp=origin, field=depth_field)[0] == 1
