@@ -100,11 +100,11 @@ vector double_jack_search(grid_point gp, field3d field) {
           dimensions.  Hence, the Double Jack.
         Visual explanation, where the numbers represent the order in which each cell is explored:
         ...                 ...                    ...                 ...
-            18     15    19       ^ y                         20               ^ z
-                8  5  9           |                           10               |
+            18     15    19       ^ y                         21               ^ z
+                8  5  9           |                           11               |
             12  2  1  3  13          --> x             12  2  1  3  13          --> x
-                6  4  7                                       11
-            16     14    17                                   21
+                6  4  7                                       10
+            16     14    17                                   20
         ...                 ...                    ...                 ...
         There is no guarantee that the returned vector is the absolute closest vector,
             but this sacrifices accuracy for speed, and is still a decent heuristic.

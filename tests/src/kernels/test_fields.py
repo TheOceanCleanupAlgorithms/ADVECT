@@ -251,6 +251,3 @@ def test_double_jack_search():
     assert double_jack_search(gp=origin, field=depth_field)[0] == 0
     depth_field["U"][0, 4, 5] = 1  # find point below before point above
     assert double_jack_search(gp=origin, field=depth_field)[0] == 1
-
-
-test_double_jack_search()
