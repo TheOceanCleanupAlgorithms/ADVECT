@@ -141,8 +141,8 @@ def handle_errors(chunk: xr.Dataset, chunk_num: int):
         bad_codes = np.unique(chunk.exit_code[chunk.exit_code != 0])
         logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
                       f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in bad_codes]}")
-        for i, code in enumerate(chunk.exit_code[chunk.exit_code != 0].values):
-            logging.warning(f"Chunk {chunk_num: 3}: Particle ID {chunk.p_id.values[i]} exited with error code {code}.")
+        for code in chunk.exit_code[chunk.exit_code != 0]:
+            logging.warning(f"Chunk {chunk_num: 3}: Particle ID {int(code.p_id)} exited with error code {int(code)}.")
     if np.any(chunk.exit_code < 0):
         raise ValueError(f"Fatal error encountered, error code(s) "
                          f"{np.unique(chunk.exit_code[chunk.exit_code < 0])}; aborting")
