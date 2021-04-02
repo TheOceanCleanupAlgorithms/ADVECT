@@ -112,7 +112,7 @@ def openCL_advect(current: xr.Dataset,
 
         p0_chunk = P_chunk.isel(time=-1).to_dataframe().reset_index()  # move p_id from index to column
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-1], ['lat', 'lon']] = p0[['lat', 'lon']]
+        p0_chunk.loc[p0_chunk.release_date > advect_time_chunk[-2], ['lat', 'lon']] = p0[['lat', 'lon']]
 
     return writer.paths
 
