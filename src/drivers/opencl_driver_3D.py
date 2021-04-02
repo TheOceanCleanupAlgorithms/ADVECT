@@ -120,7 +120,7 @@ def openCL_advect(
 
         p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        unreleased = p0_chunk.release_date > advect_time_chunk[-1]
+        unreleased = p0_chunk.release_date > advect_time_chunk[-2]
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
