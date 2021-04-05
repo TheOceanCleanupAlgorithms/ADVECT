@@ -19,3 +19,5 @@ Source files contain the initial state of particles, and are encoded as netcdf d
 | density | (p_id) | numeric | density of particle (kg m^-3) |
 | corey_shape_factor | (p_id) | numeric | Represents the shape of the particle.  Defined as c/sqrt(a*b), where a, b, and c are the longest, intermediate, and shortest perpendicular dimensions of the particle. |
 | release_date | (p_id) | datetime (CF- or ISO-compliant) | timestamp at which particle enters simulation |
+
+Additional variables may be present.  If they have dimensions `(p_id)`, they will be copied to the outputfile unchanged; otherwise they will be discarded.  This feature can be useful to add additional silent information to particles, such as their country of origin.
