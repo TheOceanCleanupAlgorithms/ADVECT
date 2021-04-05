@@ -107,7 +107,7 @@ class OutputWriter:
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
 
-            # Variables that don't change between chunks
+            # Variables along only the static dimension, p_id
             p_id = ds.createVariable("p_id", chunk.p_id.dtype, ("p_id",))
             p_id[:] = chunk.p_id.values
 
@@ -124,7 +124,26 @@ class OutputWriter:
             density.units = "kg m^-3"
             density[:] = chunk.density.values.astype(np.float64)
 
-            # Variables that expand/change between chunks
+            corey_shape_factor = ds.createVariable("corey_shape_factor", np.float64, ("p_id",))
+            corey_shape_factor.units = "unitless"
+            corey_shape_factor[:] = chunk.corey_shape_factor.values.astype(np.float64)
+
+            exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
+            exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
+                                    "kernel must be terminated.  Their semantic meaning is provided in the " \
+                                    "'code_to_meaning' attribute of this variable."
+            exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
+            exit_code[:] = chunk.exit_code.values.astype(np.byte)
+
+            # any other variables along only p_id should be copied over as well...
+            dims_except_p_id = [dim for dim in chunk.dims if dim != "p_id"]
+            for varname in chunk.drop_dims(dims_except_p_id).variables:
+                if varname not in ds.variables:
+                    ds.createVariable(varname, chunk[varname].dtype, ("p_id",))
+                    ds[varname].setncatts(chunk[varname].attrs)
+                    ds[varname][:] = chunk[varname].values
+
+            # Variables that expand between chunks
             time = ds.createVariable("time", np.float64, ("time",))
             time.units = "seconds since 1970-01-01 00:00:00.0"
             time.calendar = "gregorian"
@@ -142,13 +161,6 @@ class OutputWriter:
             depth.units = "meters"
             depth.positive = "up"
             depth[:] = chunk.depth.values
-
-            exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
-            exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
-                                    "kernel must be terminated.  Their semantic meaning is provided in the " \
-                                    "'code_to_meaning' attribute of this variable."
-            exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
-            exit_code[:] = chunk.exit_code.values
 
     def _append_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
