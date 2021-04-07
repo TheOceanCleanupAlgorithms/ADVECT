@@ -302,7 +302,6 @@ class Kernel3D:
 
         # issue warning if wind timestep is smaller than one day
         if np.any(np.diff(self.wind_t) < pd.Timedelta(days=1).total_seconds()):
-            print(np.diff(self.wind_t)/3600)
             warnings.warn(
                 "Timestep of wind data is less than a day.  The kernel assumes a fully developed sea state from each "
                 "wind datum; short timesteps mean this is a bad assumption.  Use wind data averaged over a longer "
