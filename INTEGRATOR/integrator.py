@@ -26,9 +26,7 @@ def generate_vertical_velocity(
     :return: xarray DataArray containing vertical current, 'W'; same coordinates as UV.
     """
     # load density profile
-    rho_profile = xr.open_dataarray(
-        Path(__file__).parent / "seawater_density_profile.nc"
-    )
+    rho_profile = xr.open_dataarray(Path(__file__).parent / "seawater_density_profile.nc")
 
     # check assumptions about data coordinates
     np.testing.assert_allclose(

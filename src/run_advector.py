@@ -10,19 +10,14 @@ See src/forcing_data_specifications.md for detailed description of data format r
 
 import datetime
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple
 
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
-from io_tools.open_vectorfiles import (
-    open_2D_vectorfield,
-    empty_2D_vectorfield,
-    open_currents,
-    open_seawater_density,
-)
+from io_tools.open_vectorfiles import *
 
 
 def run_advector(
@@ -36,16 +31,16 @@ def run_advector(
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
-    advection_scheme: str = "taylor2",
+    advection_scheme: str = 'taylor2',
     save_period: int = 1,
-    sourcefile_varname_map: dict = None,
-    water_varname_map: dict = None,
-    seawater_density_varname_map: dict = None,
+    sourcefile_varname_map: dict = {},
+    water_varname_map: dict = {},
+    seawater_density_varname_map: dict = {},
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: str = None,
     v_wind_path: str = None,
-    wind_varname_map: dict = None,
+    wind_varname_map: dict = {},
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
     verbose: bool = False,
@@ -103,10 +98,8 @@ def run_advector(
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
-        raise ValueError(
-            f"Invalid argument advection_scheme; must be one of "
-            f"{set(scheme.name for scheme in AdvectionScheme)}."
-        )
+        raise ValueError(f"Invalid argument advection_scheme; must be one of "
+                         f"{set(scheme.name for scheme in AdvectionScheme)}.")
 
     print("Opening Sourcefiles...")
     p0 = open_sourcefiles(
@@ -132,9 +125,7 @@ def run_advector(
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Opening Wind Files...")
-        assert (
-            windage_multiplier is not None
-        ), "Wind data must be accompanied by windage coefficient."
+        assert windage_multiplier is not None, "Wind data must be accompanied by windage coefficient."
         wind = open_2D_vectorfield(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
