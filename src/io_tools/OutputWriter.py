@@ -1,5 +1,4 @@
 import os
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -84,10 +83,11 @@ class OutputWriter:
                 "from the first zonal wind file in the dataset."
             )
             if self.wind_meta is not None:
-                with tempfile.NamedTemporaryFile() as tmp:
-                    self.wind_meta.to_netcdf(tmp.name)  # save xr.Dataset to temp file
-                    with netCDF4.Dataset(tmp.name, mode="r") as wind_meta:  # so we can open it with netCDF4
-                        copy_dataset(wind_meta, wind_meta_group)
+                tmp_wind_path = self.folder_path / "wind_meta_tmp.nc"
+                self.wind_meta.to_netcdf(tmp_wind_path)  # save xr.Dataset to temp file
+                with netCDF4.Dataset(tmp_wind_path, mode="r") as wind_meta:  # so we can open it with netCDF4
+                    copy_dataset(wind_meta, wind_meta_group)
+                os.remove(tmp_wind_path)
 
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.title = "Trajectories of Floating Marine Debris"
