@@ -37,6 +37,8 @@ We will only give detailed specifications on the contents of the root group, as 
 | density | (p_id) | float64 | density of particle, kg m^-3 |
 | exit_code | (p_id) | uint8 | relays information about any non-fatal errors encountered during kernel execution. See below. |
 
+Additional variables with dimensions `(p_id)` may be present, copied from the sourcefile.  See sourcefile_specifications.md.
+
 #### Exit Codes
 
 | Code | Semantic Name | Description |
