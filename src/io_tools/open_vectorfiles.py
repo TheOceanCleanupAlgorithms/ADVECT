@@ -4,13 +4,28 @@ import xarray as xr
 import glob
 import dask
 import numpy as np
+from dask.diagnostics import ProgressBar
 
 
 def open_3d_field(paths: List[str], varnames: Set[str], variable_mapping: Optional[dict]):
-    vectors = xr.merge(
-        (xr.open_mfdataset(sorted(glob.glob(path)), data_vars="minimal", parallel=True) for path in paths),
-        combine_attrs="override"
-    )  # use first file's attributes
+    if variable_mapping is None:
+        variable_mapping = {}
+    concat_dim = next(
+        (key for key, value in variable_mapping.items() if value == "time"), "time"
+    )
+    with ProgressBar():
+        vectors = xr.merge(
+            (
+                xr.open_mfdataset(
+                    sorted(glob.glob(path)),
+                    data_vars="minimal",
+                    parallel=True,
+                    concat_dim=concat_dim,
+                )
+                for path in paths
+            ),
+            combine_attrs="override",
+        )  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[list(varnames)]  # drop any additional variables
     assert set(vectors.dims) == {'lat', 'lon', 'time', 'depth'}, f"Unexpected/missing dimension(s) ({vectors.dims})"
@@ -25,8 +40,7 @@ def open_3d_field(paths: List[str], varnames: Set[str], variable_mapping: Option
     # convert positive-down depth to positive-up if necessary
     if np.all(vectors.depth >= 0):
         vectors['depth'] = -1 * vectors.depth
-
-    with dask.config.set(**{'array.slicing.split_large_chunks': True}):
+    with dask.config.set(**{'array.slicing.split_large_chunks': False}):
         vectors = vectors.sortby('depth', ascending=True)  # depth required to be ascending sorted
     return vectors
 
@@ -59,9 +73,22 @@ def open_2D_vectorfield(u_path: str, v_path: str, variable_mapping: Optional[dic
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
-    U = xr.open_mfdataset(sorted(glob.glob(u_path)), data_vars="minimal", parallel=True)
-    V = xr.open_mfdataset(sorted(glob.glob(v_path)), data_vars="minimal", parallel=True)
-    vectors = xr.merge((U, V), combine_attrs="override")  # use first file's attributes
+    if variable_mapping is None:
+        variable_mapping = {}
+    concat_dim = next((key for key, value in variable_mapping.items() if value == "time"), "time")
+    with ProgressBar():
+        vectors = xr.merge(
+            (
+                xr.open_mfdataset(
+                    sorted(glob.glob(path)),
+                    data_vars="minimal",
+                    parallel=True,
+                    concat_dim=concat_dim,
+                )
+                for path in (u_path, v_path)
+            ),
+            combine_attrs="override",
+        )  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[['U', 'V']]  # drop any additional variables
     vectors = vectors.squeeze()  # remove any singleton dimensions
