@@ -1,14 +1,14 @@
 import datetime
 import gc
 import logging
-from pathlib import Path
-
 import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
+from tqdm import tqdm
 
 from typing import Tuple, Optional, List
+from pathlib import Path
 from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.OutputWriter import OutputWriter
@@ -83,28 +83,32 @@ def openCL_advect(
 
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
-    for i, (advect_time_chunk, current_chunk, wind_chunk, seawater_density_chunk) \
-            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)):
-        print(f'Chunk {i+1:3}/{len(current_chunks)}: '
-              f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
+    for i in tqdm(
+        range(len(advect_time_chunks)),
+        desc="ADVECTING",
+        unit="chunk",
+    ):
+        # print(f'Chunk {i+1:3}/{len(advect_time_chunks)}: '
+        #       f'{advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
 
         # create the kernel wrapper object, pass it arguments
-        with ProgressBar():
-            print(f'  Loading forcing data...')   # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = Kernel3D(
-                current=current_chunk,
-                wind=wind_chunk,
-                seawater_density=seawater_density_chunk,
-                p0=p0_chunk,
-                advection_scheme=advection_scheme,
-                eddy_diffusivity=eddy_diffusivity,
-                max_wave_height=max_wave_height,
-                wave_mixing_depth_factor=wave_mixing_depth_factor,
-                windage_multiplier=windage_multiplier,
-                wind_mixing_enabled=wind_mixing_enabled,
-                advect_time=advect_time_chunk,
-                save_every=save_every,
-                context=context)
+        # with ProgressBar():
+        # print(f'  Loading forcing data...')   # these get implicitly loaded when .values is called on current_chunk variables
+        kernel = Kernel3D(
+            current=current_chunks[i],
+            wind=wind_chunks[i],
+            seawater_density=seawater_density_chunks[i],
+            p0=p0_chunk,
+            advection_scheme=advection_scheme,
+            eddy_diffusivity=eddy_diffusivity,
+            max_wave_height=max_wave_height,
+            wave_mixing_depth_factor=wave_mixing_depth_factor,
+            windage_multiplier=windage_multiplier,
+            wind_mixing_enabled=wind_mixing_enabled,
+            advect_time=advect_time_chunks[i],
+            save_every=save_every,
+            context=context
+        )
         P_chunk = kernel.execute()
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
 
@@ -119,7 +123,7 @@ def openCL_advect(
 
         p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        unreleased = p0_chunk.release_date > advect_time_chunk[-2]
+        unreleased = p0_chunk.release_date > advect_time_chunks[i][-2]
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
