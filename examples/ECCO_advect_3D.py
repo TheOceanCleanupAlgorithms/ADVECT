@@ -31,7 +31,6 @@ if __name__ == '__main__':
         advection_scheme='taylor2',
         windage_multiplier=WINDAGE_MULTIPLIER,
         wind_mixing_enabled=True,
-        verbose=True,
         opencl_device=(0, 0),
         memory_utilization=.4,
     )

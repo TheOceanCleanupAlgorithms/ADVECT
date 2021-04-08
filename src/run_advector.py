@@ -10,7 +10,7 @@ See src/forcing_data_specifications.md for detailed description of data format r
 
 import datetime
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple
 
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter
@@ -43,7 +43,6 @@ def run_advector(
     wind_varname_map: dict = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
-    verbose: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -90,7 +89,6 @@ def run_advector(
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
-    :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
     arguments = locals()
@@ -158,7 +156,6 @@ def run_advector(
         windage_multiplier=windage_multiplier,
         wind_mixing_enabled=wind_mixing_enabled,
         platform_and_device=opencl_device,
-        verbose=verbose,
         memory_utilization=memory_utilization,
     )
 

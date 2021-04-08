@@ -2,16 +2,14 @@ import datetime
 import gc
 import logging
 import time
-
 import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
-from tqdm import tqdm
 
+from tqdm import tqdm
 from typing import Tuple, Optional, List
 from pathlib import Path
-from dask.diagnostics import ProgressBar
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
@@ -36,7 +34,6 @@ def openCL_advect(
     wind_mixing_enabled: bool,
     memory_utilization: float,
     platform_and_device: Tuple[int] = None,
-    verbose=False,
 ) -> List[Path]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
@@ -58,7 +55,6 @@ def openCL_advect(
     :param wind_mixing_enabled: toggle the wind mixing functionality
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
-    :param verbose: determines whether to print buffer sizes and timing results
     :return: list of outputfile paths
     """
     num_particles = len(p0.p_id)
