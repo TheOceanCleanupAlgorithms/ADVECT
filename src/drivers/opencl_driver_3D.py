@@ -1,6 +1,8 @@
 import datetime
 import gc
 import logging
+import time
+
 import pyopencl as cl
 import numpy as np
 import xarray as xr
@@ -85,15 +87,12 @@ def openCL_advect(
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
     for i in tqdm(
         range(len(advect_time_chunks)),
-        desc="ADVECTING",
+        desc="PROGRESS",
         unit="chunk",
     ):
-        # print(f'Chunk {i+1:3}/{len(advect_time_chunks)}: '
-        #       f'{advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
-
+        print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
         # create the kernel wrapper object, pass it arguments
-        # with ProgressBar():
-        # print(f'  Loading forcing data...')   # these get implicitly loaded when .values is called on current_chunk variables
+        print("\tInitializing Kernel...")
         kernel = Kernel3D(
             current=current_chunks[i],
             wind=wind_chunks[i],
@@ -109,23 +108,32 @@ def openCL_advect(
             save_every=save_every,
             context=context
         )
+        print("\tTriggering kernel execution...")
         P_chunk = kernel.execute()
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
-
-        if verbose:
-            kernel.print_memory_footprint()
-            kernel.print_execution_time()
+        data_loading_time = kernel.data_load_time
+        buffer_time = kernel.buf_time
+        execution_time = kernel.kernel_time
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
+        print("\tWriting output to disk...")
+        output_start = time.time()
         output_writer.write_output_chunk(P_chunk)
+        output_time = time.time() - output_start
 
         p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
         unreleased = p0_chunk.release_date > advect_time_chunks[i][-2]
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
+
+        print("\t---EXECUTION TIME BREAKDOWN---")
+        print(f"\tData Loading:      {data_loading_time:10.3f}s")
+        print(f"\tBuffer Read/Write: {buffer_time:10.3f}s")
+        print(f"\tKernel Execution:  {execution_time:10.3f}s")
+        print(f"\tOutput Writing:    {output_time:10.3f}s")
 
     return output_writer.paths
 

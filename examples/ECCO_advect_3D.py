@@ -1,6 +1,8 @@
 """
 advect on ECCO currents
 """
+import sys
+sys.path.append("../src")
 from pathlib import Path
 
 from plotting.plot_advection import animate_ocean_advection
@@ -29,7 +31,7 @@ if __name__ == '__main__':
         advection_scheme='taylor2',
         windage_multiplier=WINDAGE_MULTIPLIER,
         wind_mixing_enabled=True,
-        verbose=False,
+        verbose=True,
         opencl_device=(0, 0),
         memory_utilization=.4,
     )
