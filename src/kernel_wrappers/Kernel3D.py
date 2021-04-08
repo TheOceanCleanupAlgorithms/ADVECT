@@ -219,8 +219,7 @@ class Kernel3D:
                 }
         )
 
-    def print_memory_footprint(self):
-        print('-----MEMORY FOOTPRINT-----')
+    def get_memory_footprint(self) -> dict:
         current_bytes = (self.current_x.nbytes + self.current_y.nbytes + self.current_z.nbytes + self.current_t.nbytes +
                          self.current_U.nbytes + self.current_V.nbytes + self.current_W.nbytes)
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
@@ -233,18 +232,12 @@ class Kernel3D:
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.z0.nbytes + self.release_date.nbytes +
                           self.density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
-        print(f'Current:            {current_bytes / 1e6:10.3f} MB')
-        print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
-        print(f'Seawater Density:   {seawater_density_bytes / 1e6:10.3f} MB')
-        print(f'Particle State:     {particle_bytes / 1e6:10.3f} MB')
-        print(f'Total:              {(current_bytes + wind_bytes + seawater_density_bytes + particle_bytes) / 1e6:10.3f} MB')
-        print('')
-
-    def print_execution_time(self):
-        print('------EXECUTION TIME------')
-        print(f'Kernel Execution:   {self.kernel_time:10.3f} s')
-        print(f'Memory Read/Write:  {self.buf_time:10.3f} s')
-        print('')
+        return {
+            "current": current_bytes,
+            "wind": wind_bytes,
+            "seawater_density": seawater_density_bytes,
+            "particles": particle_bytes,
+        }
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""

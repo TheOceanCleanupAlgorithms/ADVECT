@@ -110,6 +110,7 @@ def openCL_advect(
         data_loading_time = kernel.data_load_time
         buffer_time = kernel.buf_time
         execution_time = kernel.kernel_time
+        memory_usage = kernel.get_memory_footprint()
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
@@ -125,7 +126,13 @@ def openCL_advect(
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
-        print("\t---EXECUTION TIME BREAKDOWN---")
+        print("\t---BUFFER SIZES---")
+        print(f'\tCurrent:            {memory_usage["current"] / 1e6:10.3f} MB')
+        print(f'\tWind:               {memory_usage["wind"] / 1e6:10.3f} MB')
+        print(f'\tSeawater Density:   {memory_usage["seawater_density"] / 1e6:10.3f} MB')
+        print(f'\tParticle State:     {memory_usage["particles"] / 1e6:10.3f} MB')
+        print(f'\tTotal:              {sum(memory_usage.values()) / 1e6:10.3f} MB')
+        print("\t---EXECUTION TIME---")
         print(f"\tData Loading:      {data_loading_time:10.3f}s")
         print(f"\tBuffer Read/Write: {buffer_time:10.3f}s")
         print(f"\tKernel Execution:  {execution_time:10.3f}s")
