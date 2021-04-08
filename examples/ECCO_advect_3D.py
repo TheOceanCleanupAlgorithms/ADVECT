@@ -1,6 +1,8 @@
 """
 advect on ECCO currents
 """
+import sys
+sys.path.append("../src")
 from pathlib import Path
 
 from plotting.plot_advection import animate_ocean_advection
@@ -21,7 +23,7 @@ if __name__ == '__main__':
         u_wind_path='ncep_ncar_doe_ii/uwnd.10m.gauss.2015.nc',
         v_wind_path='ncep_ncar_doe_ii/vwnd.10m.gauss.2015.nc',
         seawater_density_path='ECCO/ECCO_interp/RHO_2015.nc',
-        wind_varname_map={'uwnd': 'U', 'vwnd': 'V'},
+        wind_varname_map={'uwnd': 'U', 'vwnd': 'V', 'level': 'depth'},
         advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
         timestep=timedelta(hours=1),
         num_timesteps=24*365,
@@ -29,7 +31,6 @@ if __name__ == '__main__':
         advection_scheme='taylor2',
         windage_multiplier=WINDAGE_MULTIPLIER,
         wind_mixing_enabled=True,
-        verbose=True,
         opencl_device=(0, 0),
         memory_utilization=.4,
     )

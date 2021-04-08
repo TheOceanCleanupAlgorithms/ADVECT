@@ -10,14 +10,14 @@ See src/forcing_data_specifications.md for detailed description of data format r
 
 import datetime
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple
 
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
-from io_tools.open_vectorfiles import open_2D_vectorfield, empty_2D_vectorfield, open_currents, open_seawater_density
+from io_tools.open_vectorfiles import *
 
 
 def run_advector(
@@ -43,7 +43,6 @@ def run_advector(
     wind_varname_map: dict = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
-    verbose: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -90,7 +89,6 @@ def run_advector(
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
-    :param verbose: whether to print detailed information about kernel execution.
     :return: list of paths to the outputfiles
     """
     arguments = locals()
@@ -100,30 +98,36 @@ def run_advector(
         raise ValueError(f"Invalid argument advection_scheme; must be one of "
                          f"{set(scheme.name for scheme in AdvectionScheme)}.")
 
+    print("---INITIALIZING DATASETS---")
+    print("Opening Sourcefiles...")
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
     )
 
+    print("Opening Configfile...")
+    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
+        = unpack_configfile(configfile_path=configfile_path)
+
+    print("Initializing Ocean Current...")
     currents = open_currents(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
+    print("Initializing Seawater Density...")
     seawater_density = open_seawater_density(
         path=seawater_density_path, variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
+        print("Initializing Wind...")
         assert windage_multiplier is not None, "Wind data must be accompanied by windage coefficient."
-        wind = open_2D_vectorfield(
+        wind = open_wind(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
     else:
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
-
-    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
-        = unpack_configfile(configfile_path=configfile_path)
 
     output_writer = OutputWriter(
         out_dir=Path(output_directory),
@@ -134,6 +138,7 @@ def run_advector(
         arguments_to_run_advector=arguments,
     )
 
+    print("---COMMENCING ADVECTION---")
     out_paths = openCL_advect(
         current=currents,
         wind=wind,
@@ -151,7 +156,6 @@ def run_advector(
         windage_multiplier=windage_multiplier,
         wind_mixing_enabled=wind_mixing_enabled,
         platform_and_device=opencl_device,
-        verbose=verbose,
         memory_utilization=memory_utilization,
     )
 

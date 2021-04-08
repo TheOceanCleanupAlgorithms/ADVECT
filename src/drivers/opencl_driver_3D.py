@@ -1,15 +1,15 @@
 import datetime
 import gc
 import logging
-from pathlib import Path
-
+import time
 import pyopencl as cl
 import numpy as np
 import xarray as xr
 import pandas as pd
 
+from tqdm import tqdm
 from typing import Tuple, Optional, List
-from dask.diagnostics import ProgressBar
+from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
@@ -34,7 +34,6 @@ def openCL_advect(
     wind_mixing_enabled: bool,
     memory_utilization: float,
     platform_and_device: Tuple[int] = None,
-    verbose=False,
 ) -> List[Path]:
     """
     advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
@@ -56,7 +55,6 @@ def openCL_advect(
     :param wind_mixing_enabled: toggle the wind mixing functionality
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
-    :param verbose: determines whether to print buffer sizes and timing results
     :return: list of outputfile paths
     """
     num_particles = len(p0.p_id)
@@ -83,45 +81,62 @@ def openCL_advect(
 
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
-    for i, (advect_time_chunk, current_chunk, wind_chunk, seawater_density_chunk) \
-            in enumerate(zip(advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks)):
-        print(f'Chunk {i+1:3}/{len(current_chunks)}: '
-              f'{current_chunk.time.values[0]} to {current_chunk.time.values[-1]}...')
-
+    for i in tqdm(
+        range(len(advect_time_chunks)),
+        desc="PROGRESS",
+        unit="chunk",
+    ):
+        print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
         # create the kernel wrapper object, pass it arguments
-        with ProgressBar():
-            print(f'  Loading forcing data...')   # these get implicitly loaded when .values is called on current_chunk variables
-            kernel = Kernel3D(
-                current=current_chunk,
-                wind=wind_chunk,
-                seawater_density=seawater_density_chunk,
-                p0=p0_chunk,
-                advection_scheme=advection_scheme,
-                eddy_diffusivity=eddy_diffusivity,
-                max_wave_height=max_wave_height,
-                wave_mixing_depth_factor=wave_mixing_depth_factor,
-                windage_multiplier=windage_multiplier,
-                wind_mixing_enabled=wind_mixing_enabled,
-                advect_time=advect_time_chunk,
-                save_every=save_every,
-                context=context)
+        print("\tInitializing Kernel...")
+        kernel = Kernel3D(
+            current=current_chunks[i],
+            wind=wind_chunks[i],
+            seawater_density=seawater_density_chunks[i],
+            p0=p0_chunk,
+            advection_scheme=advection_scheme,
+            eddy_diffusivity=eddy_diffusivity,
+            max_wave_height=max_wave_height,
+            wave_mixing_depth_factor=wave_mixing_depth_factor,
+            windage_multiplier=windage_multiplier,
+            wind_mixing_enabled=wind_mixing_enabled,
+            advect_time=advect_time_chunks[i],
+            save_every=save_every,
+            context=context
+        )
+        print("\tTriggering kernel execution...")
         P_chunk = kernel.execute()
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
-
-        if verbose:
-            kernel.print_memory_footprint()
-            kernel.print_execution_time()
+        data_loading_time = kernel.data_load_time
+        buffer_time = kernel.buf_time
+        execution_time = kernel.kernel_time
+        memory_usage = kernel.get_memory_footprint()
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
 
+        print("\tWriting output to disk...")
+        output_start = time.time()
         output_writer.write_output_chunk(P_chunk)
+        output_time = time.time() - output_start
 
         p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
         # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        unreleased = p0_chunk.release_date > advect_time_chunk[-2]
+        unreleased = p0_chunk.release_date > advect_time_chunks[i][-2]
         for var in ['lat', 'lon', 'depth']:
             p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
+
+        print("\t---BUFFER SIZES---")
+        print(f'\tCurrent:            {memory_usage["current"] / 1e6:10.3f} MB')
+        print(f'\tWind:               {memory_usage["wind"] / 1e6:10.3f} MB')
+        print(f'\tSeawater Density:   {memory_usage["seawater_density"] / 1e6:10.3f} MB')
+        print(f'\tParticle State:     {memory_usage["particles"] / 1e6:10.3f} MB')
+        print(f'\tTotal:              {sum(memory_usage.values()) / 1e6:10.3f} MB')
+        print("\t---EXECUTION TIME---")
+        print(f"\tData Loading:      {data_loading_time:10.3f}s")
+        print(f"\tBuffer Read/Write: {buffer_time:10.3f}s")
+        print(f"\tKernel Execution:  {execution_time:10.3f}s")
+        print(f"\tOutput Writing:    {output_time:10.3f}s")
 
     return output_writer.paths
 

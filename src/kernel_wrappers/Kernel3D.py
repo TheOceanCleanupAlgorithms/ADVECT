@@ -13,6 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from dask.diagnostics import ProgressBar
+
 import kernel_wrappers.kernel_constants as cl_const
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
@@ -48,37 +50,50 @@ class Kernel3D:
         self.p0 = p0
         self.out_time = advect_time[::save_every][1:]
 
+        # some handy timers
+        self.data_load_time = 0
+        self.buf_time = 0
+        self.kernel_time = 0
+
         # ---KERNEL ARGUMENT INITIALIZATION--- #
         # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
 
+        print("\t\tLoading Current Data...")
+        data_loading_start = time.time()
         current = current.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
-        self.current_x = current.lon.values.astype(np.float64)
-        self.current_y = current.lat.values.astype(np.float64)
-        self.current_z = current.depth.values.astype(np.float64)
-        self.current_t = current.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-        self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
-        self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
-        self.current_W = current.W.values.astype(np.float32, copy=False).ravel()
+        with ProgressBar():
+            self.current_x = current.lon.values.astype(np.float64)
+            self.current_y = current.lat.values.astype(np.float64)
+            self.current_z = current.depth.values.astype(np.float64)
+            self.current_t = current.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+            self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+            self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
+            self.current_W = current.W.values.astype(np.float32, copy=False).ravel()
         # wind vector field
+        print("\t\tLoading Wind Data...")
         if windage_multiplier is not None:
-            wind = wind.transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
-            self.wind_x = wind.lon.values.astype(np.float64)
-            self.wind_y = wind.lat.values.astype(np.float64)
-            self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-            self.wind_U = wind.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
-            self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
+            with ProgressBar():
+                wind = wind.transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
+                self.wind_x = wind.lon.values.astype(np.float64)
+                self.wind_y = wind.lat.values.astype(np.float64)
+                self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+                self.wind_U = wind.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+                self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
         else:  # Windage disabled; pass a dummy field with singleton dimensions
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
         self.wind_z = np.zeros(1, dtype=np.float64)  # to indicate surface wind
         # seawater_density vector field
-        seawater_density = seawater_density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
-        self.seawater_density_x = seawater_density.lon.values.astype(np.float64)
-        self.seawater_density_y = seawater_density.lat.values.astype(np.float64)
-        self.seawater_density_z = seawater_density.depth.values.astype(np.float64)
-        self.seawater_density_t = seawater_density.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-        self.seawater_density_values = seawater_density.rho.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+        print("\t\tLoading Seawater Density Data...")
+        with ProgressBar():
+            seawater_density = seawater_density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+            self.seawater_density_x = seawater_density.lon.values.astype(np.float64)
+            self.seawater_density_y = seawater_density.lat.values.astype(np.float64)
+            self.seawater_density_z = seawater_density.depth.values.astype(np.float64)
+            self.seawater_density_t = seawater_density.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+            self.seawater_density_values = seawater_density.rho.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+        self.data_load_time = time.time() - data_loading_start
         # particle initialization
         self.x0 = p0.lon.values.astype(np.float32)
         self.y0 = p0.lat.values.astype(np.float32)
@@ -117,16 +132,13 @@ class Kernel3D:
         self.cl_kernel = cl.Program(context, open(KERNEL_SOURCE).read())\
             .build(options=['-I', str(KERNEL_SOURCE.parent)]).advect
 
-        # some handy timers
-        self.buf_time = 0
-        self.kernel_time = 0
-
     def execute(self) -> xr.Dataset:
         """tranfers arguments to the compute device, triggers execution, returns result"""
         # perform argument check
         self._check_args()
 
         # write arguments to compute device
+        print("\t\tWriting buffers to compute device...")
         write_start = time.time()
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W,\
@@ -154,6 +166,7 @@ class Kernel3D:
         self.buf_time = time.time() - write_start
 
         # execute the program
+        print("\t\tExecuting kernel...")
         execution_start = time.time()
         self.cl_kernel(
             self.queue, (len(self.x0),), None,
@@ -187,6 +200,7 @@ class Kernel3D:
         self.kernel_time = time.time() - execution_start
 
         # Read back the results from the compute device
+        print("\t\tCopying results back to host device...")
         read_start = time.time()
         cl.enqueue_copy(self.queue, self.X_out, d_X_out)
         cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
@@ -205,8 +219,7 @@ class Kernel3D:
                 }
         )
 
-    def print_memory_footprint(self):
-        print('-----MEMORY FOOTPRINT-----')
+    def get_memory_footprint(self) -> dict:
         current_bytes = (self.current_x.nbytes + self.current_y.nbytes + self.current_z.nbytes + self.current_t.nbytes +
                          self.current_U.nbytes + self.current_V.nbytes + self.current_W.nbytes)
         wind_bytes = (self.wind_x.nbytes + self.wind_y.nbytes + self.wind_t.nbytes +
@@ -219,18 +232,12 @@ class Kernel3D:
         particle_bytes = (self.x0.nbytes + self.y0.nbytes + self.z0.nbytes + self.release_date.nbytes +
                           self.density.nbytes + self.radius.nbytes + self.corey_shape_factor.nbytes +
                           self.X_out.nbytes + self.Y_out.nbytes + self.Z_out.nbytes + self.exit_code.nbytes)
-        print(f'Current:            {current_bytes / 1e6:10.3f} MB')
-        print(f'Wind:               {wind_bytes / 1e6:10.3f} MB')
-        print(f'Seawater Density:   {seawater_density_bytes / 1e6:10.3f} MB')
-        print(f'Particle State:     {particle_bytes / 1e6:10.3f} MB')
-        print(f'Total:              {(current_bytes + wind_bytes + seawater_density_bytes + particle_bytes) / 1e6:10.3f} MB')
-        print('')
-
-    def print_execution_time(self):
-        print('------EXECUTION TIME------')
-        print(f'Kernel Execution:   {self.kernel_time:10.3f} s')
-        print(f'Memory Read/Write:  {self.buf_time:10.3f} s')
-        print('')
+        return {
+            "current": current_bytes,
+            "wind": wind_bytes,
+            "seawater_density": seawater_density_bytes,
+            "particles": particle_bytes,
+        }
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""
