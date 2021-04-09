@@ -7,6 +7,7 @@ import math
 import numpy as np
 
 from typing import List, Tuple
+from tqdm import tqdm
 
 
 def chunk_advection_params(
@@ -35,9 +36,10 @@ def chunk_advection_params(
 
     # it's hard to pre-compute the exact number of chunks necessary that will fit into RAM.  we start with a guess,
     # then if any of the chunks we create don't fit into RAM, we just increment the number of chunks and try again.
+    print("\tIncrementing number of chunks until data fits...")
     num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))
+    pbar = tqdm(total=len(out_time)-num_chunks)
     while True:
-        print(num_chunks)
         if num_chunks > len(out_time):
             raise RuntimeError(
                 "There is not enough memory to hold even the smallest possible chunk!"
@@ -91,6 +93,7 @@ def chunk_advection_params(
                 seawater_density_chunks,
             )
         num_chunks += 1
+        pbar.update(1)
 
 
 def estimate_memory_bytes(
