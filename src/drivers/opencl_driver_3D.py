@@ -69,6 +69,7 @@ def openCL_advect(
         context = cl.create_some_context(answers=list(platform_and_device))
 
     # get the minimum RAM available on the specified compute devices.
+    print("Chunking Datasets...")
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
     advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks = \
         chunk_advection_params(device_bytes=available_RAM,

@@ -86,7 +86,7 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
     assert set(vectors.dims) == expected_dims, f"Unexpected/missing dimension(s) ({vectors.dims})"
 
     if max(vectors.lon) > 180:
-        print("\tRolling longitude domain from [0-360) to [-180, 180).")
+        print("\tRolling longitude domain from [0, 360) to [-180, 180).")
         print("\tThis operation is expensive.  You may want to preprocess your data to the correct domain.")
         with dask.config.set(**{'array.slicing.split_large_chunks': True}):
             with ProgressBar():
