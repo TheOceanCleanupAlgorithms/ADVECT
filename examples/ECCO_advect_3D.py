@@ -20,6 +20,7 @@ if __name__ == '__main__':
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',
         v_water_path='ECCO/ECCO_interp/V_2015*.nc',
         w_water_path='ECCO/ECCO_interp/W_2015*.nc',
+        bathymetry_water_path='ECCO/ECCO_interp/bathymetry.nc',
         u_wind_path='ncep_ncar_doe_ii/uwnd.10m.gauss.2015.nc',
         v_wind_path='ncep_ncar_doe_ii/vwnd.10m.gauss.2015.nc',
         seawater_density_path='ECCO/ECCO_interp/RHO_2015.nc',
