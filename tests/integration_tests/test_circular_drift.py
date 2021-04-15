@@ -32,6 +32,7 @@ def compare_alg_drift(initial_radius: float, plot=False):
             "U": (["lat", "lon", "depth", "time"], U[:, :, np.newaxis, np.newaxis]),
             "V": (["lat", "lon", "depth", "time"], V[:, :, np.newaxis, np.newaxis]),
             "W": (["lat", "lon", "depth", "time"], np.zeros((*U.shape, 1, 1))),
+            "bathymetry": (["lat", "lon"], np.zeros(U.shape))
         },
         coords={
             "lon": lon,

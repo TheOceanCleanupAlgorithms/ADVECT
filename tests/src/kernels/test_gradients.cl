@@ -29,8 +29,7 @@ __kernel void test_partials(
                      .x_spacing = calculate_spacing(field_x, field_x_len),
                      .y_spacing = calculate_spacing(field_y, field_y_len),
                      .t_spacing = calculate_spacing(field_t, field_t_len),
-                     .U = field_U, .V = field_V, .W = field_W,
-                     .z_floor = calculate_coordinate_floor(field_z, field_z_len),  // bottom edge of lowest layer
+                     .U = field_U, .V = field_V, .W = field_W, .bathy = 0,
                      .x_is_circular = x_is_circular};
 
     particle p = {.x = p_x, .y = p_y, .z = p_z, .t = p_t};
