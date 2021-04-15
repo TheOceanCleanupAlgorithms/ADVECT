@@ -69,6 +69,7 @@ class Kernel3D:
             self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
             self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
             self.current_W = current.W.values.astype(np.float32, copy=False).ravel()
+            self.current_bathy = current.bathymetry.values.astype(np.float32, copy=False).ravel()
         # wind vector field
         print("\t\tLoading Wind Data...")
         if windage_multiplier is not None:
@@ -141,7 +142,7 @@ class Kernel3D:
         print("\t\tWriting buffers to compute device...")
         write_start = time.time()
         d_current_x, d_current_y, d_current_z, d_current_t,\
-            d_current_U, d_current_V, d_current_W,\
+            d_current_U, d_current_V, d_current_W, d_current_bathy,\
             d_wind_x, d_wind_y, d_wind_z, d_wind_t, d_wind_U, d_wind_V, \
             d_seawater_density_x, d_seawater_density_y, d_seawater_density_z, d_seawater_density_t, \
             d_seawater_density_values, \
@@ -151,7 +152,7 @@ class Kernel3D:
             (cl.Buffer(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf)
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
-              self.current_U, self.current_V, self.current_W,
+              self.current_U, self.current_V, self.current_W, self.current_bathy,
               self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
               self.seawater_density_x, self.seawater_density_y, self.seawater_density_z, self.seawater_density_t,
               self.seawater_density_values,
@@ -174,7 +175,7 @@ class Kernel3D:
             d_current_y, np.uint32(len(self.current_y)),
             d_current_z, np.uint32(len(self.current_z)),
             d_current_t, np.uint32(len(self.current_t)),
-            d_current_U, d_current_V, d_current_W,
+            d_current_U, d_current_V, d_current_W, d_current_bathy,
             d_wind_x, np.uint32(len(self.wind_x)),
             d_wind_y, np.uint32(len(self.wind_y)),
             d_wind_z,
