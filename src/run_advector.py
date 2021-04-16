@@ -27,7 +27,6 @@ def run_advector(
     u_water_path: str,
     v_water_path: str,
     w_water_path: str,
-    bathymetry_water_path: str,
     seawater_density_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
@@ -58,8 +57,6 @@ def run_advector(
         See forcing_data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
     :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
-    :param bathymetry_water_path: path to the bathymetry of the current dataset.
-        See forcing_data_specifications.md for details.
     :param seawater_density_path: wildcard path to the seawater seawater_density files.
         See forcing_data_specifications.md for data requirements.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
@@ -114,11 +111,7 @@ def run_advector(
 
     print("Initializing Ocean Current...")
     currents = open_currents(
-        u_path=u_water_path,
-        v_path=v_water_path,
-        w_path=w_water_path,
-        bathymetry_path=bathymetry_water_path,
-        variable_mapping=water_varname_map,
+        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
     print("Initializing Seawater Density...")

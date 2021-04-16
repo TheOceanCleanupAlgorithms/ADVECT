@@ -11,6 +11,7 @@ from tqdm import tqdm
 from typing import Tuple, Optional, List
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
+from drivers.create_bathymetry import create_bathymetry
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 from kernel_wrappers.kernel_constants import EXIT_CODES
@@ -48,7 +49,6 @@ def openCL_advect(
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
     :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
     :param eddy_diffusivity: xarray Dataset storing vertical profiles of eddy diffusivities
-    :param density_profile: xarray Dataset storing vertical profile of seawater density
     :param max_wave_height: caps parameterization in kernel; see config_specifications.md
     :param wave_mixing_depth_factor: scales depth of mixing in kernel; see config_specifications.md
     :param windage_multiplier: multiplies the default windage, which is based on emerged area
@@ -67,6 +67,10 @@ def openCL_advect(
         context = cl.create_some_context(interactive=True)
     else:
         context = cl.create_some_context(answers=list(platform_and_device))
+
+    # encode the model domain, taken as where all the current components are non-null, as bathymetry
+    print("Calculating bathymetry of current dataset...")
+    current = xr.merge((current, create_bathymetry(current)))
 
     # get the minimum RAM available on the specified compute devices.
     print("Chunking Datasets...")

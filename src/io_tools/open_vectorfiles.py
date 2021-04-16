@@ -7,35 +7,19 @@ import numpy as np
 from dask.diagnostics import ProgressBar
 
 
-def open_currents(
-    u_path: str,
-    v_path: str,
-    w_path: str,
-    bathymetry_path: str,
-    variable_mapping: Optional[dict]
-):
+def open_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
     :param w_path: wildcard path to the vertical vector files.  See u_path for more details.
-    :param bathymetry_path: path to the bathymetry of the current model.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
-    currents = open_vectorfield(
+    return open_vectorfield(
         paths=[u_path, v_path, w_path],
         varnames={"U", "V", "W"},
         variable_mapping=variable_mapping,
         keep_depth_dim=True,
     )
-    bathymetry = open_bathymetry(
-        bathymetry_path=bathymetry_path, variable_mapping=variable_mapping
-    )
-    assert np.all(bathymetry.lon == currents.lon) and np.all(
-            bathymetry.lat == currents.lat
-    ), "Bathymetry dimensions do not match U/V/W dimensions!"
-
-    print("\tMerging currents and bathymetry...")
-    return xr.merge((currents, bathymetry))
 
 
 def open_seawater_density(path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
@@ -59,16 +43,6 @@ def open_wind(u_path: str, v_path: str, variable_mapping: Optional[dict]):
         variable_mapping=variable_mapping,
         keep_depth_dim=False,
     )
-
-
-def open_bathymetry(bathymetry_path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
-    print("\tOpening bathymetry...")
-    if variable_mapping is None:
-        variable_mapping = {}
-    bathymetry = xr.open_dataset(bathymetry_path).rename(variable_mapping)
-    assert set(bathymetry.dims) == {"lat", "lon"}
-    bathymetry = bathymetry[["bathymetry"]]  # drop any unnecessary variables
-    return bathymetry
 
 
 def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Optional[dict], keep_depth_dim: bool) -> xr.Dataset:
