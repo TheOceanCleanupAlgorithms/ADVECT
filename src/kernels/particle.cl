@@ -34,8 +34,8 @@ particle update_position_no_beaching(particle p, vector displacement_meters, fie
 
     // first, we modify the displacement's z component based on bathymetry
     // this is essential to allow huge vertical displacements to clip to the bathymetry.
-    double bathy_at_p = index_bathymetry(field, find_nearest_neighbor(p, field));
-    double bathy_at_new_p = index_bathymetry(field, find_nearest_neighbor(new_p, field));
+    double bathy_at_p = find_nearest_bathymetry(p, field);
+    double bathy_at_new_p = find_nearest_bathymetry(new_p, field);
     // we should try and push it up as little as possible; fmin determines the clipping point.
     // then the fmax clips the z up if it's below the clipping point.
     double clipped_z = fmax(new_p.z, fmin(bathy_at_p, bathy_at_new_p));
@@ -104,6 +104,14 @@ vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
     return index_vector_field(field, find_nearest_neighbor(p, field), zero_nans);
 }
 
+double find_nearest_bathymetry(particle p, field3d field) {
+    grid_point neighbor = {
+        .x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing),
+        .y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing),
+    };
+    return index_bathymetry(field, neighbor);
+}
+
 vector find_nearby_non_null_vector(particle p, field3d field) {
     return double_jack_search(find_nearest_neighbor(p, field), field);
 }
@@ -112,5 +120,5 @@ bool in_ocean(particle p, field3d field) {
     /* where'er you are below bathymetry,
        you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
-    return p.z >= index_bathymetry(field, find_nearest_neighbor(p, field));
+    return p.z >= find_nearest_bathymetry(p, field);
 }
