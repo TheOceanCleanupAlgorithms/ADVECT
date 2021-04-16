@@ -25,6 +25,8 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 | W | (time, depth, lat, lon) | numeric | vertical component of velocity (m/s), positive up. |
 | bathymetry | (lat, lon) | numeric | depth of seafloor at each grid cell (m, positive up) |
 
+Note on bathymetry: the ocean domain is defined as all grid cells where U, V, and W are all not null.  When generating a bathymetry file, make sure it matches the ocean current dataset as per this definition!
+
 ### 10m Wind Velocity
 Encoded as a netcdf dataset.  Note that the near-surface, turbulent wind-mixing algorithm assumes that each wind data is an average over a timeframe of ~1 day, as it assumes the sea state is fully developed based on the closest wind observation.  If you pass in wind data with sub-daily intervals along the time dimension, the wind mixing will become less realistic.
 

@@ -32,6 +32,15 @@ particle update_position_no_beaching(particle p, vector displacement_meters, fie
     // displacement will move particle out of ocean (aka, onto shoreline, or into bathymetry).
     // We don't want this, so we'll modify displacement (but as little as possible)
 
+    // first, we modify the displacement's z component based on bathymetry
+    // this is essential to allow huge vertical displacements to clip to the bathymetry.
+    double bathy_at_p = index_bathymetry(field, find_nearest_neighbor(p, field));
+    double bathy_at_new_p = index_bathymetry(field, find_nearest_neighbor(new_p, field));
+    // we should try and push it up as little as possible; fmin determines the clipping point.
+    // then the fmax clips the z up if it's below the clipping point.
+    double clipped_z = fmax(new_p.z, fmin(bathy_at_p, bathy_at_new_p));
+    displacement_meters.z += (clipped_z - new_p.z);
+
     // split displacement into components and sort them
     vector ordered_components[3];
     resolve_and_sort(displacement_meters, ordered_components);
