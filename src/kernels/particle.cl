@@ -39,7 +39,11 @@ particle update_position_no_beaching(particle p, vector displacement_meters, fie
     // we should try and push it up as little as possible; fmin determines the clipping point.
     // then the fmax clips the z up if it's below the clipping point.
     double clipped_z = fmax(new_p.z, fmin(bathy_at_p, bathy_at_new_p));
-    displacement_meters.z += (clipped_z - new_p.z);
+    displacement_meters.z = clipped_z - p.z;
+
+    // check simple case again now that displacement has been adjusted to match bathymetry
+    new_p = update_position(p, displacement_meters);
+    if (in_ocean(new_p, field)) return new_p;
 
     // split displacement into components and sort them
     vector ordered_components[3];
@@ -105,12 +109,8 @@ vector find_nearby_non_null_vector(particle p, field3d field) {
 }
 
 bool in_ocean(particle p, field3d field) {
-    /* where'er you find the vector nan to be,
+    /* where'er you are below bathymetry,
        you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
-    grid_point gp = find_nearest_neighbor(p, field);
-    vector V = index_vector_field(field, gp, false);
-    bool position_is_nan = (isnan(V.x) || isnan(V.y) || isnan(V.z));
-    bool too_deep = p.z < index_bathymetry(field, gp);
-    return !(position_is_nan || too_deep);
+    return p.z >= index_bathymetry(field, find_nearest_neighbor(p, field));
 }
