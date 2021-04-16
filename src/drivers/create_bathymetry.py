@@ -6,6 +6,9 @@ def create_bathymetry(currents: xr.Dataset) -> xr.Dataset:
     """Creates bathymetry for a current dataset, which encodes its ocean domain.
         Method: identifies the upper depth bound of the shallowest
         null cell in each vertical grid column."""
+    assert np.all(currents.depth <= 0), "depth coordinate must be positive up"
+    assert np.all(np.diff(currents.depth) > 0), "depth coordinate must be sorted ascending"
+
     # In the kernel, particles look up data based on the nearest cell-center.
     # Thus cell bounds are the midpoints between each centers.
     # Very top cell bound is surface, and bottom cell bounds are
