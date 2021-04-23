@@ -21,6 +21,7 @@ void write_p(particle p, __global float *X_out, __global float *Y_out, __global 
 bool in_ocean(particle p, field3d field);
 grid_point find_nearest_neighbor(particle p, field3d field);
 vector find_nearest_vector(particle p, field3d field, bool zero_nans);
+double find_nearest_bathymetry(particle p, field3d field);
 vector find_nearby_non_null_vector(particle p, field3d field);
 
 #endif // PARTICLE

@@ -32,6 +32,7 @@ __kernel void advect(
     __global const float *current_U,        // m / s, shape=(t, z, y, x) flattened, 32 bit to save space
     __global const float *current_V,        // m / s
     __global const float *current_W,        // m / s
+    __global const float *current_bathy,    // m, positive up, shape=(y, x) flattened
     /* 10-meter wind vector field */
     __global const double *wind_x,          // lon, Deg E (-180 to 180), uniform spacing
     const unsigned int wind_x_len,          // 1 <= wind_x_len <= UINT_MAX + 1
@@ -97,7 +98,7 @@ __kernel void advect(
                      .y_spacing = calculate_spacing(current_y, current_y_len),
                      .t_spacing = calculate_spacing(current_t, current_t_len),
                      .U = current_U, .V = current_V, .W = current_W,
-                     .z_floor = calculate_coordinate_floor(current_z, current_z_len)};  // bottom edge of lowest layer
+                     .bathy = current_bathy};
     current.x_is_circular = x_is_circular(current);
 
     // turn 2d wind into 3d wind with singleton z
@@ -106,8 +107,7 @@ __kernel void advect(
                     .x_spacing = calculate_spacing(wind_x, wind_x_len),
                     .y_spacing = calculate_spacing(wind_y, wind_y_len),
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
-                    .U = wind_U, .V = wind_V, .W = 0,
-                    .z_floor = 0};
+                    .U = wind_U, .V = wind_V, .W = 0, .bathy = 0};
     wind.x_is_circular = x_is_circular(wind);
 
     field3d seawater_density = {
@@ -116,8 +116,7 @@ __kernel void advect(
         .x_spacing = calculate_spacing(seawater_density_x, seawater_density_x_len),
         .y_spacing = calculate_spacing(seawater_density_y, seawater_density_y_len),
         .t_spacing = NAN,
-        .U = seawater_density_values, .V = 0, .W = 0,
-        .z_floor = calculate_coordinate_floor(seawater_density_z, seawater_density_z_len),  // bottom edge of lowest layer
+        .U = seawater_density_values, .V = 0, .W = 0, .bathy = 0,
     };
     seawater_density.x_is_circular = x_is_circular(seawater_density);
 

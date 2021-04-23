@@ -32,6 +32,19 @@ particle update_position_no_beaching(particle p, vector displacement_meters, fie
     // displacement will move particle out of ocean (aka, onto shoreline, or into bathymetry).
     // We don't want this, so we'll modify displacement (but as little as possible)
 
+    // first, we modify the displacement's z component based on bathymetry
+    // this is essential to allow huge vertical displacements to clip to the bathymetry.
+    double bathy_at_p = find_nearest_bathymetry(p, field);
+    double bathy_at_new_p = find_nearest_bathymetry(new_p, field);
+    // we should try and push it up as little as possible; fmin determines the clipping point.
+    // then the fmax clips the z up if it's below the clipping point.
+    double clipped_z = fmax(new_p.z, fmin(bathy_at_p, bathy_at_new_p));
+    displacement_meters.z = clipped_z - p.z;
+
+    // check simple case again now that displacement has been adjusted to match bathymetry
+    new_p = update_position(p, displacement_meters);
+    if (in_ocean(new_p, field)) return new_p;
+
     // split displacement into components and sort them
     vector ordered_components[3];
     resolve_and_sort(displacement_meters, ordered_components);
@@ -91,17 +104,21 @@ vector find_nearest_vector(particle p, field3d field, bool zero_nans) {
     return index_vector_field(field, find_nearest_neighbor(p, field), zero_nans);
 }
 
+double find_nearest_bathymetry(particle p, field3d field) {
+    grid_point neighbor = {
+        .x_idx = find_nearest_neighbor_idx(p.x, field.x, field.x_len, field.x_spacing),
+        .y_idx = find_nearest_neighbor_idx(p.y, field.y, field.y_len, field.y_spacing),
+    };
+    return index_bathymetry(field, neighbor);
+}
+
 vector find_nearby_non_null_vector(particle p, field3d field) {
     return double_jack_search(find_nearest_neighbor(p, field), field);
 }
 
 bool in_ocean(particle p, field3d field) {
-    /* where'er you find the vector nan to be,
+    /* where'er you are below bathymetry,
        you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
-    grid_point gp = find_nearest_neighbor(p, field);
-    vector V = index_vector_field(field, gp, false);
-    bool position_is_nan = (isnan(V.x) || isnan(V.y) || isnan(V.z));
-    bool too_deep = p.z < field.z_floor;
-    return !(position_is_nan || too_deep);
+    return p.z >= find_nearest_bathymetry(p, field);
 }

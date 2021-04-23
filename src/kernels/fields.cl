@@ -51,23 +51,15 @@ vector index_vector_field(field3d field, grid_point gp, bool zero_nans) {
     return V;
 }
 
+double index_bathymetry(field3d field, grid_point gp) {
+    /* assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1] */
+    size_t flat_index = gp.y_idx*field.x_len + gp.x_idx;
+    return field.bathy ? field.bathy[flat_index] : NAN;  // ternary expression stops indexing into an undefined variable
+}
+
 double calculate_spacing(__global const double *arr, const unsigned int arr_len) {
     if (arr_len > 1) {
         return (arr[arr_len-1] - arr[0]) / (arr_len - 1);
-    } else {
-        return NAN;
-    }
-}
-
-double calculate_coordinate_floor(__global const double *arr, const unsigned int arr_len) {
-    /*
-     * Calculates the lower boundary of a coordinate array, i.e. the edge of the lowest grid cell.
-     * arr references the centers of grid cells, hence the extrapolation
-    */
-    if (arr_len > 1) {
-        return arr[0] - (arr[1] - arr[0]) / 2;  // linear extrapolation
-    } else if (arr_len == 1) {
-        return arr[0];
     } else {
         return NAN;
     }
@@ -91,7 +83,6 @@ bool field_element_is_null(field3d field, grid_point gp) {
         (isnan(v.z) && field.W != 0)
     );
 }
-
 
 vector double_jack_search(grid_point gp, field3d field) {
     /* This function returns some non-null vector from "field" which is nearby grid cell "gp".
