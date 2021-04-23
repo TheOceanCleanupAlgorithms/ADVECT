@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 from pathlib import Path
 from typing import Optional
 
@@ -15,31 +16,42 @@ CURRENTS_META_GROUP_NAME = "currents_meta"
 WIND_META_GROUP_NAME = "wind_meta"
 
 
-class OutputWriter:
-    def __init__(self, out_dir: Path, sourcefile_path: str,
-                 currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
+class OutputWriter(ABC):
+    def __init__(
+        self,
+        out_dir: Path,
+        basename: str,
+        sourcefile_path: str,
+        currents: xr.Dataset,
+        wind: Optional[xr.Dataset],
+        api_entry: str,
+        api_arguments: dict,
+    ):
         """
         :param out_dir: directory to save outputfiles
+        :param basename: base name of each outputfile (e.g. out_name = "3d_output" --> "3d_output_1993.nc")
         :param sourcefile_path: path to sourcefile
         :param currents: dataset containing the ocean currents
         :param wind: dataset containing the winds
-        :param arguments_to_run_advector: dictionary containing info on the top-level API call, "run_advector.py::run_advector"
+        :param api_arguments: dictionary containing info on the top-level API call
         """
         if not out_dir.is_dir():
             out_dir.mkdir()
 
         self.folder_path = out_dir
+        self.basename = basename
         self.current_year = None
         self.paths = []
 
         self.sourcefile_path = sourcefile_path
         self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
         self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
-        self.arguments_to_run_advector = arguments_to_run_advector
+        self.api_entry = api_entry
+        self.api_arguments = api_arguments
 
     def _set_current_year(self, year: int):
         self.current_year = year
-        self.paths.append(self.folder_path / f"advector_output_{year}.nc")
+        self.paths.append(self.folder_path / f"{self.basename}_{year}.nc")
 
     def write_output_chunk(self, chunk: xr.Dataset):
         beginning_year = chunk.time.dt.year.values[0]
@@ -92,8 +104,8 @@ class OutputWriter:
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
-            ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
-                           f"file are: {str(self.arguments_to_run_advector)}"
+            ds.arguments = f"The arguments of the call to {self.api_entry} which produced this " \
+                           f"file are: {str(self.api_arguments)}"
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -159,7 +171,7 @@ class OutputWriter2D(OutputWriter):
     def _write_first_chunk(self, chunk: xr.Dataset):
         super()._write_first_chunk(chunk)
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
-            ds.title = "Trajectories of Marine Debris"
+            ds.title = "Trajectories of Floating Marine Debris"
             ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
                              "through ADVECTOR.  This file also contains several other groups: " \
                              f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
@@ -170,21 +182,29 @@ class OutputWriter2D(OutputWriter):
 
 
 class OutputWriter3D(OutputWriter):
-    def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
-                 currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
+    def __init__(
+        self,
+        out_dir: Path,
+        basename: str,
+        configfile_path: str,
+        sourcefile_path: str,
+        currents: xr.Dataset,
+        wind: Optional[xr.Dataset],
+        api_entry: str,
+        api_arguments: dict,
+    ):
         """
-        :param out_dir: directory to save outputfiles
         :param configfile_path: path to configfile
-        :param sourcefile_path: path to sourcefile
-        :param currents: dataset containing the ocean currents
-        :param wind: dataset containing the winds
-        :param arguments_to_run_advector: dictionary containing info on the top-level API call, "run_advector.py::run_advector"
+        see OutputWriter for other arg descriptions
         """
         super().__init__(
             out_dir=out_dir,
+            basename=basename,
             sourcefile_path=sourcefile_path,
-            currents=currents, wind=wind,
-            arguments_to_run_advector=arguments_to_run_advector,
+            currents=currents,
+            wind=wind,
+            api_entry=api_entry,
+            api_arguments=api_arguments,
         )
         self.configfile_path = configfile_path
 

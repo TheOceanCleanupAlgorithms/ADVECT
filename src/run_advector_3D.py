@@ -20,7 +20,7 @@ from io_tools.open_sourcefiles import open_sourcefiles
 from io_tools.open_vectorfiles import *
 
 
-def run_advector(
+def run_advector_3D(
     sourcefile_path: str,
     configfile_path: str,
     output_directory: str,
@@ -128,11 +128,13 @@ def run_advector(
 
     output_writer = OutputWriter3D(
         out_dir=Path(output_directory),
+        basename="ADVECTOR_3D_output",
         configfile_path=configfile_path,
         sourcefile_path=sourcefile_path,
         currents=forcing_data["current"],
         wind=forcing_data["wind"] if "wind" in forcing_data else None,
-        arguments_to_run_advector=arguments,
+        api_entry="src/run_advector_3D.py::run_advector_3D",
+        api_arguments=arguments,
     )
 
     print("---COMMENCING ADVECTION---")
