@@ -8,19 +8,19 @@ import xarray as xr
 import pandas as pd
 
 from tqdm import tqdm
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Type
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from drivers.create_bathymetry import create_bathymetry
 from io_tools.OutputWriter import OutputWriter
+from kernel_wrappers.Kernel import Kernel
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def openCL_advect(
-    current: xr.Dataset,
-    wind: xr.Dataset,
-    seawater_density: xr.Dataset,
+    forcing_data: dict[str, xr.Dataset],
+    kernel: Type[Kernel],
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
@@ -37,10 +37,11 @@ def openCL_advect(
     platform_and_device: Tuple[int] = None,
 ) -> List[Path]:
     """
-    advect particles on device using OpenCL.  Dynamically chunks computation to fit device memory.
-    :param current: xarray Dataset storing current vector field/axes.
-    :param wind: xarray Dataset storing wind vector field/axes.  If None, no windage applied.
-    :param seawater_density: xarray Dataset storing seawater density field.
+    Splits an advection computation into chunks, based on memory constraints of compute device,
+    and executes the kernel over each chunk.
+    :param forcing_data: dictionary holding whatever forcing data is available.
+        valid keys: {"current", "wind", "seawater_density"}
+    :param kernel: kernel class used to execute the chunks
     :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
@@ -59,9 +60,9 @@ def openCL_advect(
     """
     num_particles = len(p0.p_id)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
-    current = current.sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
-    wind = wind.sel(time=slice(advect_time[0], advect_time[-1]))
-
+    current = forcing_data["current"].sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
+    wind = forcing_data["wind"].sel(time=slice(advect_time[0], advect_time[-1]))
+    seawater_density = forcing_data["seawater_density"]
     # choose the device/platform we're running on
     if platform_and_device is None:
         context = cl.create_some_context(interactive=True)
@@ -95,19 +96,23 @@ def openCL_advect(
         # create the kernel wrapper object, pass it arguments
         print("\tInitializing Kernel...")
         kernel = Kernel3D(
-            current=current_chunks[i],
-            wind=wind_chunks[i],
-            seawater_density=seawater_density_chunks[i],
+            forcing_data={
+                "current": current_chunks[i],
+                "wind": wind_chunks[i],
+                "seawater_density": seawater_density_chunks[i],
+            },
             p0=p0_chunk,
             advection_scheme=advection_scheme,
-            eddy_diffusivity=eddy_diffusivity,
-            max_wave_height=max_wave_height,
-            wave_mixing_depth_factor=wave_mixing_depth_factor,
-            windage_multiplier=windage_multiplier,
-            wind_mixing_enabled=wind_mixing_enabled,
+            config={
+                "eddy_diffusivity": eddy_diffusivity,
+                "max_wave_height": max_wave_height,
+                "wave_mixing_depth_factor": wave_mixing_depth_factor,
+                "windage_multiplier": windage_multiplier,
+                "wind_mixing_enabled": wind_mixing_enabled,
+            },
             advect_time=advect_time_chunks[i],
             save_every=save_every,
-            context=context
+            context=context,
         )
         print("\tTriggering kernel execution...")
         P_chunk = kernel.execute()

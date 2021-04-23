@@ -94,13 +94,3 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
                 vectors = vectors.sortby('lon')
 
     return vectors
-
-
-def empty_2D_vectorfield():
-    return xr.Dataset(
-        data_vars={
-            "U": (["lat", "lon", "time"], np.ndarray((0, 0, 0))),
-            "V": (["lat", "lon", "time"], np.ndarray((0, 0, 0))),
-        },
-        coords={"lon": [], "lat": [], "time": []},
-    )

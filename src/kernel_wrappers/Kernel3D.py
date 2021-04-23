@@ -16,36 +16,42 @@ from typing import Optional
 from dask.diagnostics import ProgressBar
 
 import kernel_wrappers.kernel_constants as cl_const
+from kernel_wrappers.Kernel import Kernel, AdvectionScheme
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
 
 
-class AdvectionScheme(Enum):
-    """matching definitions in src/kernels/advection_schemes.h"""
-    eulerian = 0
-    taylor2 = 1
-
-
-class Kernel3D:
+class Kernel3D(Kernel):
     """wrapper for src/kernels/kernel_3d.cl"""
 
     def __init__(
-            self,
-            current: xr.Dataset,
-            wind: xr.Dataset,
-            seawater_density: xr.Dataset,
-            p0: xr.Dataset,
-            advect_time: pd.DatetimeIndex,
-            save_every: int,
-            advection_scheme: AdvectionScheme,
-            eddy_diffusivity: xr.Dataset,
-            max_wave_height: float,
-            wave_mixing_depth_factor: float,
-            windage_multiplier: Optional[float],
-            wind_mixing_enabled: bool,
-            context: cl.Context,
+        self,
+        forcing_data: dict[str, xr.Dataset],
+        p0: xr.Dataset,
+        advect_time: pd.DatetimeIndex,
+        save_every: int,
+        advection_scheme: AdvectionScheme,
+        config: dict,
+        context: cl.Context,
     ):
-        """convert convenient python objects to raw representation for kernel"""
+        """
+        :param forcing_data:
+            required keys: {"current", "seawater_density"}
+            optional keys: {"wind"}
+        :param p0: initial state of particles
+        :param advect_time: the timeseries which the kernel advects on
+        :param save_every: number of timesteps between each writing of particle state
+        :param advection_scheme: specifies which advection formulation to use
+        :param config: must include
+            "windage_multiplier": Optional[float]
+            "wind_mixing_enabled": bool
+            "max_wave_height": float
+            "wave_mixing_depth_factor": float
+            "eddy_diffusivity": xr.Dataset, with variables:
+                horizontal_diffusivity, with dimension z_hd
+                vertical_diffusivity, with dimension z_vd
+        :param context: PyopenCL context for executing OpenCL programs
+        """
         # save some arguments for creating output dataset
         self.p0 = p0
         self.out_time = advect_time[::save_every][1:]
@@ -60,7 +66,7 @@ class Kernel3D:
 
         print("\t\tLoading Current Data...")
         data_loading_start = time.time()
-        current = current.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+        current = forcing_data["current"].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
         with ProgressBar():
             self.current_x = current.lon.values.astype(np.float64)
             self.current_y = current.lat.values.astype(np.float64)
@@ -72,9 +78,9 @@ class Kernel3D:
             self.current_bathy = current.bathymetry.values.astype(np.float32, copy=False).ravel()
         # wind vector field
         print("\t\tLoading Wind Data...")
-        if windage_multiplier is not None:
+        if "wind" in forcing_data:
             with ProgressBar():
-                wind = wind.transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
+                wind = forcing_data["wind"].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
                 self.wind_x = wind.lon.values.astype(np.float64)
                 self.wind_y = wind.lat.values.astype(np.float64)
                 self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
@@ -88,7 +94,7 @@ class Kernel3D:
         # seawater_density vector field
         print("\t\tLoading Seawater Density Data...")
         with ProgressBar():
-            seawater_density = seawater_density.transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+            seawater_density = forcing_data["seawater_density"].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
             self.seawater_density_x = seawater_density.lon.values.astype(np.float64)
             self.seawater_density_y = seawater_density.lat.values.astype(np.float64)
             self.seawater_density_z = seawater_density.depth.values.astype(np.float64)
@@ -114,11 +120,12 @@ class Kernel3D:
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
         self.advection_scheme = advection_scheme.value
-        self.windage_multiplier = windage_multiplier
-        self.wind_mixing_enabled = wind_mixing_enabled
-        self.max_wave_height = max_wave_height
-        self.wave_mixing_depth_factor = wave_mixing_depth_factor
+        self.windage_multiplier = config["windage_multiplier"]
+        self.wind_mixing_enabled = config["wind_mixing_enabled"]
+        self.max_wave_height = config["max_wave_height"]
+        self.wave_mixing_depth_factor = config["wave_mixing_depth_factor"]
         # eddy diffusivity
+        eddy_diffusivity = config["eddy_diffusivity"]
         self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
         self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
         self.vertical_eddy_diffusivity_z = eddy_diffusivity.z_vd.values.astype(np.float64)

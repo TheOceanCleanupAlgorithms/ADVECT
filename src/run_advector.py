@@ -15,7 +15,7 @@ from typing import Tuple
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
-from kernel_wrappers.Kernel3D import AdvectionScheme
+from kernel_wrappers.Kernel3D import AdvectionScheme, Kernel3D
 from io_tools.open_sourcefiles import open_sourcefiles
 from io_tools.open_vectorfiles import *
 
@@ -109,39 +109,36 @@ def run_advector(
     eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
         = unpack_configfile(configfile_path=configfile_path)
 
+    forcing_data = {}
     print("Initializing Ocean Current...")
-    currents = open_currents(
+    forcing_data["current"] = open_currents(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
     print("Initializing Seawater Density...")
-    seawater_density = open_seawater_density(
+    forcing_data["seawater_density"] = open_seawater_density(
         path=seawater_density_path, variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
-        wind = open_wind(
+        forcing_data["wind"] = open_wind(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
-    else:
-        wind = empty_2D_vectorfield()
-        windage_multiplier = None  # this is how we flag windage=off
 
     output_writer = OutputWriter3D(
         out_dir=Path(output_directory),
         configfile_path=configfile_path,
         sourcefile_path=sourcefile_path,
-        currents=currents,
-        wind=wind if windage_multiplier is not None else None,
+        currents=forcing_data["current"],
+        wind=forcing_data["wind"] if "wind" in forcing_data else None,
         arguments_to_run_advector=arguments,
     )
 
     print("---COMMENCING ADVECTION---")
     out_paths = openCL_advect(
-        current=currents,
-        wind=wind,
-        seawater_density=seawater_density,
+        forcing_data=forcing_data,
+        kernel=Kernel3D,
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,
