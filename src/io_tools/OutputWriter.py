@@ -9,13 +9,17 @@ import numpy as np
 from kernel_wrappers.kernel_constants import EXIT_CODES
 from _version import __version__
 
+SOURCEFILE_GROUP_NAME = "sourcefile"
+CONFIGFILE_GROUP_NAME = "configfile"
+CURRENTS_META_GROUP_NAME = "currents_meta"
+WIND_META_GROUP_NAME = "wind_meta"
+
 
 class OutputWriter:
-    def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
+    def __init__(self, out_dir: Path, sourcefile_path: str,
                  currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
         """
         :param out_dir: directory to save outputfiles
-        :param configfile_path: path to configfile
         :param sourcefile_path: path to sourcefile
         :param currents: dataset containing the ocean currents
         :param wind: dataset containing the winds
@@ -28,7 +32,6 @@ class OutputWriter:
         self.current_year = None
         self.paths = []
 
-        self.configfile_path = configfile_path
         self.sourcefile_path = sourcefile_path
         self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
         self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
@@ -47,21 +50,18 @@ class OutputWriter:
             if year != self.current_year:
                 self._set_current_year(year)
                 self._write_first_chunk(chunk_year)
+                self._copy_unexpected_variables(chunk_year)
             else:
                 self._append_chunk(chunk_year)
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
             # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
-            config_group = ds.createGroup("configfile")
-            with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
-                copy_dataset(configfile, config_group)
-
-            sourcefile_group = ds.createGroup("sourcefile")
+            sourcefile_group = ds.createGroup(SOURCEFILE_GROUP_NAME)
             with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
                 copy_dataset(sourcefile, sourcefile_group)
 
-            currents_meta_group = ds.createGroup("currents_meta")
+            currents_meta_group = ds.createGroup(CURRENTS_META_GROUP_NAME)
             currents_meta_group.setncattr(
                 "currents_meta_group_description",
                 "This group contains the coordinates of the fully concatenated currents "
@@ -75,7 +75,7 @@ class OutputWriter:
                 copy_dataset(currents_meta, currents_meta_group)
             os.remove(tmp_currents_path)
 
-            wind_meta_group = ds.createGroup("wind_meta")
+            wind_meta_group = ds.createGroup(WIND_META_GROUP_NAME)
             wind_meta_group.setncattr(
                 "wind_meta_group_description",
                 "This group contains the coordinates of the fully concatenated 10-meter wind "
@@ -90,17 +90,8 @@ class OutputWriter:
                 os.remove(tmp_wind_path)
 
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
-            ds.title = "Trajectories of Floating Marine Debris"
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
-            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
-                             "through ADVECTOR.  This file also contains several other groups: " \
-                             f"{config_group.name}, which is a copy of the configfile passed to ADVECTOR, " \
-                             f"{sourcefile_group.name}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"{currents_meta_group.name}, which contains the coordinates of the current dataset passed " \
-                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
-                             f"{wind_meta_group.name}, which contains the coordinates of the wind dataset passed to " \
-                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
             ds.arguments = f"The arguments of the call to src/run_advector.py::run_advector which produced this " \
                            f"file are: {str(self.arguments_to_run_advector)}"
 
@@ -116,32 +107,12 @@ class OutputWriter:
             release_date.calendar = "gregorian"
             release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
 
-            radius = ds.createVariable("radius", np.float64, ("p_id",))
-            radius.units = "meters"
-            radius[:] = chunk.radius.values.astype(np.float64)
-
-            density = ds.createVariable("density", np.float64, ("p_id",))
-            density.units = "kg m^-3"
-            density[:] = chunk.density.values.astype(np.float64)
-
-            corey_shape_factor = ds.createVariable("corey_shape_factor", np.float64, ("p_id",))
-            corey_shape_factor.units = "unitless"
-            corey_shape_factor[:] = chunk.corey_shape_factor.values.astype(np.float64)
-
             exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
             exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
                                     "kernel must be terminated.  Their semantic meaning is provided in the " \
                                     "'code_to_meaning' attribute of this variable."
             exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
             exit_code[:] = chunk.exit_code.values.astype(np.byte)
-
-            # any other variables along only p_id should be copied over as well...
-            dims_except_p_id = [dim for dim in chunk.dims if dim != "p_id"]
-            for varname in chunk.drop_dims(dims_except_p_id).variables:
-                if varname not in ds.variables:
-                    ds.createVariable(varname, chunk[varname].dtype, ("p_id",))
-                    ds[varname].setncatts(chunk[varname].attrs)
-                    ds[varname][:] = chunk[varname].values
 
             # Variables that expand between chunks
             time = ds.createVariable("time", np.float64, ("time",))
@@ -157,10 +128,15 @@ class OutputWriter:
             lat.units = "Degrees North"
             lat[:] = chunk.lat.values
 
-            depth = ds.createVariable("depth", chunk.depth.dtype, ("p_id", "time"))
-            depth.units = "meters"
-            depth.positive = "up"
-            depth[:] = chunk.depth.values
+    def _copy_unexpected_variables(self, chunk: xr.Dataset):
+        """copy any variables along only p_id should be copied over as well"""
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
+            dims_except_p_id = [dim for dim in chunk.dims if dim != "p_id"]
+            for varname in chunk.drop_dims(dims_except_p_id).variables:
+                if varname not in ds.variables:
+                    ds.createVariable(varname, chunk[varname].dtype, ("p_id",))
+                    ds[varname].setncatts(chunk[varname].attrs)
+                    ds[varname][:] = chunk[varname].values
 
     def _append_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
@@ -174,12 +150,87 @@ class OutputWriter:
             lat = ds.variables["lat"]
             lat[:, start_t:] = chunk.lat.values
 
-            depth = ds.variables['depth']
-            depth[:, start_t:] = chunk.depth.values
-
             exit_code = ds.variables["exit_code"]
             # overwrite with most recent codes; by design, nonzero codes cannot change
             exit_code[:] = chunk.exit_code.values
+
+
+class OutputWriter2D(OutputWriter):
+    def _write_first_chunk(self, chunk: xr.Dataset):
+        super()._write_first_chunk(chunk)
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
+            ds.title = "Trajectories of Marine Debris"
+            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
+                             "through ADVECTOR.  This file also contains several other groups: " \
+                             f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
+                             f"{CURRENTS_META_GROUP_NAME}, which contains the coordinates of the current dataset passed " \
+                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
+                             f"{WIND_META_GROUP_NAME}, which contains the coordinates of the wind dataset passed to " \
+                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+
+
+class OutputWriter3D(OutputWriter):
+    def __init__(self, out_dir: Path, configfile_path: str, sourcefile_path: str,
+                 currents: xr.Dataset, wind: Optional[xr.Dataset], arguments_to_run_advector: dict):
+        """
+        :param out_dir: directory to save outputfiles
+        :param configfile_path: path to configfile
+        :param sourcefile_path: path to sourcefile
+        :param currents: dataset containing the ocean currents
+        :param wind: dataset containing the winds
+        :param arguments_to_run_advector: dictionary containing info on the top-level API call, "run_advector.py::run_advector"
+        """
+        super().__init__(
+            out_dir=out_dir,
+            sourcefile_path=sourcefile_path,
+            currents=currents, wind=wind,
+            arguments_to_run_advector=arguments_to_run_advector,
+        )
+        self.configfile_path = configfile_path
+
+    def _write_first_chunk(self, chunk: xr.Dataset):
+        super()._write_first_chunk(chunk=chunk)
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
+            # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
+            config_group = ds.createGroup("configfile")
+            with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
+                copy_dataset(configfile, config_group)
+
+            # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
+            ds.title = "Trajectories of Marine Debris"
+            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
+                             "through ADVECTOR.  This file also contains several other groups: " \
+                             f"{CONFIGFILE_GROUP_NAME}, which is a copy of the configfile passed to ADVECTOR, " \
+                             f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
+                             f"{CURRENTS_META_GROUP_NAME}, which contains the coordinates of the current dataset passed " \
+                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
+                             f"{WIND_META_GROUP_NAME}, which contains the coordinates of the wind dataset passed to " \
+                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+
+            radius = ds.createVariable("radius", np.float64, ("p_id",))
+            radius.units = "meters"
+            radius[:] = chunk.radius.values.astype(np.float64)
+
+            density = ds.createVariable("density", np.float64, ("p_id",))
+            density.units = "kg m^-3"
+            density[:] = chunk.density.values.astype(np.float64)
+
+            corey_shape_factor = ds.createVariable("corey_shape_factor", np.float64, ("p_id",))
+            corey_shape_factor.units = "unitless"
+            corey_shape_factor[:] = chunk.corey_shape_factor.values.astype(np.float64)
+
+            depth = ds.createVariable("depth", chunk.depth.dtype, ("p_id", "time"))
+            depth.units = "meters"
+            depth.positive = "up"
+            depth[:] = chunk.depth.values
+
+    def _append_chunk(self, chunk: xr.Dataset):
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
+            start_t = len(ds.variables["time"])
+        super()._append_chunk(chunk=chunk)
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
+            depth = ds.variables['depth']
+            depth[:, start_t:] = chunk.depth.values
 
 
 def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):

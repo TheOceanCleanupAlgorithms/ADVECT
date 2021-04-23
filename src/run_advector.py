@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Tuple
 
 from drivers.opencl_driver_3D import openCL_advect
-from io_tools.OutputWriter import OutputWriter
+from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
 from kernel_wrappers.Kernel3D import AdvectionScheme
 from io_tools.open_sourcefiles import open_sourcefiles
@@ -121,7 +121,6 @@ def run_advector(
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
-        assert windage_multiplier is not None, "Wind data must be accompanied by windage coefficient."
         wind = open_wind(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
@@ -129,7 +128,7 @@ def run_advector(
         wind = empty_2D_vectorfield()
         windage_multiplier = None  # this is how we flag windage=off
 
-    output_writer = OutputWriter(
+    output_writer = OutputWriter3D(
         out_dir=Path(output_directory),
         configfile_path=configfile_path,
         sourcefile_path=sourcefile_path,
