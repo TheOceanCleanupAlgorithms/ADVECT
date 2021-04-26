@@ -10,7 +10,7 @@ See src/data_specifications.md for detailed description of data format requireme
 
 import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List
 
 from drivers.opencl_driver_2D import openCL_advect
 from kernel_wrappers.Kernel2D import AdvectionScheme
@@ -39,7 +39,7 @@ def run_advector(
     wind_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
     verbose: bool = False,
-    water_desampling_res: Optional[float] = None,
+    currents_preprocessor: Optional[Callable] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -106,7 +106,7 @@ def run_advector(
         source_file_type=sourcefile_format_enum,
     )
     currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map, desampling_res=water_desampling_res
+        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map, preprocessor=currents_preprocessor
     )
 
     if u_wind_path is not None and v_wind_path is not None:
