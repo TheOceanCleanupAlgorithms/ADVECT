@@ -15,9 +15,11 @@ from typing import Tuple
 from drivers.opencl_driver_3D import openCL_advect
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
-from kernel_wrappers.Kernel3D import AdvectionScheme, Kernel3D
+from enums.advection_scheme import AdvectionScheme
+from kernel_wrappers.Kernel3D import Kernel3D
 from io_tools.open_sourcefiles import open_sourcefiles
 from io_tools.open_vectorfiles import *
+from enums.forcings import Forcing
 
 
 def run_advector_3D(
@@ -111,18 +113,18 @@ def run_advector_3D(
 
     forcing_data = {}
     print("Initializing Ocean Current...")
-    forcing_data["current"] = open_currents(
+    forcing_data[Forcing.current] = open_currents(
         u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
     )
 
     print("Initializing Seawater Density...")
-    forcing_data["seawater_density"] = open_seawater_density(
+    forcing_data[Forcing.seawater_density] = open_seawater_density(
         path=seawater_density_path, variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
-        forcing_data["wind"] = open_wind(
+        forcing_data[Forcing.wind] = open_wind(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
 
@@ -131,8 +133,7 @@ def run_advector_3D(
         basename="ADVECTOR_3D_output",
         configfile_path=configfile_path,
         sourcefile_path=sourcefile_path,
-        currents=forcing_data["current"],
-        wind=forcing_data["wind"] if "wind" in forcing_data else None,
+        forcing_data=forcing_data,
         api_entry="src/run_advector_3D.py::run_advector_3D",
         api_arguments=arguments,
     )
@@ -140,7 +141,7 @@ def run_advector_3D(
     print("---COMMENCING ADVECTION---")
     out_paths = openCL_advect(
         forcing_data=forcing_data,
-        kernel=Kernel3D,
+        kernel_cls=Kernel3D,
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,

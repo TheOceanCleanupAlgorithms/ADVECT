@@ -5,6 +5,7 @@ We will use a small latitude/longitude scale in order to approximate cartesian b
 """
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent.parent.parent / 'src'))
 
 import numpy as np
@@ -13,8 +14,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pyopencl as cl
 from datetime import timedelta
-from io_tools.open_vectorfiles import empty_2D_vectorfield
-from kernel_wrappers.Kernel3D import AdvectionScheme, Kernel3D
+from enums.advection_scheme import AdvectionScheme
+from enums.forcings import Forcing
+from kernel_wrappers.Kernel3D import Kernel3D
 
 
 def compare_alg_drift(initial_radius: float, plot=False):
@@ -67,17 +69,29 @@ def compare_alg_drift(initial_radius: float, plot=False):
     p0['release_date'] = time[0]
     p0 = xr.Dataset(p0.set_index('p_id'))
     save_every = 1
-    wind = empty_2D_vectorfield()
 
-    euler, taylor = [Kernel3D(current=current, wind=wind, p0=p0,
-                     advect_time=time, save_every=save_every,
-                     advection_scheme=scheme,
-                     eddy_diffusivity=eddy_diffusivity,
-                     seawater_density=seawater_density,
-                     max_wave_height=0, wave_mixing_depth_factor=0,
-                     windage_multiplier=None, wind_mixing_enabled=False,
-                     context=cl.create_some_context()).execute().squeeze()
-                     for scheme in (AdvectionScheme.eulerian, AdvectionScheme.taylor2)]
+    euler, taylor = [
+        Kernel3D(
+            forcing_data={
+                Forcing.current: current,
+                Forcing.seawater_density: seawater_density,
+            },
+            p0=p0,
+            advect_time=time,
+            save_every=save_every,
+            advection_scheme=scheme,
+            config={
+                "eddy_diffusivity": eddy_diffusivity,
+                "max_wave_height": 0,
+                "wave_mixing_depth_factor": 0,
+                "windage_multiplier": None,
+                "wind_mixing_enabled": False},
+            context=cl.create_some_context(),
+        )
+        .execute()
+        .squeeze()
+        for scheme in (AdvectionScheme.eulerian, AdvectionScheme.taylor2)
+    ]
 
     if plot:
         plt.figure(figsize=(8, 4))

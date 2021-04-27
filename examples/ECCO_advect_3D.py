@@ -6,14 +6,14 @@ sys.path.append("../src")
 from pathlib import Path
 
 from plotting.plot_advection import animate_ocean_advection
-from run_advector import run_advector
+from run_advector_3D import run_advector_3D
 from datetime import datetime, timedelta
 
 WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
 
 sourcefile = 'sourcefiles/neutral.nc'
 if __name__ == '__main__':
-    out_paths = run_advector(
+    out_paths = run_advector_3D(
         output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
         sourcefile_path=sourcefile,
         configfile_path='configfiles/config.nc',

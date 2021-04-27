@@ -9,17 +9,17 @@ import numpy as np
 from typing import List, Tuple
 from tqdm import tqdm
 
+from enums.forcings import Forcing
+
 
 def chunk_advection_params(
     device_bytes: int,
-    current: xr.Dataset,
-    wind: xr.Dataset,
-    seawater_density: xr.Dataset,
+    forcing_data: dict[Forcing, xr.Dataset],
     num_particles: int,
     advect_time: pd.DatetimeIndex,
     save_every: int,
 ) -> Tuple[
-    List[pd.DatetimeIndex], List[xr.Dataset], List[xr.Dataset], List[xr.Dataset]
+    List[pd.DatetimeIndex], List[dict[Forcing, xr.Dataset]]
 ]:
     """given the parameters for advection, return parameters for an iterative advection"""
     out_time = advect_time[::save_every]
@@ -27,9 +27,7 @@ def chunk_advection_params(
 
     # estimate total size of memory we need to eventually run through the device
     field_bytes, output_bytes, p0_bytes = estimate_memory_bytes(
-        current=current,
-        wind=wind,
-        seawater_density=seawater_density,
+        forcing_data=forcing_data,
         num_particles=num_particles,
         out_timesteps=len(out_time) - 1,
     )
@@ -56,9 +54,7 @@ def chunk_advection_params(
         # now, we split up the datasets.  If any chunk is too big, we
         # immediately quit, increment num_chunks, and try again.
         advect_time_chunks = []
-        current_chunks = []
-        wind_chunks = []
-        seawater_density_chunks = []
+        forcing_data_chunks = []
         all_chunks_fit = True
         for out_time_chunk in out_time_chunks:
             # extract dataset chunks for this out_time chunk
@@ -68,17 +64,16 @@ def chunk_advection_params(
                     & (advect_time <= out_time_chunk[-1])
                 ]
             )
-            current_chunks.append(extract_dataset_chunk(current, out_time_chunk))
-            wind_chunks.append(extract_dataset_chunk(wind, out_time_chunk))
-            seawater_density_chunks.append(
-                extract_dataset_chunk(seawater_density, out_time_chunk)
+            forcing_data_chunks.append(
+                {
+                    forcing: extract_dataset_chunk(ds, out_time_chunk)
+                    for forcing, ds in forcing_data.items()
+                }
             )
 
             # if this chunk is too big, try again with more chunks.
             memory_bytes = estimate_memory_bytes(
-                current=current_chunks[-1],
-                wind=wind_chunks[-1],
-                seawater_density=seawater_density_chunks[-1],
+                forcing_data=forcing_data_chunks[-1],
                 num_particles=num_particles,
                 out_timesteps=len(out_time_chunk) - 1,
             )
@@ -86,38 +81,29 @@ def chunk_advection_params(
                 all_chunks_fit = False
                 break
         if all_chunks_fit:
-            return (
-                advect_time_chunks,
-                current_chunks,
-                wind_chunks,
-                seawater_density_chunks,
-            )
+            return advect_time_chunks, forcing_data_chunks
         num_chunks += 1
         pbar.update(1)
 
 
 def estimate_memory_bytes(
-    current: xr.Dataset,
-    wind: xr.Dataset,
-    seawater_density: xr.Dataset,
+    forcing_data: dict[Forcing, xr.Dataset],
     num_particles: int,
     out_timesteps: int,
 ) -> Tuple[int, int, int]:
     """This estimates total memory needed for the buffers.
     There's a bit more needed for the scalar arguments, but this is tiny"""
-    # current has 3 4-byte variables, and 8-byte coordinate arrays
-    current_bytes = 3 * 4 * math.prod(current.U.shape) + 8 * sum(current.U.shape)
-    # wind has 2 4-byte variables, and 8-byte coordinate arrays
-    wind_bytes = 2 * 4 * math.prod(wind.U.shape) + 8 * sum(wind.U.shape)
-    # seawater density has 1 4-byte variable, and 8-byte coordinate arrays
-    seawater_density_bytes = 4 * math.prod(seawater_density.rho.shape) + 8 * sum(
-        seawater_density.rho.shape
-    )
+    forcing_data_bytes = 0
+    for ds in forcing_data.values():
+        field_shape = list(ds.data_vars.values())[0].shape
+        # when passed to the kernel, field variables are represented as float32, coordinates as float64
+        forcing_data_bytes += len(ds.data_vars) * 4 * math.prod(field_shape) + 8 * sum(field_shape)
+
     # output has three 4-byte variables for each particle per timestep, plus 1-byte exit codes
     output_bytes = 3 * 4 * num_particles * out_timesteps + 1 * num_particles
     # the particle input has 3 4-byte variables and 4 8-byte variables
     p0_bytes = (3 * 4 + 4 * 8) * num_particles
-    return (current_bytes + wind_bytes + seawater_density_bytes), output_bytes, p0_bytes
+    return forcing_data_bytes, output_bytes, p0_bytes
 
 
 def extract_dataset_chunk(

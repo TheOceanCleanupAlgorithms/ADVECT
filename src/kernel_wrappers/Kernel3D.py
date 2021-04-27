@@ -16,6 +16,7 @@ from typing import Optional
 from dask.diagnostics import ProgressBar
 
 import kernel_wrappers.kernel_constants as cl_const
+from enums.forcings import Forcing
 from kernel_wrappers.Kernel import Kernel, AdvectionScheme
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
@@ -26,7 +27,7 @@ class Kernel3D(Kernel):
 
     def __init__(
         self,
-        forcing_data: dict[str, xr.Dataset],
+        forcing_data: dict[Forcing, xr.Dataset],
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
@@ -55,6 +56,7 @@ class Kernel3D(Kernel):
         # save some arguments for creating output dataset
         self.p0 = p0
         self.out_time = advect_time[::save_every][1:]
+        self.advect_time = advect_time
 
         # some handy timers
         self.data_load_time = 0
@@ -66,7 +68,7 @@ class Kernel3D(Kernel):
 
         print("\t\tLoading Current Data...")
         data_loading_start = time.time()
-        current = forcing_data["current"].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+        current = forcing_data[Forcing.current].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
         with ProgressBar():
             self.current_x = current.lon.values.astype(np.float64)
             self.current_y = current.lat.values.astype(np.float64)
@@ -80,7 +82,7 @@ class Kernel3D(Kernel):
         print("\t\tLoading Wind Data...")
         if "wind" in forcing_data:
             with ProgressBar():
-                wind = forcing_data["wind"].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
+                wind = forcing_data[Forcing.wind].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
                 self.wind_x = wind.lon.values.astype(np.float64)
                 self.wind_y = wind.lat.values.astype(np.float64)
                 self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
@@ -94,7 +96,7 @@ class Kernel3D(Kernel):
         # seawater_density vector field
         print("\t\tLoading Seawater Density Data...")
         with ProgressBar():
-            seawater_density = forcing_data["seawater_density"].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
+            seawater_density = forcing_data[Forcing.seawater_density].transpose('time', 'depth', 'lat', 'lon')  # coerce values into correct shape before flattening
             self.seawater_density_x = seawater_density.lon.values.astype(np.float64)
             self.seawater_density_y = seawater_density.lat.values.astype(np.float64)
             self.seawater_density_z = seawater_density.depth.values.astype(np.float64)
@@ -139,6 +141,8 @@ class Kernel3D(Kernel):
         self.queue = cl.CommandQueue(context)
         self.cl_kernel = cl.Program(context, open(KERNEL_SOURCE).read())\
             .build(options=['-I', str(KERNEL_SOURCE.parent)]).advect
+
+        self.execution_result = None
 
     def execute(self) -> xr.Dataset:
         """tranfers arguments to the compute device, triggers execution, returns result"""
@@ -218,7 +222,7 @@ class Kernel3D(Kernel):
 
         # create and return dataset
         P = self.p0.assign_coords({"time": self.out_time})  # add a time dimension
-        return P.assign(  # overwrite with new data
+        self.execution_result = P.assign(  # overwrite with new data
                 {
                         "lon": (["p_id", "time"], self.X_out.reshape([len(P.p_id), -1])),
                         "lat": (["p_id", "time"], self.Y_out.reshape([len(P.p_id), -1])),
@@ -226,6 +230,7 @@ class Kernel3D(Kernel):
                         "exit_code": (["p_id"], self.exit_code),
                 }
         )
+        return self.execution_result
 
     def get_memory_footprint(self) -> dict:
         current_bytes = (self.current_x.nbytes + self.current_y.nbytes + self.current_z.nbytes + self.current_t.nbytes +
@@ -246,6 +251,25 @@ class Kernel3D(Kernel):
             "seawater_density": seawater_density_bytes,
             "particles": particle_bytes,
         }
+
+    def get_final_state(self) -> xr.Dataset:
+        if self.execution_result is None:
+            raise RuntimeError("Cannot retreive final execution state before kernel has been executed")
+        p0_chunk = self.execution_result.isel(time=-1)  # last timestep is initial state for next chunk
+        # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
+        unreleased = p0_chunk.release_date > self.advect_time[-2]
+        for var in ['lat', 'lon', 'depth']:
+            p0_chunk[var].loc[unreleased] = self.p0[var].loc[unreleased]
+        return p0_chunk
+
+    def get_data_loading_time(self) -> float:
+        return self.data_load_time
+
+    def get_buffer_transfer_time(self) -> float:
+        return self.buf_time
+
+    def get_kernel_execution_time(self) -> float:
+        return self.kernel_time
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""

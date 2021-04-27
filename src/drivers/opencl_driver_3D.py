@@ -12,6 +12,7 @@ from typing import Tuple, Optional, List, Type
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from drivers.create_bathymetry import create_bathymetry
+from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel import Kernel
 from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
@@ -19,8 +20,8 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def openCL_advect(
-    forcing_data: dict[str, xr.Dataset],
-    kernel: Type[Kernel],
+    forcing_data: dict[Forcing, xr.Dataset],
+    kernel_cls: Type[Kernel],
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
@@ -41,7 +42,7 @@ def openCL_advect(
     and executes the kernel over each chunk.
     :param forcing_data: dictionary holding whatever forcing data is available.
         valid keys: {"current", "wind", "seawater_density"}
-    :param kernel: kernel class used to execute the chunks
+    :param kernel_cls: kernel class used to execute the chunks
     :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
@@ -60,9 +61,6 @@ def openCL_advect(
     """
     num_particles = len(p0.p_id)
     advect_time = pd.date_range(start=start_time, freq=dt, periods=num_timesteps)
-    current = forcing_data["current"].sel(time=slice(advect_time[0], advect_time[-1]))  # trim vector fields to necessary time range
-    wind = forcing_data["wind"].sel(time=slice(advect_time[0], advect_time[-1]))
-    seawater_density = forcing_data["seawater_density"]
     # choose the device/platform we're running on
     if platform_and_device is None:
         context = cl.create_some_context(interactive=True)
@@ -71,19 +69,22 @@ def openCL_advect(
 
     # encode the model domain, taken as where all the current components are non-null, as bathymetry
     print("Calculating bathymetry of current dataset...")
-    current = xr.merge((current, create_bathymetry(current)))
-
+    forcing_data[Forcing.current] = xr.merge(
+        (
+            forcing_data[Forcing.current],
+            create_bathymetry(forcing_data[Forcing.current]),
+        )
+    )
     # get the minimum RAM available on the specified compute devices.
     print("Chunking Datasets...")
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
-    advect_time_chunks, current_chunks, wind_chunks, seawater_density_chunks = \
-        chunk_advection_params(device_bytes=available_RAM,
-                               current=current,
-                               wind=wind,
-                               seawater_density=seawater_density,
-                               num_particles=num_particles,
-                               advect_time=advect_time,
-                               save_every=save_every)
+    advect_time_chunks, forcing_data_chunks = chunk_advection_params(
+        device_bytes=available_RAM,
+        forcing_data=forcing_data,
+        num_particles=num_particles,
+        advect_time=advect_time,
+        save_every=save_every,
+    )
 
     create_logger(output_writer.folder_path / "warnings.log")
     p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
@@ -95,12 +96,8 @@ def openCL_advect(
         print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
         # create the kernel wrapper object, pass it arguments
         print("\tInitializing Kernel...")
-        kernel = Kernel3D(
-            forcing_data={
-                "current": current_chunks[i],
-                "wind": wind_chunks[i],
-                "seawater_density": seawater_density_chunks[i],
-            },
+        kernel = kernel_cls(
+            forcing_data=forcing_data_chunks[i],
             p0=p0_chunk,
             advection_scheme=advection_scheme,
             config={
@@ -114,13 +111,15 @@ def openCL_advect(
             save_every=save_every,
             context=context,
         )
+
         print("\tTriggering kernel execution...")
         P_chunk = kernel.execute()
         handle_errors(chunk=P_chunk, chunk_num=i + 1)
-        data_loading_time = kernel.data_load_time
-        buffer_time = kernel.buf_time
-        execution_time = kernel.kernel_time
+        data_loading_time = kernel.get_data_loading_time()
+        buffer_time = kernel.get_buffer_transfer_time()
+        execution_time = kernel.get_kernel_execution_time()
         memory_usage = kernel.get_memory_footprint()
+        p0_chunk = kernel.get_final_state()
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
@@ -129,12 +128,6 @@ def openCL_advect(
         output_start = time.time()
         output_writer.write_output_chunk(P_chunk)
         output_time = time.time() - output_start
-
-        p0_chunk = P_chunk.isel(time=-1)  # last timestep is initial state for next chunk
-        # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        unreleased = p0_chunk.release_date > advect_time_chunks[i][-2]
-        for var in ['lat', 'lon', 'depth']:
-            p0_chunk[var].loc[unreleased] = p0[var].loc[unreleased]
 
         print("\t---BUFFER SIZES---")
         print(f'\tCurrent:            {memory_usage["current"] / 1e6:10.3f} MB')

@@ -7,13 +7,12 @@ import xarray as xr
 import netCDF4
 import numpy as np
 
+from enums.forcings import Forcing
 from kernel_wrappers.kernel_constants import EXIT_CODES
 from _version import __version__
 
 SOURCEFILE_GROUP_NAME = "sourcefile"
 CONFIGFILE_GROUP_NAME = "configfile"
-CURRENTS_META_GROUP_NAME = "currents_meta"
-WIND_META_GROUP_NAME = "wind_meta"
 
 
 class OutputWriter(ABC):
@@ -22,8 +21,7 @@ class OutputWriter(ABC):
         out_dir: Path,
         basename: str,
         sourcefile_path: str,
-        currents: xr.Dataset,
-        wind: Optional[xr.Dataset],
+        forcing_data: dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
     ):
@@ -31,8 +29,7 @@ class OutputWriter(ABC):
         :param out_dir: directory to save outputfiles
         :param basename: base name of each outputfile (e.g. out_name = "3d_output" --> "3d_output_1993.nc")
         :param sourcefile_path: path to sourcefile
-        :param currents: dataset containing the ocean currents
-        :param wind: dataset containing the winds
+        :param forcing_data: xr.Datasets containing forcing datasets (e.g. currents, wind...)
         :param api_arguments: dictionary containing info on the top-level API call
         """
         if not out_dir.is_dir():
@@ -44,8 +41,7 @@ class OutputWriter(ABC):
         self.paths = []
 
         self.sourcefile_path = sourcefile_path
-        self.currents_meta = xr.Dataset(currents.coords, attrs=currents.attrs)  # extract just coords and attributes
-        self.wind_meta = xr.Dataset(wind.coords, attrs=wind.attrs) if wind is not None else None
+        self.forcing_meta = {forcing: xr.Dataset(ds.coords, attrs=ds.attrs) for forcing, ds in forcing_data.items()}
         self.api_entry = api_entry
         self.api_arguments = api_arguments
 
@@ -73,33 +69,20 @@ class OutputWriter(ABC):
             with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
                 copy_dataset(sourcefile, sourcefile_group)
 
-            currents_meta_group = ds.createGroup(CURRENTS_META_GROUP_NAME)
-            currents_meta_group.setncattr(
-                "currents_meta_group_description",
-                "This group contains the coordinates of the fully concatenated currents "
-                "dataset, after it has been loaded into ADVECTOR, and global attributes "
-                "from the first zonal current file in the dataset."
-            )
+            for forcing, meta in self.forcing_meta.items():
+                forcing_meta_group = ds.createGroup(forcing.name)
+                forcing_meta_group.setncattr(
+                    f"{forcing.name}_meta_group_description",
+                    f"This group contains the coordinates of the fully concatenated {forcing.value} "
+                    "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                    "from the first file in the dataset."
+                )
 
-            tmp_currents_path = self.folder_path / "currents_meta_tmp.nc"
-            self.currents_meta.to_netcdf(tmp_currents_path)  # save xr.Dataset to temp file
-            with netCDF4.Dataset(tmp_currents_path, mode="r") as currents_meta:  # so we can open it with netCDF4
-                copy_dataset(currents_meta, currents_meta_group)
-            os.remove(tmp_currents_path)
-
-            wind_meta_group = ds.createGroup(WIND_META_GROUP_NAME)
-            wind_meta_group.setncattr(
-                "wind_meta_group_description",
-                "This group contains the coordinates of the fully concatenated 10-meter wind "
-                "dataset, after it has been loaded into ADVECTOR, and global attributes "
-                "from the first zonal wind file in the dataset."
-            )
-            if self.wind_meta is not None:
-                tmp_wind_path = self.folder_path / "wind_meta_tmp.nc"
-                self.wind_meta.to_netcdf(tmp_wind_path)  # save xr.Dataset to temp file
-                with netCDF4.Dataset(tmp_wind_path, mode="r") as wind_meta:  # so we can open it with netCDF4
-                    copy_dataset(wind_meta, wind_meta_group)
-                os.remove(tmp_wind_path)
+                tmp_meta_path = self.folder_path / f"{forcing.name}_meta_tmp.nc"
+                meta.to_netcdf(tmp_meta_path)  # save xr.Dataset to temp file
+                with netCDF4.Dataset(tmp_meta_path, mode="r") as netcdf4_meta:  # so we can open it with netCDF4
+                    copy_dataset(netcdf4_meta, forcing_meta_group)
+                os.remove(tmp_meta_path)
 
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.institution = "The Ocean Cleanup"
@@ -175,10 +158,9 @@ class OutputWriter2D(OutputWriter):
             ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
                              "through ADVECTOR.  This file also contains several other groups: " \
                              f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"{CURRENTS_META_GROUP_NAME}, which contains the coordinates of the current dataset passed " \
-                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
-                             f"{WIND_META_GROUP_NAME}, which contains the coordinates of the wind dataset passed to " \
-                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+                             f"and a group for each forcing dataset: {list(forcing.name for forcing in self.forcing_meta.keys())}, " \
+                             f"which each contain the dataset's coordinates " \
+                             f"and the global attributes from the first file in the dataset."
 
 
 class OutputWriter3D(OutputWriter):
@@ -188,8 +170,7 @@ class OutputWriter3D(OutputWriter):
         basename: str,
         configfile_path: str,
         sourcefile_path: str,
-        currents: xr.Dataset,
-        wind: Optional[xr.Dataset],
+        forcing_data: dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
     ):
@@ -201,8 +182,7 @@ class OutputWriter3D(OutputWriter):
             out_dir=out_dir,
             basename=basename,
             sourcefile_path=sourcefile_path,
-            currents=currents,
-            wind=wind,
+            forcing_data=forcing_data,
             api_entry=api_entry,
             api_arguments=api_arguments,
         )
@@ -222,10 +202,9 @@ class OutputWriter3D(OutputWriter):
                              "through ADVECTOR.  This file also contains several other groups: " \
                              f"{CONFIGFILE_GROUP_NAME}, which is a copy of the configfile passed to ADVECTOR, " \
                              f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"{CURRENTS_META_GROUP_NAME}, which contains the coordinates of the current dataset passed " \
-                             f"to ADVECTOR, as well as the global attributes from the first zonal current file, and " \
-                             f"{WIND_META_GROUP_NAME}, which contains the coordinates of the wind dataset passed to " \
-                             f"ADVECTOR, as well as the global attributes from the first zonal wind file."
+                             f"and a group for each forcing dataset: {list(forcing.name for forcing in self.forcing_meta.keys())}, " \
+                             f"which each contain the dataset's coordinates " \
+                             f"and the global attributes from the first file in the dataset."
 
             radius = ds.createVariable("radius", np.float64, ("p_id",))
             radius.units = "meters"
