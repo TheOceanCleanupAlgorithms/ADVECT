@@ -3,7 +3,6 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
-import warnings
 import numpy as np
 import pyopencl as cl
 import time

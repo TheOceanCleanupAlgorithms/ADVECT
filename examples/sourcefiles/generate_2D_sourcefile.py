@@ -32,7 +32,7 @@ def generate_2D_sourcefile(
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))
 
-    ds.attrs["title"] = f"3D Sourcefile for ADVECTOR"
+    ds.attrs["title"] = f"2D Sourcefile for ADVECTOR"
     ds.attrs["institution"] = "The Ocean Cleanup"
 
     out_path = Path(__file__).parent / out_name

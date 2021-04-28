@@ -1,7 +1,6 @@
 import os
 from abc import ABC
 from pathlib import Path
-from typing import Optional
 
 import xarray as xr
 import netCDF4

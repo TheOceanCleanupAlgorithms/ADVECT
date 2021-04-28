@@ -6,7 +6,7 @@ accessible to the python runtime.
 # this is defined by the OpenCL runtime itself; this matches the definition in the OpenCL 1.2 standard.
 UINT_MAX = 0xffffffff
 
-# these match the definitions in kernel_2d.cl.
+# these match the definitions in src/kernels/exit_codes.cl.
 EXIT_CODES = {
     0: 'SUCCESS',
     1: 'NULL_LOCATION',

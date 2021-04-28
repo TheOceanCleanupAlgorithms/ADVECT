@@ -1,12 +1,8 @@
-from typing import Tuple
-
 import xarray as xr
 import pandas as pd
 import pyopencl as cl
 
 from abc import ABC, abstractmethod
-
-from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
 
 
