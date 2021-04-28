@@ -18,7 +18,6 @@ class Kernel(ABC):
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
-        advection_scheme: AdvectionScheme,
         config: dict,
         context: cl.Context,
     ):
@@ -27,7 +26,6 @@ class Kernel(ABC):
         :param p0: initial state of particles
         :param advect_time: the timeseries which the kernel advects on
         :param save_every: number of timesteps between each writing of particle state
-        :param advection_scheme: specifies which advection formulation to use
         :param config: dictionary with any extra settings needed by subclass implementation
         :param context: PyopenCL context for executing OpenCL programs
         """

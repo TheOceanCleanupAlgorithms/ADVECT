@@ -79,8 +79,8 @@ def compare_alg_drift(initial_radius: float, plot=False):
             p0=p0,
             advect_time=time,
             save_every=save_every,
-            advection_scheme=scheme,
             config={
+                "advection_scheme": scheme,
                 "eddy_diffusivity": eddy_diffusivity,
                 "max_wave_height": 0,
                 "wave_mixing_depth_factor": 0,

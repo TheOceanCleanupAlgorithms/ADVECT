@@ -12,7 +12,7 @@ import datetime
 from pathlib import Path
 from typing import Tuple
 
-from drivers.opencl_driver_3D import openCL_advect
+from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
 from enums.advection_scheme import AdvectionScheme
@@ -139,21 +139,23 @@ def run_advector_3D(
     )
 
     print("---COMMENCING ADVECTION---")
-    out_paths = openCL_advect(
+    out_paths = execute_chunked_kernel_computation(
         forcing_data=forcing_data,
         kernel_cls=Kernel3D,
+        kernel_config={
+            "advection_scheme": scheme_enum,
+            "eddy_diffusivity": eddy_diffusivity,
+            "max_wave_height": max_wave_height,
+            "wave_mixing_depth_factor": wave_mixing_depth_factor,
+            "windage_multiplier": windage_multiplier,
+            "wind_mixing_enabled": wind_mixing_enabled,
+        },
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,
         dt=timestep,
         num_timesteps=num_timesteps,
         save_every=save_period,
-        advection_scheme=scheme_enum,
-        eddy_diffusivity=eddy_diffusivity,
-        max_wave_height=max_wave_height,
-        wave_mixing_depth_factor=wave_mixing_depth_factor,
-        windage_multiplier=windage_multiplier,
-        wind_mixing_enabled=wind_mixing_enabled,
         platform_and_device=opencl_device,
         memory_utilization=memory_utilization,
     )

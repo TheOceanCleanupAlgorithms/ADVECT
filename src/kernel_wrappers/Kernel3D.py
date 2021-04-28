@@ -31,7 +31,6 @@ class Kernel3D(Kernel):
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
-        advection_scheme: AdvectionScheme,
         config: dict,
         context: cl.Context,
     ):
@@ -42,8 +41,8 @@ class Kernel3D(Kernel):
         :param p0: initial state of particles
         :param advect_time: the timeseries which the kernel advects on
         :param save_every: number of timesteps between each writing of particle state
-        :param advection_scheme: specifies which advection formulation to use
         :param config: must include
+            "advection_scheme": AdvectionScheme
             "windage_multiplier": Optional[float]
             "wind_mixing_enabled": bool
             "max_wave_height": float
@@ -121,7 +120,7 @@ class Kernel3D(Kernel):
         self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
-        self.advection_scheme = advection_scheme.value
+        self.advection_scheme = config["advection_scheme"].value
         self.windage_multiplier = config["windage_multiplier"]
         self.wind_mixing_enabled = config["wind_mixing_enabled"]
         self.max_wave_height = config["max_wave_height"]

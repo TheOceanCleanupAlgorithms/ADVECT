@@ -19,21 +19,16 @@ from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
-def openCL_advect(
+def execute_chunked_kernel_computation(
     forcing_data: dict[Forcing, xr.Dataset],
     kernel_cls: Type[Kernel],
+    kernel_config: dict,
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
     dt: datetime.timedelta,
     num_timesteps: int,
     save_every: int,
-    advection_scheme: AdvectionScheme,
-    eddy_diffusivity: xr.Dataset,
-    max_wave_height: float,
-    wave_mixing_depth_factor: float,
-    windage_multiplier: Optional[float],
-    wind_mixing_enabled: bool,
     memory_utilization: float,
     platform_and_device: Tuple[int] = None,
 ) -> List[Path]:
@@ -43,18 +38,14 @@ def openCL_advect(
     :param forcing_data: dictionary holding whatever forcing data is available.
         valid keys: {"current", "wind", "seawater_density"}
     :param kernel_cls: kernel class used to execute the chunks
+    :param kernel_config: dictionary to be passed to kernel_cls.__init__ as arg "config."
+        See kernel_cls implementation for details on what configuration parameters are required.
     :param output_writer: object which is responsible for persisting the model output to disk
     :param p0: xarray Dataset storing particle initial state from sourcefile
     :param start_time: advection start time
     :param dt: timestep duration
     :param num_timesteps: number of timesteps
     :param save_every: how many timesteps between saving state.  Must divide num_timesteps.
-    :param advection_scheme: scheme to use, listed in the AdvectionScheme enum
-    :param eddy_diffusivity: xarray Dataset storing vertical profiles of eddy diffusivities
-    :param max_wave_height: caps parameterization in kernel; see config_specifications.md
-    :param wave_mixing_depth_factor: scales depth of mixing in kernel; see config_specifications.md
-    :param windage_multiplier: multiplies the default windage, which is based on emerged area
-    :param wind_mixing_enabled: toggle the wind mixing functionality
     :param memory_utilization: fraction of the opencl device memory available for buffers
     :param platform_and_device: indices of platform/device to execute program.  None initiates interactive mode.
     :return: list of outputfile paths
@@ -99,14 +90,7 @@ def openCL_advect(
         kernel = kernel_cls(
             forcing_data=forcing_data_chunks[i],
             p0=p0_chunk,
-            advection_scheme=advection_scheme,
-            config={
-                "eddy_diffusivity": eddy_diffusivity,
-                "max_wave_height": max_wave_height,
-                "wave_mixing_depth_factor": wave_mixing_depth_factor,
-                "windage_multiplier": windage_multiplier,
-                "wind_mixing_enabled": wind_mixing_enabled,
-            },
+            config=kernel_config,
             advect_time=advect_time_chunks[i],
             save_every=save_every,
             context=context,
