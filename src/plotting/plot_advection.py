@@ -48,63 +48,46 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
 
     # initialize the scatter plot with dummy data.
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
-    vmin = colorbar_depth if colorbar_depth else P.depth.min()
-    dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
-                     s=5, norm=mcol.Normalize(vmin=vmin, vmax=0))
-    cbar = plt.colorbar(mappable=dot, ax=ax)
-    cbar.ax.set_ylabel('Depth (m)')
-
-    if save:
-        animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot)
+    if "depth" in P.variables:
+        vmin = colorbar_depth if colorbar_depth is not None else P.depth.min()
+        dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
+                         s=5, norm=mcol.Normalize(vmin=vmin, vmax=0))
+        cbar = plt.colorbar(mappable=dot, ax=ax)
+        cbar.ax.set_ylabel('Depth (m)')
     else:
-        animate_ocean_advection_live(P, ax, dot)
+        dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c="tab:blue", s=5)
 
-
-def animate_ocean_advection_live(P, ax, dot):
-    timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
-    for i in range(len(P.time)):
+    def base_update(i, P, ax, dot, timestr):
         dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
-        dot.set_array(P.isel(time=i).depth.values)
         ax.set_title(timestr[i])
         ax.set_ylim(-90, 90)
-        plt.pause(.005)
-    plt.show()
+    if "depth" in P.variables:
+        def update_func(i, P, ax, dot, timestr):
+            base_update(i, P, ax, dot, timestr)
+            dot.set_array(P.isel(time=i).depth.values)
+    else:
+        update_func = base_update
+
+    timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
+    if save:
+        animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot, timestr, update_func)
+    else:
+        for i in range(len(P.time)):
+            update_func(i, P, ax, dot, timestr)
+            plt.pause(.005)
+        plt.show()
 
 
-def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot):
+def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot, timestr, update_func):
     FFMpegWriter = manimation.writers['ffmpeg']
     writer = FFMpegWriter(fps=30)
     outfile = Path(outputfile_path).with_suffix('.mp4')
-    timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
     print("Creating Movie...")
     with writer.saving(fig, outfile=outfile, dpi=150):
         for i in tqdm(range(len(P.time))):
-            dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
-            dot.set_array(P.isel(time=i).depth.values)
-            ax.set_title(timestr[i])
-            ax.set_ylim(-90, 90)
+            update_func(i, P, ax, dot, timestr)
             writer.grab_frame()
 
     plt.close()
     print("Opening Movie...")
     subprocess.call(['open', outfile])  # this won't work except on mac.
-
-
-@click.command()
-@click.argument("outputfile_path", type=click.Path(exists=True, dir_okay=False, readable=True))
-@click.argument("current_path", type=click.Path(), default="")
-@click.option("-s", "--save_to_disk", is_flag=True)
-@click.option("-t", "--trajectories", is_flag=True)
-@click.option("-d", "--colorbar_depth", required=False, default=None)
-def plot_ocean_advection_CLI(outputfile_path: str, current_path: str,
-                             save_to_disk: bool, trajectories: bool,
-                             colorbar_depth: float):
-    if trajectories:
-        assert current_path, "current path needed for land grid"
-        plot_ocean_trajectories(outputfile_path, current_path)
-    else:
-        animate_ocean_advection(outputfile_path, save=save_to_disk, colorbar_depth=colorbar_depth)
-
-
-if __name__ == '__main__':
-    plot_ocean_advection_CLI()
