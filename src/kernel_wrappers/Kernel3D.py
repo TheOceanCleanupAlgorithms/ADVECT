@@ -89,7 +89,6 @@ class Kernel3D(Kernel):
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
             self.windage_multiplier = np.nan  # to flag the kernel that windage is disabled
-        self.wind_z = np.zeros(1, dtype=np.float64)  # to indicate surface wind
         # seawater_density vector field
         print("\t\tLoading Seawater Density Data...")
         with ProgressBar():
@@ -151,7 +150,7 @@ class Kernel3D(Kernel):
         write_start = time.time()
         d_current_x, d_current_y, d_current_z, d_current_t,\
             d_current_U, d_current_V, d_current_W, d_current_bathy,\
-            d_wind_x, d_wind_y, d_wind_z, d_wind_t, d_wind_U, d_wind_V, \
+            d_wind_x, d_wind_y, d_wind_t, d_wind_U, d_wind_V, \
             d_seawater_density_x, d_seawater_density_y, d_seawater_density_z, d_seawater_density_t, \
             d_seawater_density_values, \
             d_x0, d_y0, d_z0, d_release_date, d_radius, d_p_density, d_corey_shape_factor,\
@@ -161,7 +160,7 @@ class Kernel3D(Kernel):
              for hostbuf in
              (self.current_x, self.current_y, self.current_z, self.current_t,
               self.current_U, self.current_V, self.current_W, self.current_bathy,
-              self.wind_x, self.wind_y, self.wind_t, self.wind_z, self.wind_U, self.wind_V,
+              self.wind_x, self.wind_y, self.wind_t, self.wind_U, self.wind_V,
               self.seawater_density_x, self.seawater_density_y, self.seawater_density_z, self.seawater_density_t,
               self.seawater_density_values,
               self.x0, self.y0, self.z0, self.release_date, self.radius, self.density, self.corey_shape_factor,
@@ -186,7 +185,6 @@ class Kernel3D(Kernel):
             d_current_U, d_current_V, d_current_W, d_current_bathy,
             d_wind_x, np.uint32(len(self.wind_x)),
             d_wind_y, np.uint32(len(self.wind_y)),
-            d_wind_z,
             d_wind_t, np.uint32(len(self.wind_t)),
             d_wind_U, d_wind_V,
             d_seawater_density_x, np.uint32(len(self.seawater_density_x)),
@@ -301,7 +299,6 @@ class Kernel3D(Kernel):
         assert min(self.wind_y) >= -90
         assert 1 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_y)
-        assert len(self.wind_z) == 1
         assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
         assert is_uniformly_spaced_ascending(self.wind_t)
 

@@ -10,7 +10,8 @@ unsigned int find_nearest_neighbor_idx(double value, __global const double *arr,
             inside a kernel so we must perform the check in the host code.
         -- value MUST be non-nan.  This function produces UNDEFINED BEHAVIOR if value is nan.
     */
-    if (arr_len == 1 || isnan(spacing) || spacing == 0) {  // handles singletons and protects against division by zero
+    if (arr == 0 || arr_len <= 1 || isnan(spacing) || spacing == 0) {
+        // handles singleton/nonexistent dims and protects against division by zero
         return 0;
     } else {
         return (unsigned int) clamp(round((value - arr[0])/spacing), (double) (0.0), (double) (arr_len-1));
@@ -22,6 +23,8 @@ unsigned int find_nearest_neighbor_idx_non_uniform(double value, __global const 
     // currently a naive search.  if we assume sorted, we can implement a binary search.
     // however, given the nature of the ADVECTOR, fastest is likely to store neighbor grid_point on particle, and do an outward
     // search, since particles don't move much between timesteps, esp. in depth.  Most of the time would be 3 loop iterations.
+    if (arr == 0) return 0;  // protect against undefined coordinates
+
     unsigned int neighbor_idx = 0;
     double min_distance = INFINITY;
     for (unsigned int i = 0; i < arr_len; i++) {
@@ -39,7 +42,9 @@ vector index_vector_field(field3d field, grid_point gp, bool zero_nans) {
     assumption: gp.[dim]_idx args will be in [0, field.[dim]_len - 1]
     optional: if zero_nans, any nans encountered will be replaced with zero.  useful for advection schemes.
     */
-    size_t flat_index = (((gp.t_idx*field.z_len) + gp.z_idx)*field.y_len + gp.y_idx)*field.x_len + gp.x_idx;
+    unsigned int z_len = field.z_len ? field.z_len : 1;
+    // support for 2d field; if z dimension non-existent, consider it as a singleton
+    size_t flat_index = (((gp.t_idx*z_len) + gp.z_idx)*field.y_len + gp.y_idx)*field.x_len + gp.x_idx;
     vector V = {.x = field.U ? field.U[flat_index] : NAN, // these ternary expressions serve to stop indexing into
                 .y = field.V ? field.V[flat_index] : NAN, // an undefined variable
                 .z = field.W ? field.W[flat_index] : NAN};

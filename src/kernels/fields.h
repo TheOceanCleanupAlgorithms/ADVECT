@@ -4,10 +4,11 @@
 #include "vector.h"
 
 typedef struct field3d {
+    // to represent a 2d field, set .z = 0 and .z_len = 0.  dim_len < 1 is supported for z only.
     __global const double *x, *y, *z, *t;
     const unsigned int x_len, y_len, z_len, t_len;
     const double x_spacing, y_spacing, t_spacing;
-    __global const float *U, *V, *W, *bathy;
+    __global const float *U, *V, *W, *bathy;  // set any of these 0 if not present; NANs will be returned from lookups.
     bool x_is_circular;  // explicitly notates whether x is a circular array (e.g. full global dataset vs regional)
 } field3d;
 

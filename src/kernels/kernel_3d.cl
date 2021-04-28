@@ -32,7 +32,6 @@ __kernel void advect(
     const unsigned int wind_x_len,          // 1 <= wind_x_len <= UINT_MAX + 1
     __global const double *wind_y,          // lat, Deg N (-90 to 90), uniform spacing
     const unsigned int wind_y_len,          // 1 <= wind_y_len <= UINT_MAX + 1
-    __global const double *wind_z,          // assumed singleton array, height of surface wind field (m)
     __global const double *wind_t,          // time, seconds since epoch, uniform spacing
     const unsigned int wind_t_len,          // 1 <= wind_t_len <= UINT_MAX + 1
     __global const float *wind_U,           // m / s, shape=(t, y, x) flattened, 32 bit to save space
@@ -95,13 +94,12 @@ __kernel void advect(
                      .bathy = current_bathy};
     current.x_is_circular = x_is_circular(current);
 
-    // turn 2d wind into 3d wind with singleton z
-    field3d wind = {.x = wind_x, .y = wind_y, .z = wind_z, .t = wind_t,
-                    .x_len = wind_x_len, .y_len = wind_y_len, .z_len = 1, .t_len = wind_t_len,
+    field3d wind = {.x = wind_x, .y = wind_y, .t = wind_t,
+                    .x_len = wind_x_len, .y_len = wind_y_len, .t_len = wind_t_len,
                     .x_spacing = calculate_spacing(wind_x, wind_x_len),
                     .y_spacing = calculate_spacing(wind_y, wind_y_len),
                     .t_spacing = calculate_spacing(wind_t, wind_t_len),
-                    .U = wind_U, .V = wind_V, .W = 0, .bathy = 0};
+                    .U = wind_U, .V = wind_V};
     wind.x_is_circular = x_is_circular(wind);
 
     field3d seawater_density = {
@@ -110,7 +108,7 @@ __kernel void advect(
         .x_spacing = calculate_spacing(seawater_density_x, seawater_density_x_len),
         .y_spacing = calculate_spacing(seawater_density_y, seawater_density_y_len),
         .t_spacing = NAN,
-        .U = seawater_density_values, .V = 0, .W = 0, .bathy = 0,
+        .U = seawater_density_values,
     };
     seawater_density.x_is_circular = x_is_circular(seawater_density);
 
