@@ -13,14 +13,14 @@ from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter
-from kernel_wrappers.Kernel import Kernel
+from kernel_wrappers.Kernel import Kernel, KernelConfig
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def execute_chunked_kernel_computation(
     forcing_data: dict[Forcing, xr.Dataset],
     kernel_cls: Type[Kernel],
-    kernel_config: dict,
+    kernel_config: KernelConfig,
     output_writer: OutputWriter,
     p0: xr.Dataset,
     start_time: datetime.datetime,
@@ -105,13 +105,13 @@ def execute_chunked_kernel_computation(
 
         print("\t---BUFFER SIZES---")
         for key, value in memory_usage.items():
-            print(f'\t{key}:              {value / 1e6:10.3f} MB')
-        print(f'\tTotal:              {sum(memory_usage.values()) / 1e6:10.3f} MB')
+            print(f'\t{key+":":<20}{value / 1e6:10.3f} MB')
+        print(f'\t{"Total:":<20}{sum(memory_usage.values()) / 1e6:10.3f} MB')
         print("\t---EXECUTION TIME---")
-        print(f"\tData Loading:      {data_loading_time:10.3f}s")
-        print(f"\tBuffer Read/Write: {buffer_time:10.3f}s")
-        print(f"\tKernel Execution:  {execution_time:10.3f}s")
-        print(f"\tOutput Writing:    {output_time:10.3f}s")
+        print(f"\tData Loading:         {data_loading_time:10.3f}s")
+        print(f"\tBuffer Read/Write:    {buffer_time:10.3f}s")
+        print(f"\tKernel Execution:     {execution_time:10.3f}s")
+        print(f"\tOutput Writing:       {output_time:10.3f}s")
 
     return output_writer.paths
 

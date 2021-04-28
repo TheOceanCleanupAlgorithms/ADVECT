@@ -3,6 +3,8 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+from dataclasses import dataclass
+
 import numpy as np
 import pyopencl as cl
 import time
@@ -13,10 +15,23 @@ from pathlib import Path
 from dask.diagnostics import ProgressBar
 
 import kernel_wrappers.kernel_constants as cl_const
+from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
-from kernel_wrappers.Kernel import Kernel
+from kernel_wrappers.Kernel import Kernel, KernelConfig
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_2d.cl')
+
+
+@dataclass
+class Kernel2DConfig(KernelConfig):
+    """ Configuration for 2D Kernel.
+    advection_scheme: which mathematical scheme to use for an advection step
+    windage_coefficient: fraction of wind speed that is transferred to particles during advection
+    eddy_diffusivity: (m^2 / s) controls the scale of each particle's Wiener-process random walk.
+    """
+    advection_scheme: AdvectionScheme
+    windage_coefficient: float
+    eddy_diffusivity: float
 
 
 class Kernel2D(Kernel):
@@ -28,20 +43,17 @@ class Kernel2D(Kernel):
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
-        config: dict,
+        config: Kernel2DConfig,
         context: cl.Context,
     ):
         """
         :param forcing_data:
-            required keys: {"current"}
-            optional keys: {"wind"}
+            required keys: {Forcing.current}
+            optional keys: {Forcing.wind}
         :param p0: initial state of particles
         :param advect_time: the timeseries which the kernel advects on
         :param save_every: number of timesteps between each writing of particle state
-        :param config: must include
-            "advection_scheme": AdvectionScheme
-            "windage_coefficient": float
-            "eddy_diffusivity": float
+        :param config: see Kernel2DConfig definition for details
         :param context: PyopenCL context for executing OpenCL programs
         """
         # save some arguments for creating output dataset
@@ -94,9 +106,9 @@ class Kernel2D(Kernel):
         self.X_out = np.full((len(p0.lon) * len(self.out_time)), np.nan, dtype=np.float32)  # output will have this value
         self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
         # physics
-        self.advection_scheme = config["advection_scheme"].value
-        self.windage_coefficient = config["windage_coefficient"]
-        self.eddy_diffusivity = config["eddy_diffusivity"]
+        self.advection_scheme = config.advection_scheme.value
+        self.windage_coefficient = config.windage_coefficient
+        self.eddy_diffusivity = config.eddy_diffusivity
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 

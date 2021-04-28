@@ -1,9 +1,16 @@
+from dataclasses import dataclass
+
 import xarray as xr
 import pandas as pd
 import pyopencl as cl
 
 from abc import ABC, abstractmethod
 from enums.forcings import Forcing
+
+
+@dataclass
+class KernelConfig(ABC):
+    pass
 
 
 class Kernel(ABC):
@@ -14,15 +21,15 @@ class Kernel(ABC):
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
-        config: dict,
+        config: KernelConfig,
         context: cl.Context,
     ):
         """
-        :param forcing_data: dict containing forcing datasets; keys in {"current", "wind", "seawater_density"}
+        :param forcing_data: dict containing forcing datasets
         :param p0: initial state of particles
         :param advect_time: the timeseries which the kernel advects on
         :param save_every: number of timesteps between each writing of particle state
-        :param config: dictionary with any extra settings needed by subclass implementation
+        :param config: dataclass with any extra settings needed by subclass implementation
         :param context: PyopenCL context for executing OpenCL programs
         """
         pass

@@ -18,7 +18,7 @@ from io_tools.OutputWriter import OutputWriter2D
 from enums.advection_scheme import AdvectionScheme
 from io_tools.open_sourcefiles import open_2d_sourcefiles
 from io_tools.open_vectorfiles import *
-from kernel_wrappers.Kernel2D import Kernel2D
+from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
 
 
 def run_advector_2D(
@@ -127,11 +127,11 @@ def run_advector_2D(
     out_paths = execute_chunked_kernel_computation(
         forcing_data=forcing_data,
         kernel_cls=Kernel2D,
-        kernel_config={
-            "advection_scheme": scheme_enum,
-            "windage_coefficient": windage_coeff,
-            "eddy_diffusivity": eddy_diffusivity,
-        },
+        kernel_config=Kernel2DConfig(
+            advection_scheme=scheme_enum,
+            windage_coefficient=windage_coeff,
+            eddy_diffusivity=eddy_diffusivity,
+        ),
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,

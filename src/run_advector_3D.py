@@ -16,7 +16,7 @@ from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
 from enums.advection_scheme import AdvectionScheme
-from kernel_wrappers.Kernel3D import Kernel3D
+from kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
 from io_tools.open_sourcefiles import open_3d_sourcefiles
 from io_tools.open_vectorfiles import *
 from enums.forcings import Forcing
@@ -142,14 +142,14 @@ def run_advector_3D(
     out_paths = execute_chunked_kernel_computation(
         forcing_data=forcing_data,
         kernel_cls=Kernel3D,
-        kernel_config={
-            "advection_scheme": scheme_enum,
-            "eddy_diffusivity": eddy_diffusivity,
-            "max_wave_height": max_wave_height,
-            "wave_mixing_depth_factor": wave_mixing_depth_factor,
-            "windage_multiplier": windage_multiplier,
-            "wind_mixing_enabled": wind_mixing_enabled,
-        },
+        kernel_config=Kernel3DConfig(
+            advection_scheme=scheme_enum,
+            eddy_diffusivity=eddy_diffusivity,
+            max_wave_height=max_wave_height,
+            wave_mixing_depth_factor=wave_mixing_depth_factor,
+            windage_multiplier=windage_multiplier,
+            wind_mixing_enabled=wind_mixing_enabled,
+        ),
         output_writer=output_writer,
         p0=p0,
         start_time=advection_start_date,

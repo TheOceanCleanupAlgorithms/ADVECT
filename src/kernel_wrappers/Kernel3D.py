@@ -4,6 +4,9 @@ Args are passed upon initialization, execution is triggered by method "execute".
 of executing kernels.
 """
 import warnings
+from dataclasses import dataclass
+from typing import Optional
+
 import numpy as np
 import pyopencl as cl
 import time
@@ -14,10 +17,32 @@ from pathlib import Path
 from dask.diagnostics import ProgressBar
 
 import kernel_wrappers.kernel_constants as cl_const
+from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
-from kernel_wrappers.Kernel import Kernel
+from kernel_wrappers.Kernel import Kernel, KernelConfig
 
 KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
+
+
+@dataclass
+class Kernel3DConfig(KernelConfig):
+    """ Configuration for 3D Kernel.
+    advection_scheme: which mathematical scheme to use for an advection step
+    windage_multiplier: scales the physically-motivated windage contribution
+    wind_mixing_enabled: toggles wind-driven mixing
+    max_wave_height: (m) see config_specifications.md for details
+    wave_mixing_depth_factor: see config_specifications.md for details
+    eddy_diffusivity: dataset with vertical profiles of horizontal/vertical eddy diffusivity
+        variables [m^2 / s] (dim [m]):
+        horizontal_diffusivity (z_hd)
+        vertical_diffusivity (z_vd)
+    """
+    advection_scheme: AdvectionScheme
+    windage_multiplier: Optional[float]
+    wind_mixing_enabled: bool
+    max_wave_height: float
+    wave_mixing_depth_factor: float
+    eddy_diffusivity: xr.Dataset
 
 
 class Kernel3D(Kernel):
@@ -29,25 +54,17 @@ class Kernel3D(Kernel):
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
-        config: dict,
+        config: Kernel3DConfig,
         context: cl.Context,
     ):
         """
         :param forcing_data:
-            required keys: {"current", "seawater_density"}
-            optional keys: {"wind"}
+            required keys: {Forcing.current, Forcing.seawater_density}
+            optional keys: {Forcing.wind}
         :param p0: initial state of particles
         :param advect_time: the timeseries which the kernel advects on
         :param save_every: number of timesteps between each writing of particle state
-        :param config: must include
-            "advection_scheme": AdvectionScheme
-            "windage_multiplier": Optional[float]
-            "wind_mixing_enabled": bool
-            "max_wave_height": float
-            "wave_mixing_depth_factor": float
-            "eddy_diffusivity": xr.Dataset, with variables:
-                horizontal_diffusivity, with dimension z_hd
-                vertical_diffusivity, with dimension z_vd
+        :param config: see Kernel3DConfig definition for details
         :param context: PyopenCL context for executing OpenCL programs
         """
         # save some arguments for creating output dataset
@@ -117,17 +134,16 @@ class Kernel3D(Kernel):
         self.Y_out = np.full((len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32)  # until overwritten (e.g. pre-release)
         self.Z_out = np.full((len(p0.depth) * len(self.out_time)), np.nan, dtype=np.float32)
         # physics
-        self.advection_scheme = config["advection_scheme"].value
-        self.windage_multiplier = config["windage_multiplier"]
-        self.wind_mixing_enabled = config["wind_mixing_enabled"]
-        self.max_wave_height = config["max_wave_height"]
-        self.wave_mixing_depth_factor = config["wave_mixing_depth_factor"]
+        self.advection_scheme = config.advection_scheme.value
+        self.windage_multiplier = config.windage_multiplier
+        self.wind_mixing_enabled = config.wind_mixing_enabled
+        self.max_wave_height = config.max_wave_height
+        self.wave_mixing_depth_factor = config.wave_mixing_depth_factor
         # eddy diffusivity
-        eddy_diffusivity = config["eddy_diffusivity"]
-        self.horizontal_eddy_diffusivity_z = eddy_diffusivity.z_hd.values.astype(np.float64)
-        self.horizontal_eddy_diffusivity_values = eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
-        self.vertical_eddy_diffusivity_z = eddy_diffusivity.z_vd.values.astype(np.float64)
-        self.vertical_eddy_diffusivity_values = eddy_diffusivity.vertical_diffusivity.values.astype(np.float64)
+        self.horizontal_eddy_diffusivity_z = config.eddy_diffusivity.z_hd.values.astype(np.float64)
+        self.horizontal_eddy_diffusivity_values = config.eddy_diffusivity.horizontal_diffusivity.values.astype(np.float64)
+        self.vertical_eddy_diffusivity_z = config.eddy_diffusivity.z_vd.values.astype(np.float64)
+        self.vertical_eddy_diffusivity_values = config.eddy_diffusivity.vertical_diffusivity.values.astype(np.float64)
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 
