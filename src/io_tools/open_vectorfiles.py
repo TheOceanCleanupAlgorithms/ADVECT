@@ -1,24 +1,42 @@
-from typing import Optional, Set, List
-
 import xarray as xr
 import glob
 import dask
 import numpy as np
+
+from typing import Optional, Set, List
 from dask.diagnostics import ProgressBar
+from io_tools.create_bathymetry import create_bathymetry
 
 
-def open_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
+def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
     :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
     :param w_path: wildcard path to the vertical vector files.  See u_path for more details.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
-    return open_vectorfield(
+    currents = open_vectorfield(
         paths=[u_path, v_path, w_path],
         varnames={"U", "V", "W"},
         variable_mapping=variable_mapping,
         keep_depth_dim=True,
+    )
+    # encode the model domain, taken as where all the current components are non-null, as bathymetry
+    print("Calculating bathymetry of current dataset...")
+    return xr.merge((currents, create_bathymetry(currents)))
+
+
+def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
+    """
+    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
+    :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
+    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    """
+    return open_vectorfield(
+        paths=[u_path, v_path],
+        varnames={"U", "V"},
+        variable_mapping=variable_mapping,
+        keep_depth_dim=False,
     )
 
 

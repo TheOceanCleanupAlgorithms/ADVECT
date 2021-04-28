@@ -14,7 +14,7 @@ from pathlib import Path
 @click.option('-csf', 'corey_shape_factor', required=False, default=.5)
 @click.option('-o', 'out_name', required=False, type=click.Path(exists=False, dir_okay=False),
               default='neutral.nc')
-def generate_sourcefile(
+def generate_3D_sourcefile(
     num_particles: int,
     density: float,
     radius: float,
@@ -51,7 +51,7 @@ def generate_sourcefile(
     p0['p_id'] = np.arange(num_particles)
     ds = xr.Dataset(p0.set_index('p_id'))
 
-    ds.attrs["title"] = f"Sourcefile for ADVECTOR"
+    ds.attrs["title"] = f"3D Sourcefile for ADVECTOR"
     ds.attrs["institution"] = "The Ocean Cleanup"
 
     out_path = Path(__file__).parent / out_name
@@ -59,4 +59,4 @@ def generate_sourcefile(
 
 
 if __name__ == '__main__':
-    generate_sourcefile()
+    generate_3D_sourcefile()

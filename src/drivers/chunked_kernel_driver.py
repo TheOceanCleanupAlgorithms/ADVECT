@@ -8,14 +8,12 @@ import xarray as xr
 import pandas as pd
 
 from tqdm import tqdm
-from typing import Tuple, Optional, List, Type
+from typing import Tuple, List, Type
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
-from drivers.create_bathymetry import create_bathymetry
 from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter
 from kernel_wrappers.Kernel import Kernel
-from kernel_wrappers.Kernel3D import Kernel3D, AdvectionScheme
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
@@ -58,14 +56,6 @@ def execute_chunked_kernel_computation(
     else:
         context = cl.create_some_context(answers=list(platform_and_device))
 
-    # encode the model domain, taken as where all the current components are non-null, as bathymetry
-    print("Calculating bathymetry of current dataset...")
-    forcing_data[Forcing.current] = xr.merge(
-        (
-            forcing_data[Forcing.current],
-            create_bathymetry(forcing_data[Forcing.current]),
-        )
-    )
     # get the minimum RAM available on the specified compute devices.
     print("Chunking Datasets...")
     available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
@@ -114,10 +104,8 @@ def execute_chunked_kernel_computation(
         output_time = time.time() - output_start
 
         print("\t---BUFFER SIZES---")
-        print(f'\tCurrent:            {memory_usage["current"] / 1e6:10.3f} MB')
-        print(f'\tWind:               {memory_usage["wind"] / 1e6:10.3f} MB')
-        print(f'\tSeawater Density:   {memory_usage["seawater_density"] / 1e6:10.3f} MB')
-        print(f'\tParticle State:     {memory_usage["particles"] / 1e6:10.3f} MB')
+        for key, value in memory_usage.items():
+            print(f'\t{key}:              {value / 1e6:10.3f} MB')
         print(f'\tTotal:              {sum(memory_usage.values()) / 1e6:10.3f} MB')
         print("\t---EXECUTION TIME---")
         print(f"\tData Loading:      {data_loading_time:10.3f}s")
