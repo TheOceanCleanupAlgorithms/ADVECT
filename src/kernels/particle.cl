@@ -120,5 +120,6 @@ bool in_ocean(particle p, field3d field) {
     /* where'er you are below bathymetry,
        you sure as heck can bet this ain't the sea.
         -- William Shakespeare */
-    return p.z >= find_nearest_bathymetry(p, field);
+    double bathy = find_nearest_bathymetry(p, field);
+    return (bathy < 0) && (p.z >= bathy);
 }
