@@ -1,6 +1,9 @@
 import netCDF4 as nc
 import numpy as np
+import sys
+from pathlib import Path
 
+sys.path.append(str(Path(__file__).parent.parent.parent / 'src'))
 from io_tools.OutputWriter import copy_dataset
 
 

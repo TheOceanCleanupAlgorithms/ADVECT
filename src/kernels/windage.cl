@@ -3,15 +3,20 @@
 double calculate_windage_coeff(double r, double z);
 double circular_segment_area(double R, double r);
 
+vector explicit_windage(particle p, field3d wind_10m, double dt, double windage_coefficient) {
+    /* Windage calculated based on a scaling coefficient that's explicitly provided */
+    vector nearest_wind_10m = find_nearest_vector(p, wind_10m, true);
+    vector nearest_wind_10cm = mul(nearest_wind_10m, wind_10cm_per_wind_10m);
+    vector wind_displacement_meters = mul(nearest_wind_10cm, windage_coefficient * dt);
+    return wind_displacement_meters;
+}
+
 vector windage_meters(particle p, field3d wind_10m, double dt, double windage_multiplier) {
     /* Physically-motivated windage, scaled by windage_multiplier.
      * Wind speed at 10cm is assumed to be representative of wind speed experienced by surfaced particles.
      */
     double windage_coeff = calculate_windage_coeff(p.r, p.z);
-    vector nearest_wind_10m = find_nearest_vector(p, wind_10m, true);
-    vector nearest_wind_10cm = mul(nearest_wind_10m, wind_10cm_per_wind_10m);
-    vector wind_displacement_meters = mul(nearest_wind_10cm, windage_coeff * windage_multiplier * dt);
-    return wind_displacement_meters;
+    return explicit_windage(p, wind_10m, dt, windage_coeff * windage_multiplier);
 }
 
 double calculate_windage_coeff(double r, double z) {

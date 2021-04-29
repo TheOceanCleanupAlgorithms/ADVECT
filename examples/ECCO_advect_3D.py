@@ -2,19 +2,19 @@
 advect on ECCO currents
 """
 import sys
-sys.path.append("../src")
 from pathlib import Path
-
-from plotting.plot_advection import animate_ocean_advection
-from run_advector import run_advector
 from datetime import datetime, timedelta
+
+sys.path.append("../src")
+from plotting.plot_advection import animate_ocean_advection
+from run_advector_3D import run_advector_3D
 
 WINDAGE_MULTIPLIER = 1  # multiplier of default windage formulation (based on emerged surface area)
 
-sourcefile = 'sourcefiles/neutral.nc'
+sourcefile = 'sourcefiles/3D_uniform_source_2015.nc'
 if __name__ == '__main__':
-    out_paths = run_advector(
-        output_directory=f'outputfiles/2015_ECCO/{Path(sourcefile).stem}/',
+    out_paths = run_advector_3D(
+        output_directory=f'outputfiles/ECCO_2015_3D/{Path(sourcefile).stem}/',
         sourcefile_path=sourcefile,
         configfile_path='configfiles/config.nc',
         u_water_path='ECCO/ECCO_interp/U_2015*.nc',

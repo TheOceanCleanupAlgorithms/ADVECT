@@ -1,7 +1,5 @@
 #include "diffusion.h"
 
-double amplitude_of_diffusion(const double dt, unsigned int ndims, double diffusivity);
-
 vector eddy_diffusion_meters(double z, const double dt, random_state *rstate,
                              vertical_profile horizontal_eddy_diffusivity_profile,
                              vertical_profile vertical_eddy_diffusivity_profile) {
@@ -14,6 +12,16 @@ vector eddy_diffusion_meters(double z, const double dt, random_state *rstate,
                         .y = diffusion_step(horizontal_eddy_diffusivity, dt, rstate),
                         .z = diffusion_step(vertical_eddy_diffusivity, dt, rstate)};
     return diffusion;
+}
+
+
+vector eddy_diffusion_meters_2d(const double dt, random_state *rstate, const double eddy_diffusivity) {
+    /* returns random walk in meters*/
+    vector diff = {
+        .x = diffusion_step(eddy_diffusivity, dt, rstate),
+        .y = diffusion_step(eddy_diffusivity, dt, rstate),
+    };
+    return diff;
 }
 
 

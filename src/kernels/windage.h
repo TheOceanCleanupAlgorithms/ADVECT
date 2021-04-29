@@ -10,5 +10,6 @@
                                         // taking surface roughness = .0002 (WMO Guide to Instruments and Methods of Observation, 2018 edition, page 211)
 
 vector windage_meters(particle p, field3d wind, double dt, double windage_multiplier);
+vector explicit_windage(particle p, field3d wind, double dt, double windage_coefficient);
 
 #endif // WINDAGE

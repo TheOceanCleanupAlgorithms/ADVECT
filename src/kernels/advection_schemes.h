@@ -10,5 +10,7 @@
 
 vector eulerian_displacement(particle p, field3d field, double dt);
 vector taylor2_displacement(particle p, field3d field, double dt);
+vector eulerian_displacement_2d(particle p, field3d field, double dt);
+vector taylor2_displacement_2d(particle p, field3d field, double dt);
 
 #endif // ADVECTION_SCHEMES
