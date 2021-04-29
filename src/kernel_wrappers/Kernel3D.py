@@ -30,8 +30,8 @@ class Kernel3DConfig(KernelConfig):
     advection_scheme: which mathematical scheme to use for an advection step
     windage_multiplier: scales the physically-motivated windage contribution
     wind_mixing_enabled: toggles wind-driven mixing
-    max_wave_height: (m) see config_specifications.md for details
-    wave_mixing_depth_factor: see config_specifications.md for details
+    max_wave_height: (m) see configfile_specifications.md for details
+    wave_mixing_depth_factor: see configfile_specifications.md for details
     eddy_diffusivity: dataset with vertical profiles of horizontal/vertical eddy diffusivity
         variables [m^2 / s] (dim [m]):
         horizontal_diffusivity (z_hd)
