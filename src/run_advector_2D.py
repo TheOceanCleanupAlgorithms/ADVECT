@@ -1,11 +1,13 @@
 """
-This is the ADVECTOR entry-point for 2D simulation.
+This is the ADVECTOR 2D entry-point.
 To use, create a python script within this repo, import this file, and execute.  E.g.
-    from run_advector import run_advector
-    run_advector(...)
-See examples/HYCOM_advect_2d.py for an example usage.
-See function docstring below for detailed descriptions of all arguments.
-See src/2d_forcing_data_specifications.md for detailed description of data format requirements.
+    from run_advector_2D import run_advector_2D
+    run_advector_2D(...)
+See examples/ECCO_advect_2D.py for an example usage.
+See docstring below for descriptions of arguments.
+See src/forcing_data_specifications.md for detailed description of forcing data requirements.
+See src/sourcefile_specifications.md for detailed description of sourcefile requirements.
+See src/outputfile_specifications.md for detailed description of the outputfile created by this program.
 """
 
 import datetime

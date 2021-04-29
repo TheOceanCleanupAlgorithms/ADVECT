@@ -1,11 +1,14 @@
 """
-This is the ADVECTOR entry-point.
+This is the ADVECTOR 3D entry-point.
 To use, create a python script within this repo, import this file, and execute.  E.g.
-    from run_advector import run_advector
-    run_advector(...)
-See examples/HYCOM_advect_2d.py for an example usage.
-See function docstring below for detailed descriptions of all arguments.
-See src/forcing_data_specifications.md for detailed description of data format requirements.
+    from run_advector_3D import run_advector_3D
+    run_advector_3D(...)
+See examples/ECCO_advect_3D.py for an example usage.
+See docstring below for descriptions of arguments.
+See src/forcing_data_specifications.md for detailed description of forcing data requirements.
+See src/sourcefile_specifications.md for detailed description of sourcefile requirements.
+See src/configfile_specifications.md for detailed description of configfile requirements.
+See src/outputfile_specifications.md for detailed description of the outputfile created by this program.
 """
 
 import datetime
@@ -51,7 +54,7 @@ def run_advector_3D(
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
         See forcing_data_specifications.md for data requirements.
     :param configfile_path: path to the configfile netcdf file.
-        See config_specifications.md for details
+        See configfile_specifications.md for details
     :param output_directory: directory which will be populated with the outfiles.
         Existing files in this directory may be overwritten.
         See forcing_data_specifications.md for outputfile format details.
