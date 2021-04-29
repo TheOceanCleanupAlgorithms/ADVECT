@@ -2,13 +2,13 @@ import os
 from abc import ABC
 from pathlib import Path
 
-import xarray as xr
 import netCDF4
 import numpy as np
+import xarray as xr
 
+import _version
 from enums.forcings import Forcing
 from kernel_wrappers.kernel_constants import EXIT_CODES
-from _version import __version__
 
 SOURCEFILE_GROUP_NAME = "sourcefile"
 CONFIGFILE_GROUP_NAME = "configfile"
@@ -84,7 +84,7 @@ class OutputWriter(ABC):
 
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.institution = "The Ocean Cleanup"
-            ds.source = f"ADVECTOR Version {__version__}"
+            ds.source = f"ADVECTOR Version {_version.__version__}"
             ds.arguments = f"The arguments of the call to {self.api_entry} which produced this " \
                            f"file are: {str(self.api_arguments)}"
 
