@@ -12,7 +12,7 @@ ECCO_U_PATH = 'ECCO/ECCO_interp/U_2015*.nc'
 ECCO_V_PATH = 'ECCO/ECCO_interp/V_2015*.nc'
 
 if __name__ == '__main__':
-    sourcefile = "sourcefiles/2D_uniform_source.nc"
+    sourcefile = "sourcefiles/2D_uniform_source_2015.nc"
     ADVECTION_START = datetime(2015, 1, 1)
     ADVECTION_END = datetime(2016, 1, 1)
     out_paths = run_advector_2D(
