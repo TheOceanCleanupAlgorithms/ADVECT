@@ -93,7 +93,6 @@ def execute_chunked_kernel_computation(
         buffer_time = kernel.get_buffer_transfer_time()
         execution_time = kernel.get_kernel_execution_time()
         memory_usage = kernel.get_memory_footprint()
-        p0_chunk = kernel.get_final_state()
 
         del kernel  # important for releasing memory for the next iteration
         gc.collect()
@@ -102,6 +101,12 @@ def execute_chunked_kernel_computation(
         output_start = time.time()
         output_writer.write_output_chunk(P_chunk)
         output_time = time.time() - output_start
+
+        p0_chunk = convert_final_state_to_initial_state(
+                execution_result=P_chunk,
+                advect_time=advect_time_chunks[i],
+                previous_initial_state=p0_chunk,
+        )
 
         print("\t---BUFFER SIZES---")
         for key, value in memory_usage.items():
@@ -114,6 +119,21 @@ def execute_chunked_kernel_computation(
         print(f"\tOutput Writing:       {output_time:10.3f}s")
 
     return output_writer.paths
+
+
+def convert_final_state_to_initial_state(
+    execution_result: xr.Dataset,
+    previous_initial_state: xr.Dataset,
+    advect_time: pd.DatetimeIndex
+) -> xr.Dataset:
+    """Takes the final timestep of a computation, and convert it into an initial state to send to another kernel"""
+    final_state = execution_result.isel(time=-1).copy(deep=True)  # copy in order to avoid mutating execution result
+    # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
+    unreleased = final_state.release_date > advect_time[-2]
+    for var in execution_result.data_vars:
+        if "time" in execution_result[var].dims:
+            final_state[var].loc[unreleased] = previous_initial_state[var].loc[unreleased]
+    return final_state
 
 
 def create_logger(log_path: Path):

@@ -6,8 +6,6 @@ We will use a small latitude/longitude scale in order to approximate cartesian b
 import sys
 from pathlib import Path
 
-from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
-
 sys.path.append(str(Path(__file__).parent.parent.parent / 'src'))
 
 import numpy as np
@@ -19,6 +17,7 @@ from datetime import timedelta
 from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
 from kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
+from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
 
 nx = 20
 lon = np.linspace(-.02, .02, nx*2)  # .01 degrees at equator ~= 1 km

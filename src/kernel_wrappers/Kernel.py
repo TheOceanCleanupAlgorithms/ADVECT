@@ -40,14 +40,6 @@ class Kernel(ABC):
         pass
 
     @abstractmethod
-    def get_final_state(self) -> xr.Dataset:
-        """
-        :return: the state at the end of execution, formatted such that it can be used as an initial state
-            for a subsequent kernel execution
-        """
-        pass
-
-    @abstractmethod
     def get_memory_footprint(self) -> dict:
         pass
 

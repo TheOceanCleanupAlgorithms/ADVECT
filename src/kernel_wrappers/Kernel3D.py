@@ -263,16 +263,6 @@ class Kernel3D(Kernel):
             "particles": particle_bytes,
         }
 
-    def get_final_state(self) -> xr.Dataset:
-        if self.execution_result is None:
-            raise RuntimeError("Cannot retreive final execution state before kernel has been executed")
-        p0_chunk = self.execution_result.isel(time=-1)  # last timestep is initial state for next chunk
-        # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
-        unreleased = p0_chunk.release_date > self.advect_time[-2]
-        for var in ['lat', 'lon', 'depth']:
-            p0_chunk[var].loc[unreleased] = self.p0[var].loc[unreleased]
-        return p0_chunk
-
     def get_data_loading_time(self) -> float:
         return self.data_load_time
 

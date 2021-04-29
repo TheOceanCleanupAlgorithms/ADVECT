@@ -31,8 +31,7 @@ class OutputWriter(ABC):
         :param forcing_data: xr.Datasets containing forcing datasets (e.g. currents, wind...)
         :param api_arguments: dictionary containing info on the top-level API call
         """
-        if not out_dir.is_dir():
-            out_dir.mkdir()
+        out_dir.mkdir(exist_ok=True, parents=True)
 
         self.folder_path = out_dir
         self.basename = basename
