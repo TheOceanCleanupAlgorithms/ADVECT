@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import click
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
