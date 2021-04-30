@@ -1,7 +1,7 @@
 # Sourcefile Specifications
 Source files contain the initial state of particles, and are encoded as netcdf datasets.  There is some difference between the sourcefiles required by the 2D and 3D Kernels.  In general, the 3D sourcefiles are the same as 2D, but with some extra variables.
 
-##2D Sourcefiles
+## 2D Sourcefiles
 
 ### Dimensions
 

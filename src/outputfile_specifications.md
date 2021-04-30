@@ -1,7 +1,7 @@
 # Outputfile Specifications
 Outputfiles contain the particle trajectories computed by the model, as well as metadata which describe in detail the configuration of ADVECTOR which produced them.  There is some difference between the outputfiles produced by the 2D and 3D Kernels.
 
-##2D Outputfiles
+## 2D Outputfiles
 
 ### Groups
 NetCDF-4 added support for hierarchical groups within netCDF datasets; each group acts as its own dataset.  We use this functionality to include a bunch of metadata along with the trajectories, without cluttering the trajectory dataset.
@@ -38,7 +38,7 @@ We will only give detailed specifications on the contents of the root group, as 
 
 Additional variables with dimensions `(p_id)` may be present, copied from the sourcefile.  See sourcefile_specifications.md.
 
-##3D Outputfiles
+## 3D Outputfiles
 These are generally identical to 2D Outputfiles, just with additional groups/variables.
 
 ### Additional Groups
