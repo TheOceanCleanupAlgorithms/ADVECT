@@ -1,6 +1,7 @@
 import os
 from abc import ABC
 from pathlib import Path
+from typing import Dict
 
 import xarray as xr
 import netCDF4
@@ -20,7 +21,7 @@ class OutputWriter(ABC):
         out_dir: Path,
         basename: str,
         sourcefile_path: str,
-        forcing_data: dict[Forcing, xr.Dataset],
+        forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
     ):
@@ -168,7 +169,7 @@ class OutputWriter3D(OutputWriter):
         basename: str,
         configfile_path: str,
         sourcefile_path: str,
-        forcing_data: dict[Forcing, xr.Dataset],
+        forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
     ):

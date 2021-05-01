@@ -8,7 +8,7 @@ import xarray as xr
 import pandas as pd
 
 from tqdm import tqdm
-from typing import Tuple, List, Type
+from typing import Dict, Tuple, List, Type
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from enums.forcings import Forcing
@@ -18,7 +18,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def execute_chunked_kernel_computation(
-    forcing_data: dict[Forcing, xr.Dataset],
+    forcing_data: Dict[Forcing, xr.Dataset],
     kernel_cls: Type[Kernel],
     kernel_config: KernelConfig,
     output_writer: OutputWriter,

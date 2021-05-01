@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Dict
 
 import xarray as xr
 import pandas as pd
@@ -17,7 +18,7 @@ class Kernel(ABC):
     @abstractmethod
     def __init__(
         self,
-        forcing_data: dict[Forcing, xr.Dataset],
+        forcing_data: Dict[Forcing, xr.Dataset],
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
