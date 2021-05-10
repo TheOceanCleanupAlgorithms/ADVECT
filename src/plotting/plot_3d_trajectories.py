@@ -1,9 +1,8 @@
 from enum import Enum
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import xarray as xr
-from matplotlib import cm
 from matplotlib import colors
 
 from io_tools.create_bathymetry import create_bathymetry_from_land_mask
