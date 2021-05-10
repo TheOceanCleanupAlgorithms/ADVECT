@@ -1,82 +1,109 @@
-from typing import Tuple, Optional
+from enum import Enum
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import xarray as xr
+from matplotlib import colors
+
+from io_tools.create_bathymetry import create_bathymetry_from_land_mask
+
+
+class BathyPlotType(Enum):
+    gridded = 0
+    contour = 1
 
 
 def plot_3d_trajectories(
-    outputfile: str,
-    current_U_path: str,
-    current_V_path: str,
-    current_W_path: str,
-    lon_range: Tuple[float, float],
-    lat_range: Tuple[float, float],
-    depth_range: Tuple[float, float],
-    variable_mapping: Optional[dict] = None,
+    particles: xr.Dataset,
+    land_mask: xr.DataArray,
+    bathymetry_plot_type: BathyPlotType = BathyPlotType.gridded,
 ):
-    """current_U_path will be used to plot landmass/bathymetry; best if same file as used in creation of outputfile, so
-        the boundary behavior matches up.
-       lon/lat/depth range should be pretty tight windows.  This plotting is computationally expensive, and if you want
-       the result to be at all interactive, this should be a very small window.  It means less generation of grid,
-       and only shows particles which enter this domain at some point.  Also, don't use outfiles with too many
-       particles."""
-    P = xr.open_dataset(outputfile)
-    currents = xr.open_mfdataset([current_U_path, current_V_path, current_W_path]).squeeze()
-    currents = currents.rename(variable_mapping)
-    grid = (currents.U.isnull() | currents.V.isnull() | currents.W.isnull())
-    grid = grid.transpose("lon", "lat", "depth").sortby("depth", "ascending")
-    smallgrid = grid.sel(
-        lon=slice(*lon_range), lat=slice(*lat_range), depth=slice(*depth_range)
-    )
-
-    def cell_edges(coord: xr.DataArray):
-        depth_bnds = (
-            coord - 0.5 * coord.diff(dim=coord.dims[0])
-        ).values  # halfway between grid points
-        return np.concatenate(
-            (
-                [coord[0] - (coord[1]-coord[0])/2],
-                depth_bnds,
-                [coord[-1] - (coord[-2]-coord[-1])/2],
-            )
-        )  # linearly extrapolate endpoints
-
-    Y, X, Z = np.meshgrid(
-        cell_edges(smallgrid.lat),
-        cell_edges(smallgrid.lon),
-        cell_edges(smallgrid.depth),
-    )
-    fig = plt.figure()
-    ax = fig.gca(projection="3d")
+    plt.figure(figsize=(12, 8))
+    ax = plt.axes(projection="3d")
     ax.view_init(15, -80)
-    ax.voxels(X, Y, Z, smallgrid.values, edgecolor="k", alpha=.8)
+    if bathymetry_plot_type == BathyPlotType.gridded:
+        plot_gridded_bathymetry(ax=ax, land_mask=land_mask)
+    elif bathymetry_plot_type == BathyPlotType.contour:
+        plot_contour_bathymetry(ax=ax, land_mask=land_mask)
+    else:
+        raise ValueError("Invalid BathyPlotType")
 
-    smallp = P.isel(
-        p_id=(
-            (P.lon > lon_range[0])
-            & (P.lon < lon_range[1])
-            & (P.lat > lat_range[0])
-            & (P.lat < lat_range[1])
-            & (P.depth < depth_range[1])
-        ).any(dim="time")
-    )
-
-    for i in range(len(smallp.p_id)):
-        ax.scatter3D(smallp.isel(p_id=i).lon, smallp.isel(p_id=i).lat, smallp.isel(p_id=i).depth, ".", s=3)
-    ax.set_xlim(*lon_range)
-    ax.set_ylim(*lat_range)
-
+    for i in range(len(particles.p_id)):
+        ax.scatter3D(
+            particles.isel(p_id=i).lon,
+            particles.isel(p_id=i).lat,
+            particles.isel(p_id=i).depth,
+            ".",
+            s=3,
+        )
+    ax.set_xlim([land_mask.lon.min(), land_mask.lon.max()])
+    ax.set_ylim([land_mask.lat.min(), land_mask.lat.max()])
+    ax.set_zlim([min(land_mask.depth), -1*(min(land_mask.depth))])
     ax.set_xlabel('Longitude (deg E)')
     ax.set_ylabel('Latitude (deg N)')
     ax.set_zlabel('Depth (m)')
 
 
-# cape horn
-plot_3d_trajectories(outputfile='../../examples/outputfiles/2015_ECCO/neutral/advector_output_2015.nc',
-                     current_U_path='../../examples/ECCO/ECCO_interp/U_2015-01-01.nc',
-                     current_V_path='../../examples/ECCO/ECCO_interp/V_2015-01-01.nc',
-                     current_W_path='../../examples/ECCO/ECCO_interp/W_2015-01-01.nc',
-                     lon_range=(-80, -60),
-                     lat_range=(-56, -46),
-                     depth_range=(-1000, 0))
+def plot_gridded_bathymetry(
+    ax: plt.Axes,
+    land_mask: xr.DataArray,
+):
+    bathy = create_bathymetry_from_land_mask(land_mask=land_mask)
+    floor = np.min(bathy.values) - 1
+    X, Y = np.meshgrid(bathy.lon, bathy.lat)
+    dx = np.diff(bathy.lon)[0]
+    dy = np.diff(bathy.lat)[0]
+    facecolors = np.empty((len(X.ravel()), 6), dtype=object)
+    facecolors[:] = "tab:blue"
+    facecolors[bathy.values.ravel() == 0, 1] = "tab:green"
+
+    ax.bar3d(X.ravel(), Y.ravel(), floor, dx, dy, bathy.values.ravel()-floor,
+             edgecolor="k", linewidth=.1, alpha=.8, color=facecolors.ravel())
+
+
+def plot_contour_bathymetry(
+    ax: plt.Axes,
+    land_mask: xr.DataArray,
+):
+    bathy = create_bathymetry_from_land_mask(land_mask=land_mask)
+    X, Y = np.meshgrid(bathy.lon, bathy.lat)
+    color = np.zeros_like(bathy)
+    color[bathy.values == 0] = 1
+    cmap = colors.ListedColormap(['tab:blue', 'tab:green'])
+
+    my_col = cmap(color)
+    ax.plot_surface(X=X, Y=Y, Z=bathy.values, alpha=.9, facecolors=my_col)
+
+
+if __name__ == "__main__":
+    # example plotting around cape horn
+    lon_range = (-80, -40)
+    lat_range = (-70, -30)
+    depth_range = (-10000, 0)
+    P = xr.open_dataset(
+        '../../examples/outputfiles/ECCO_2015_3D/3D_uniform_source_2015/ADVECTOR_3D_output_2015.nc',
+    )
+    P = P.isel(
+        p_id=(
+            (P.lon >= lon_range[0]) &
+            (P.lon <= lon_range[1]) &
+            (P.lat >= lat_range[0]) &
+            (P.lat <= lat_range[1]) &
+            (P.depth >= depth_range[0]) &
+            (P.depth <= depth_range[1])
+        ).any(dim="time")
+    )
+    ECCO_land_mask = (
+        xr.open_dataset('../../examples/ECCO/ECCO_interp/U_2015-01-01.nc')
+        .squeeze().U.isnull()
+        .sortby("depth")
+        .sel(
+            lon=slice(*lon_range),
+            lat=slice(*lat_range),
+        )
+    )
+    plot_3d_trajectories(
+        particles=P,
+        land_mask=ECCO_land_mask,
+        bathymetry_plot_type=BathyPlotType.contour,
+    )

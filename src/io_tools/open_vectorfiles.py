@@ -5,7 +5,7 @@ import numpy as np
 
 from typing import Optional, Set, List
 from dask.diagnostics import ProgressBar
-from io_tools.create_bathymetry import create_bathymetry
+from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
@@ -23,7 +23,10 @@ def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Op
     )
     # encode the model domain, taken as where all the current components are non-null, as bathymetry
     print("Calculating bathymetry of current dataset...")
-    return xr.merge((currents, create_bathymetry(currents)))
+    first_timestep = currents.isel(time=0)  # only need one timestep
+    land_mask = first_timestep.U.isnull() | first_timestep.V.isnull() | first_timestep.W.isnull()
+
+    return xr.merge((currents, create_bathymetry_from_land_mask(land_mask)))
 
 
 def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
