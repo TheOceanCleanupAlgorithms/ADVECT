@@ -12,8 +12,6 @@ import xarray as xr
 import pandas as pd
 from pathlib import Path
 
-from dask.diagnostics import ProgressBar
-
 import kernel_wrappers.kernel_constants as cl_const
 from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
@@ -72,22 +70,20 @@ class Kernel2D(Kernel):
         print("\t\tLoading Current Data...")
         data_loading_start = time.time()
         current = forcing_data[Forcing.current].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
-        with ProgressBar():
-            self.current_x = current.lon.values.astype(np.float64)
-            self.current_y = current.lat.values.astype(np.float64)
-            self.current_t = current.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-            self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
-            self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
+        self.current_x = current.lon.values.astype(np.float64)
+        self.current_y = current.lat.values.astype(np.float64)
+        self.current_t = current.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+        self.current_U = current.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+        self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
         # wind vector field
         print("\t\tLoading Wind Data...")
         if "wind" in forcing_data:
-            with ProgressBar():
-                wind = forcing_data[Forcing.wind].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
-                self.wind_x = wind.lon.values.astype(np.float64)
-                self.wind_y = wind.lat.values.astype(np.float64)
-                self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
-                self.wind_U = wind.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
-                self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
+            wind = forcing_data[Forcing.wind].transpose('time', 'lat', 'lon')  # coerce values into correct shape before flattening
+            self.wind_x = wind.lon.values.astype(np.float64)
+            self.wind_y = wind.lat.values.astype(np.float64)
+            self.wind_t = wind.time.values.astype('datetime64[s]').astype(np.float64)  # float64 representation of unix timestamp
+            self.wind_U = wind.U.values.astype(np.float32, copy=False).ravel()  # astype will still copy if variable is not already float32
+            self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
         else:  # Windage disabled; pass a dummy field with singleton dimensions
             self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
             self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2

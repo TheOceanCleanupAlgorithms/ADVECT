@@ -74,6 +74,7 @@ def execute_chunked_kernel_computation(
         desc="PROGRESS",
         unit="chunk",
     ):
+        print("")  # newline after the progress bar
         print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
         # create the kernel wrapper object, pass it arguments
         print("\tInitializing Kernel...")

@@ -36,54 +36,54 @@ def chunk_advection_params(
     # then if any of the chunks we create don't fit into RAM, we just increment the number of chunks and try again.
     print("\tIncrementing number of chunks until data fits...")
     num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))
-    pbar = tqdm(total=len(out_time)-num_chunks)
-    while True:
-        if num_chunks > len(out_time):
-            raise RuntimeError(
-                "There is not enough memory to hold even the smallest possible chunk!"
-            )
-        # now we split up the advection OUTPUT into chunks.  All else will be based on this splitting.
-        out_time_chunks = np.array_split(out_time, num_chunks)
-        # give subsequent time chunks overlapping endpoints.  This is because the final reported value
-        # from a computation will be fed to the next computation as the start point.
-        out_time_chunks[1:] = [
-            out_time_chunks[i - 1][-1:].append(out_time_chunks[i])
-            for i in range(1, len(out_time_chunks))
-        ]
+    with tqdm(total=len(out_time)-num_chunks) as pbar:
+        while True:
+            if num_chunks > len(out_time):
+                raise RuntimeError(
+                    "There is not enough memory to hold even the smallest possible chunk!"
+                )
+            # now we split up the advection OUTPUT into chunks.  All else will be based on this splitting.
+            out_time_chunks = np.array_split(out_time, num_chunks)
+            # give subsequent time chunks overlapping endpoints.  This is because the final reported value
+            # from a computation will be fed to the next computation as the start point.
+            out_time_chunks[1:] = [
+                out_time_chunks[i - 1][-1:].append(out_time_chunks[i])
+                for i in range(1, len(out_time_chunks))
+            ]
 
-        # now, we split up the datasets.  If any chunk is too big, we
-        # immediately quit, increment num_chunks, and try again.
-        advect_time_chunks = []
-        forcing_data_chunks = []
-        all_chunks_fit = True
-        for out_time_chunk in out_time_chunks:
-            # extract dataset chunks for this out_time chunk
-            advect_time_chunks.append(
-                advect_time[
-                    (out_time_chunk[0] <= advect_time)
-                    & (advect_time <= out_time_chunk[-1])
-                ]
-            )
-            forcing_data_chunks.append(
-                {
-                    forcing: extract_dataset_chunk(ds, out_time_chunk)
-                    for forcing, ds in forcing_data.items()
-                }
-            )
+            # now, we split up the datasets.  If any chunk is too big, we
+            # immediately quit, increment num_chunks, and try again.
+            advect_time_chunks = []
+            forcing_data_chunks = []
+            all_chunks_fit = True
+            for out_time_chunk in out_time_chunks:
+                # extract dataset chunks for this out_time chunk
+                advect_time_chunks.append(
+                    advect_time[
+                        (out_time_chunk[0] <= advect_time)
+                        & (advect_time <= out_time_chunk[-1])
+                    ]
+                )
+                forcing_data_chunks.append(
+                    {
+                        forcing: extract_dataset_chunk(ds, out_time_chunk)
+                        for forcing, ds in forcing_data.items()
+                    }
+                )
 
-            # if this chunk is too big, try again with more chunks.
-            memory_bytes = estimate_memory_bytes(
-                forcing_data=forcing_data_chunks[-1],
-                num_particles=num_particles,
-                out_timesteps=len(out_time_chunk) - 1,
-            )
-            if sum(memory_bytes) > device_bytes:
-                all_chunks_fit = False
-                break
-        if all_chunks_fit:
-            return advect_time_chunks, forcing_data_chunks
-        num_chunks += 1
-        pbar.update(1)
+                # if this chunk is too big, try again with more chunks.
+                memory_bytes = estimate_memory_bytes(
+                    forcing_data=forcing_data_chunks[-1],
+                    num_particles=num_particles,
+                    out_timesteps=len(out_time_chunk) - 1,
+                )
+                if sum(memory_bytes) > device_bytes:
+                    all_chunks_fit = False
+                    break
+            if all_chunks_fit:
+                return advect_time_chunks, forcing_data_chunks
+            num_chunks += 1
+            pbar.update(1)
 
 
 def estimate_memory_bytes(

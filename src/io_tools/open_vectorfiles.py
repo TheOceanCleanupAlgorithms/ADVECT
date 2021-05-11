@@ -4,7 +4,6 @@ import dask
 import numpy as np
 
 from typing import Optional, Set, List
-from dask.diagnostics import ProgressBar
 from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
@@ -73,19 +72,18 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
         (key for key, value in variable_mapping.items() if value == "time"), "time"
     )
     print("\tOpening NetCDF files...")
-    with ProgressBar():
-        vectors = xr.merge(
-            (
-                xr.open_mfdataset(
-                    sorted(glob.glob(path)),
-                    data_vars="minimal",
-                    parallel=True,
-                    concat_dim=concat_dim,
-                )
-                for path in paths
-            ),
-            combine_attrs="override",
-        )  # use first file's attributes
+    vectors = xr.merge(
+        (
+            xr.open_mfdataset(
+                sorted(glob.glob(path)),
+                data_vars="minimal",
+                parallel=True,
+                concat_dim=concat_dim,
+            )
+            for path in paths
+        ),
+        combine_attrs="override",
+    )  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[list(varnames)]  # drop any additional variables
 
@@ -110,8 +108,7 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
         print("\tRolling longitude domain from [0, 360) to [-180, 180).")
         print("\tThis operation is expensive.  You may want to preprocess your data to the correct domain.")
         with dask.config.set(**{'array.slicing.split_large_chunks': True}):
-            with ProgressBar():
-                vectors['lon'] = ((vectors.lon + 180) % 360) - 180
-                vectors = vectors.sortby('lon')
+            vectors['lon'] = ((vectors.lon + 180) % 360) - 180
+            vectors = vectors.sortby('lon')
 
     return vectors
