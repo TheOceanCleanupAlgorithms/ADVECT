@@ -12,7 +12,7 @@ from tqdm import tqdm
 import subprocess
 
 
-def plot_ocean_trajectories(outputfile_path: str, current_path: str, current_varname_map: dict = None):
+def plot_ocean_trajectories(P: xr.Dataset, current_path: str, current_varname_map: dict = None):
     fig, ax = plt.subplots(figsize=[14, 8])
 
     # show current data grid
@@ -29,28 +29,26 @@ def plot_ocean_trajectories(outputfile_path: str, current_path: str, current_var
     plt.pcolormesh(lon_edges, lat_edges, ~grid, cmap='gray')
 
     # plot trajectories
-    P = xr.open_dataset(outputfile_path)
     ax.plot(P.lon.transpose('time', 'p_id'), P.lat.transpose('time', 'p_id'), '.')
     plt.show()
 
 
-def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_range=(-90, 90), save: bool = False,
-                            colorbar_depth=None):
-    P = xr.open_dataset(outputfile_path)
+def animate_ocean_advection(P: xr.Dataset, lon_range=(-180, 180), lat_range=(-90, 90), save: bool = False,
+                            movie_path: str = "advection", colorbar_depth=None):
     # plot le advection
     proj = ccrs.PlateCarree()
     fig = plt.figure(figsize=[14, 8])
     ax = plt.axes(projection=proj)
     ax.coastlines()
 
-    # invisible line forces map to at least cover the specified area, regardless of particle tracks
-    ax.plot(np.linspace(*lon_range), np.linspace(*lat_range), alpha=0)
+    ax.set_ylim(lat_range)
+    ax.set_xlim(lon_range)
 
     # initialize the scatter plot with dummy data.
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, .8, 100)))
     if "depth" in P.variables:
         vmin = colorbar_depth if colorbar_depth is not None else P.depth.min()
-        dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap=trunc_winter,
+        dot = ax.scatter(np.zeros(len(P.p_id)), np.zeros(len(P.p_id)), c=np.zeros(len(P.p_id)), cmap="viridis",
                          s=5, norm=mcol.Normalize(vmin=vmin, vmax=0))
         cbar = plt.colorbar(mappable=dot, ax=ax)
         cbar.ax.set_ylabel('Depth (m)')
@@ -60,7 +58,6 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
     def base_update(i, P, ax, dot, timestr):
         dot.set_offsets(np.c_[np.array([P.isel(time=i).lon, P.isel(time=i).lat]).T])
         ax.set_title(timestr[i])
-        ax.set_ylim(-90, 90)
     if "depth" in P.variables:
         def update_func(i, P, ax, dot, timestr):
             base_update(i, P, ax, dot, timestr)
@@ -70,7 +67,7 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
 
     timestr = P.time.dt.strftime("%Y-%m-%dT%H:%M:%S").values
     if save:
-        animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot, timestr, update_func)
+        animate_ocean_advection_to_disk(movie_path, P, fig, ax, dot, timestr, update_func)
     else:
         for i in range(len(P.time)):
             update_func(i, P, ax, dot, timestr)
@@ -78,10 +75,10 @@ def animate_ocean_advection(outputfile_path: str, lon_range=(-180, 180), lat_ran
         plt.show()
 
 
-def animate_ocean_advection_to_disk(outputfile_path, P, fig, ax, dot, timestr, update_func):
+def animate_ocean_advection_to_disk(movie_path, P, fig, ax, dot, timestr, update_func):
     FFMpegWriter = manimation.writers['ffmpeg']
     writer = FFMpegWriter(fps=30)
-    outfile = Path(outputfile_path).with_suffix('.mp4')
+    outfile = Path(movie_path).with_suffix(".mp4")
     print("Creating Movie...")
     with writer.saving(fig, outfile=outfile, dpi=150):
         for i in tqdm(range(len(P.time))):
