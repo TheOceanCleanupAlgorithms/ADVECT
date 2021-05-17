@@ -2,8 +2,10 @@
 advect on HYCOM surface currents
 """
 import glob
+import sys
 from pathlib import Path
 
+sys.path.append("../src")
 from run_advector_2D import run_advector_2D
 from plotting.plot_advection import animate_ocean_advection, plot_ocean_trajectories
 from datetime import datetime, timedelta
