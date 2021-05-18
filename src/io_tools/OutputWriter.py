@@ -1,6 +1,6 @@
-from abc import ABC
+from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import netCDF4
 import numpy as np
@@ -11,6 +11,7 @@ from enums.forcings import Forcing
 from kernel_wrappers.kernel_constants import EXIT_CODES
 
 SOURCEFILE_GROUP_NAME = "sourcefile"
+MODEL_DOMAIN_GROUP_NAME = "model_domain"
 CONFIGFILE_GROUP_NAME = "configfile"
 
 
@@ -32,7 +33,9 @@ class OutputWriter(ABC):
         :param api_arguments: dictionary containing info on the top-level API call
         """
         if out_dir.exists() and any(out_dir.iterdir()):
-            print(f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!")
+            print(
+                f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!"
+            )
             answer = ""
             while answer not in {"y", "n"}:
                 answer = input("Continue anyway? [y/n]: ")
@@ -46,9 +49,28 @@ class OutputWriter(ABC):
         self.paths = []
 
         self.sourcefile = sourcefile
-        self.forcing_meta = {forcing: xr.Dataset(ds.coords, attrs=ds.attrs) for forcing, ds in forcing_data.items()}
+        self.forcing_meta = {
+            forcing: xr.Dataset(ds.coords, attrs=ds.attrs)
+            for forcing, ds in forcing_data.items()
+        }
         self.api_entry = api_entry
         self.api_arguments = api_arguments
+
+        self.model_domain = self._get_ocean_domain(forcing_data)
+
+    @property
+    @abstractmethod
+    def _dataset_title(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _group_names(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        pass
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -70,10 +92,19 @@ class OutputWriter(ABC):
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
+            ds.title = self._dataset_title
+            ds.description = (
+                "This file's root group contains timeseries location data "
+                "for particles run through ADVECTOR.  This file also contains "
+                "several other self-describing groups: "
+                f"{self._group_names}."
+            )
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
-            ds.arguments = f"The arguments of the call to {self.api_entry} which produced this " \
-                           f"file are: {str(self.api_arguments)}"
+            ds.arguments = (
+                f"The arguments of the call to {self.api_entry} which produced this "
+                f"file are: {str(self.api_arguments)}"
+            )
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -85,13 +116,19 @@ class OutputWriter(ABC):
             release_date = ds.createVariable("release_date", np.float64, ("p_id",))
             release_date.units = "seconds since 1970-01-01 00:00:00.0"
             release_date.calendar = "gregorian"
-            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
+            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
             exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
-            exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
-                                    "kernel must be terminated.  Their semantic meaning is provided in the " \
-                                    "'code_to_meaning' attribute of this variable."
-            exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
+            exit_code.description = (
+                "These codes are returned by the kernel when unexpected behavior occurs and the"
+                "kernel must be terminated.  Their semantic meaning is provided in the "
+                "'code_to_meaning' attribute of this variable."
+            )
+            exit_code.code_to_meaning = str(
+                {code: meaning for code, meaning in EXIT_CODES.items() if code >= 0}
+            )
             exit_code[:] = chunk.exit_code.values.astype(np.byte)
 
             # Variables that expand between chunks
@@ -109,6 +146,7 @@ class OutputWriter(ABC):
             lat[:] = chunk.lat.values
 
         # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
+        self.model_domain.to_netcdf(self.paths[-1], mode="a", group="model_domain")
         self.sourcefile.to_netcdf(self.paths[-1], mode="a", group=SOURCEFILE_GROUP_NAME)
         for forcing, meta in self.forcing_meta.items():
             meta.attrs["group_description"] = (
@@ -116,7 +154,7 @@ class OutputWriter(ABC):
                 "dataset, after it has been loaded into ADVECTOR, and global attributes "
                 "from the first file in the dataset."
             )
-            meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name+"_meta")
+            meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name + "_meta")
 
     def _copy_unexpected_variables(self, chunk: xr.Dataset):
         """copy any variables along only p_id should be copied over as well"""
@@ -132,7 +170,9 @@ class OutputWriter(ABC):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             time = ds.variables["time"]
             start_t = len(time)
-            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
+            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
             lon = ds.variables["lon"]
             lon[:, start_t:] = chunk.lon.values
@@ -146,16 +186,36 @@ class OutputWriter(ABC):
 
 
 class OutputWriter2D(OutputWriter):
-    def _write_first_chunk(self, chunk: xr.Dataset):
-        super()._write_first_chunk(chunk)
-        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
-            ds.title = "Trajectories of Floating Marine Debris"
-            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
-                             "through ADVECTOR.  This file also contains several other groups: " \
-                             f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"and a group for each forcing dataset: {list(forcing.name+'_meta' for forcing in self.forcing_meta.keys())}, " \
-                             f"which each contain the dataset's coordinates " \
-                             f"and the global attributes from the first file in the dataset."
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        land_mask_varname = "land_mask"
+        return (
+            (forcing_data[Forcing.current]["U"].isel(time=0).isnull())
+            .drop_vars(("time", "depth"), errors="ignore")
+            .rename(land_mask_varname)
+            .assign_attrs(
+                {
+                    "description": "boolean mask which identifies 'land', defined as "
+                    "the null cells in the sea surface current velocity field."
+                }
+            )
+            .to_dataset()
+            .assign_attrs(
+                {
+                    "domain_definition": "The internal model domain is defined as all grid cells which are "
+                    f"not land; land is defined by the variable '{land_mask_varname}'."
+                }
+            )
+        )
+
+    @property
+    def _dataset_title(self) -> str:
+        return "Trajectories of Floating Marine Debris"
+
+    @property
+    def _group_names(self) -> List[str]:
+        return [MODEL_DOMAIN_GROUP_NAME, SOURCEFILE_GROUP_NAME] + list(
+            forcing.name + "_meta" for forcing in self.forcing_meta.keys()
+        )
 
 
 class OutputWriter3D(OutputWriter):
@@ -191,15 +251,6 @@ class OutputWriter3D(OutputWriter):
 
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
-            ds.title = "Trajectories of Marine Debris"
-            ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
-                             "through ADVECTOR.  This file also contains several other groups: " \
-                             f"{CONFIGFILE_GROUP_NAME}, which is a copy of the configfile passed to ADVECTOR, " \
-                             f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"and a group for each forcing dataset: {list(forcing.name+'_meta' for forcing in self.forcing_meta.keys())}, " \
-                             f"which each contain the dataset's coordinates " \
-                             f"and the global attributes from the first file in the dataset."
-
             radius = ds.createVariable("radius", np.float64, ("p_id",))
             radius.units = "meters"
             radius[:] = chunk.radius.values.astype(np.float64)
@@ -208,7 +259,9 @@ class OutputWriter3D(OutputWriter):
             density.units = "kg m^-3"
             density[:] = chunk.density.values.astype(np.float64)
 
-            corey_shape_factor = ds.createVariable("corey_shape_factor", np.float64, ("p_id",))
+            corey_shape_factor = ds.createVariable(
+                "corey_shape_factor", np.float64, ("p_id",)
+            )
             corey_shape_factor.units = "unitless"
             corey_shape_factor[:] = chunk.corey_shape_factor.values.astype(np.float64)
 
@@ -222,5 +275,37 @@ class OutputWriter3D(OutputWriter):
             start_t = len(ds.variables["time"])
         super()._append_chunk(chunk=chunk)
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
-            depth = ds.variables['depth']
+            depth = ds.variables["depth"]
             depth[:, start_t:] = chunk.depth.values
+
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        return (
+            forcing_data[Forcing.current]["bathymetry"]
+            .assign_attrs(
+                {
+                    "description": "depth of ocean floor, defined as the bottom bound "
+                    "of the first non-null cell of the ocean current "
+                    "velocity field along the ascending depth dimension."
+                }
+            )
+            .to_dataset()
+            .assign_attrs(
+                {
+                    "domain_definition": "The internal model domain is defined as all points in "
+                    "(lat, lon, depth) space where depth >= bathymetry, "
+                    "excluding cells where bathymetry == 0."
+                }
+            )
+        )
+
+    @property
+    def _dataset_title(self) -> str:
+        return "Trajectories of Marine Debris"
+
+    @property
+    def _group_names(self) -> List[str]:
+        return [
+            MODEL_DOMAIN_GROUP_NAME,
+            SOURCEFILE_GROUP_NAME,
+            CONFIGFILE_GROUP_NAME,
+        ] + list(forcing.name + "_meta" for forcing in self.forcing_meta.keys())
