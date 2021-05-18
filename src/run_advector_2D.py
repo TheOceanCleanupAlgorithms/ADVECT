@@ -117,7 +117,7 @@ def run_advector_2D(
     output_writer = OutputWriter2D(
         out_dir=Path(output_directory),
         basename="ADVECTOR_2D_output",
-        sourcefile_path=sourcefile_path,
+        sourcefile=p0,
         forcing_data=forcing_data,
         api_entry="src/run_advector_2D.py::run_advector_2D",
         api_arguments=arguments,

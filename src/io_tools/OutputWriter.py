@@ -1,15 +1,14 @@
-import os
 from abc import ABC
 from pathlib import Path
 from typing import Dict
 
-import xarray as xr
 import netCDF4
 import numpy as np
+import xarray as xr
 
+from _version import __version__
 from enums.forcings import Forcing
 from kernel_wrappers.kernel_constants import EXIT_CODES
-from _version import __version__
 
 SOURCEFILE_GROUP_NAME = "sourcefile"
 CONFIGFILE_GROUP_NAME = "configfile"
@@ -20,7 +19,7 @@ class OutputWriter(ABC):
         self,
         out_dir: Path,
         basename: str,
-        sourcefile_path: str,
+        sourcefile: xr.Dataset,
         forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
@@ -28,7 +27,7 @@ class OutputWriter(ABC):
         """
         :param out_dir: directory to save outputfiles
         :param basename: base name of each outputfile (e.g. out_name = "3d_output" --> "3d_output_1993.nc")
-        :param sourcefile_path: path to sourcefile
+        :param sourcefile: sourcefile, to be copied to outputfiles.
         :param forcing_data: xr.Datasets containing forcing datasets (e.g. currents, wind...)
         :param api_arguments: dictionary containing info on the top-level API call
         """
@@ -39,7 +38,7 @@ class OutputWriter(ABC):
         self.current_year = None
         self.paths = []
 
-        self.sourcefile_path = sourcefile_path
+        self.sourcefile = sourcefile
         self.forcing_meta = {forcing: xr.Dataset(ds.coords, attrs=ds.attrs) for forcing, ds in forcing_data.items()}
         self.api_entry = api_entry
         self.api_arguments = api_arguments
@@ -63,26 +62,6 @@ class OutputWriter(ABC):
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         with netCDF4.Dataset(self.paths[-1], mode="w") as ds:
-            # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
-            sourcefile_group = ds.createGroup(SOURCEFILE_GROUP_NAME)
-            with netCDF4.Dataset(self.sourcefile_path, mode="r") as sourcefile:
-                copy_dataset(sourcefile, sourcefile_group)
-
-            for forcing, meta in self.forcing_meta.items():
-                forcing_meta_group = ds.createGroup(forcing.name)
-                forcing_meta_group.setncattr(
-                    f"{forcing.name}_meta_group_description",
-                    f"This group contains the coordinates of the fully concatenated {forcing.value} "
-                    "dataset, after it has been loaded into ADVECTOR, and global attributes "
-                    "from the first file in the dataset."
-                )
-
-                tmp_meta_path = self.folder_path / f"{forcing.name}_meta_tmp.nc"
-                meta.to_netcdf(tmp_meta_path)  # save xr.Dataset to temp file
-                with netCDF4.Dataset(tmp_meta_path, mode="r") as netcdf4_meta:  # so we can open it with netCDF4
-                    copy_dataset(netcdf4_meta, forcing_meta_group)
-                os.remove(tmp_meta_path)
-
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
@@ -122,6 +101,16 @@ class OutputWriter(ABC):
             lat.units = "Degrees North"
             lat[:] = chunk.lat.values
 
+        # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
+        self.sourcefile.to_netcdf(self.paths[-1], mode="a", group=SOURCEFILE_GROUP_NAME)
+        for forcing, meta in self.forcing_meta.items():
+            meta.attrs["group_description"] = (
+                f"This group contains the coordinates of the fully concatenated {forcing.value} "
+                "dataset, after it has been loaded into ADVECTOR, and global attributes "
+                "from the first file in the dataset."
+            )
+            meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name+"_meta")
+
     def _copy_unexpected_variables(self, chunk: xr.Dataset):
         """copy any variables along only p_id should be copied over as well"""
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
@@ -157,7 +146,7 @@ class OutputWriter2D(OutputWriter):
             ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
                              "through ADVECTOR.  This file also contains several other groups: " \
                              f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"and a group for each forcing dataset: {list(forcing.name for forcing in self.forcing_meta.keys())}, " \
+                             f"and a group for each forcing dataset: {list(forcing.name+'_meta' for forcing in self.forcing_meta.keys())}, " \
                              f"which each contain the dataset's coordinates " \
                              f"and the global attributes from the first file in the dataset."
 
@@ -167,41 +156,40 @@ class OutputWriter3D(OutputWriter):
         self,
         out_dir: Path,
         basename: str,
-        configfile_path: str,
-        sourcefile_path: str,
+        configfile: xr.Dataset,
+        sourcefile: xr.Dataset,
         forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
     ):
         """
-        :param configfile_path: path to configfile
+        :param configfile: configfile, to be copied to outputfiles
         see OutputWriter for other arg descriptions
         """
         super().__init__(
             out_dir=out_dir,
             basename=basename,
-            sourcefile_path=sourcefile_path,
+            sourcefile=sourcefile,
             forcing_data=forcing_data,
             api_entry=api_entry,
             api_arguments=api_arguments,
         )
-        self.configfile_path = configfile_path
+        self.configfile = configfile
 
     def _write_first_chunk(self, chunk: xr.Dataset):
         super()._write_first_chunk(chunk=chunk)
-        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
-            # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
-            config_group = ds.createGroup("configfile")
-            with netCDF4.Dataset(self.configfile_path, mode="r") as configfile:
-                copy_dataset(configfile, config_group)
 
+        # --- SAVE MODEL CONFIGURATION METADATA INTO GROUPS --- #
+        self.configfile.to_netcdf(self.paths[-1], mode="a", group=CONFIGFILE_GROUP_NAME)
+
+        with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             # --- INITIALIZE PARTICLE TRAJECTORIES IN ROOT GROUP --- #
             ds.title = "Trajectories of Marine Debris"
             ds.description = "This file's root group contains timeseries location data for a batch of particles run " \
                              "through ADVECTOR.  This file also contains several other groups: " \
                              f"{CONFIGFILE_GROUP_NAME}, which is a copy of the configfile passed to ADVECTOR, " \
                              f"{SOURCEFILE_GROUP_NAME}, which is a copy of the sourcefile passed to ADVECTOR, " \
-                             f"and a group for each forcing dataset: {list(forcing.name for forcing in self.forcing_meta.keys())}, " \
+                             f"and a group for each forcing dataset: {list(forcing.name+'_meta' for forcing in self.forcing_meta.keys())}, " \
                              f"which each contain the dataset's coordinates " \
                              f"and the global attributes from the first file in the dataset."
 
@@ -229,22 +217,3 @@ class OutputWriter3D(OutputWriter):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             depth = ds.variables['depth']
             depth[:, start_t:] = chunk.depth.values
-
-
-def copy_dataset(source: netCDF4.Dataset, destination: netCDF4.Dataset):
-    """
-    copy the contents (attributes, dimensions, variables) of 'source' into 'destination.'
-    adapted from https://stackoverflow.com/a/49592545
-    """
-    # copy global attributes
-    destination.setncatts(source.__dict__)
-    # copy dimensions
-    for name, dimension in source.dimensions.items():
-        destination.createDimension(name, (len(dimension) if not dimension.isunlimited() else None))
-    # copy variables
-    for name, variable in source.variables.items():
-        destination.createVariable(name, variable.datatype, variable.dimensions)
-        # copy variable attributes
-        destination[name].setncatts(source[name].__dict__)
-        # copy variable contents
-        destination[name][:] = source[name][:]

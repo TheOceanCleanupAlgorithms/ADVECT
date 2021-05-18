@@ -23,7 +23,7 @@ def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Op
     )
     # encode the model domain, taken as where all the current components are non-null, as bathymetry
     print("Calculating bathymetry of current dataset...")
-    return xr.merge((currents, create_bathymetry(currents)))
+    return xr.merge((currents, create_bathymetry(currents)), combine_attrs="override")
 
 
 def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
