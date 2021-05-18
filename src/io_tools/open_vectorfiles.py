@@ -25,7 +25,7 @@ def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Op
     first_timestep = currents.isel(time=0)  # only need one timestep
     land_mask = first_timestep.U.isnull() | first_timestep.V.isnull() | first_timestep.W.isnull()
 
-    return xr.merge((currents, create_bathymetry_from_land_mask(land_mask)))
+    return xr.merge((currents, create_bathymetry_from_land_mask(land_mask)), combine_attrs="override")
 
 
 def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):

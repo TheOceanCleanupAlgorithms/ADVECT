@@ -6,7 +6,7 @@ import xarray as xr
 import math
 import numpy as np
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from tqdm import tqdm
 
 from enums.forcings import Forcing
@@ -14,12 +14,12 @@ from enums.forcings import Forcing
 
 def chunk_advection_params(
     device_bytes: int,
-    forcing_data: dict[Forcing, xr.Dataset],
+    forcing_data: Dict[Forcing, xr.Dataset],
     num_particles: int,
     advect_time: pd.DatetimeIndex,
     save_every: int,
 ) -> Tuple[
-    List[pd.DatetimeIndex], List[dict[Forcing, xr.Dataset]]
+    List[pd.DatetimeIndex], List[Dict[Forcing, xr.Dataset]]
 ]:
     """given the parameters for advection, return parameters for an iterative advection"""
     out_time = advect_time[::save_every]
@@ -87,7 +87,7 @@ def chunk_advection_params(
 
 
 def estimate_memory_bytes(
-    forcing_data: dict[Forcing, xr.Dataset],
+    forcing_data: Dict[Forcing, xr.Dataset],
     num_particles: int,
     out_timesteps: int,
 ) -> Tuple[int, int, int]:

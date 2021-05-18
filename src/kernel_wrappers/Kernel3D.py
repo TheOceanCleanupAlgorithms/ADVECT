@@ -5,7 +5,7 @@ of executing kernels.
 """
 import warnings
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 import pyopencl as cl
@@ -48,7 +48,7 @@ class Kernel3D(Kernel):
 
     def __init__(
         self,
-        forcing_data: dict[Forcing, xr.Dataset],
+        forcing_data: Dict[Forcing, xr.Dataset],
         p0: xr.Dataset,
         advect_time: pd.DatetimeIndex,
         save_every: int,
