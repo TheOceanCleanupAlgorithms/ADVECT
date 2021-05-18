@@ -248,3 +248,19 @@ class OutputWriter3D(OutputWriter):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             depth = ds.variables['depth']
             depth[:, start_t:] = chunk.depth.values
+
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        return (
+            forcing_data[Forcing.current]["bathymetry"]
+            .assign_attrs({
+                "description": "depth of ocean floor, defined as the bottom bound "
+                               "of the first non-null cell of the ocean current "
+                               "velocity field along the ascending depth dimension."
+            })
+            .to_dataset()
+            .assign_attrs({
+                "domain_definition": "The internal model domain is defined as all points in "
+                                     "(lat, lon, depth) space where depth >= bathymetry, "
+                                     "excluding cells where bathymetry == 0."
+            })
+        )
