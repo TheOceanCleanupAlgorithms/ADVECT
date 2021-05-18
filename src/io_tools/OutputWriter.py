@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict
 
@@ -49,6 +49,12 @@ class OutputWriter(ABC):
         self.forcing_meta = {forcing: xr.Dataset(ds.coords, attrs=ds.attrs) for forcing, ds in forcing_data.items()}
         self.api_entry = api_entry
         self.api_arguments = api_arguments
+
+        self.model_domain = self._get_ocean_domain(forcing_data)
+
+    @abstractmethod
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        pass
 
     def _set_current_year(self, year: int):
         self.current_year = year
@@ -117,6 +123,7 @@ class OutputWriter(ABC):
                 "from the first file in the dataset."
             )
             meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name+"_meta")
+        self.model_domain.to_netcdf(self.paths[-1], mode="a", group="model_domain")
 
     def _copy_unexpected_variables(self, chunk: xr.Dataset):
         """copy any variables along only p_id should be copied over as well"""
@@ -156,6 +163,23 @@ class OutputWriter2D(OutputWriter):
                              f"and a group for each forcing dataset: {list(forcing.name+'_meta' for forcing in self.forcing_meta.keys())}, " \
                              f"which each contain the dataset's coordinates " \
                              f"and the global attributes from the first file in the dataset."
+
+    def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
+        land_mask_varname = "land_mask"
+        return (
+            (forcing_data[Forcing.current]["U"].isel(time=0).isnull())
+            .drop_vars(("time", "depth"), errors="ignore")
+            .rename(land_mask_varname)
+            .assign_attrs({
+                "description": "boolean mask which identifies 'land', defined as "
+                               "the null cells in the sea surface current velocity field."
+            })
+            .to_dataset()
+            .assign_attrs({
+                "domain_definition": "The internal model domain is defined as all grid cells which are "
+                                     f"not land; land is defined by the variable '{land_mask_varname}'."
+            })
+        )
 
 
 class OutputWriter3D(OutputWriter):
