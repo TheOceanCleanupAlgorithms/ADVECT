@@ -31,6 +31,13 @@ class OutputWriter(ABC):
         :param forcing_data: xr.Datasets containing forcing datasets (e.g. currents, wind...)
         :param api_arguments: dictionary containing info on the top-level API call
         """
+        if out_dir.exists() and any(out_dir.iterdir()):
+            print(f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!")
+            answer = ""
+            while answer not in {"y", "n"}:
+                answer = input("Continue anyway? [y/n]: ")
+            if answer == "n":
+                raise SystemExit
         out_dir.mkdir(exist_ok=True, parents=True)
 
         self.folder_path = out_dir

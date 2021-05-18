@@ -10,6 +10,7 @@ dependencies:
   - netcdf4
   - dask
   - pyopencl
+  - pocl
   - matplotlib
   - cartopy
   - tqdm

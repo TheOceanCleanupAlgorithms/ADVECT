@@ -4,8 +4,7 @@ import dask
 import numpy as np
 
 from typing import Optional, Set, List
-from dask.diagnostics import ProgressBar
-from io_tools.create_bathymetry import create_bathymetry
+from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
@@ -23,7 +22,10 @@ def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Op
     )
     # encode the model domain, taken as where all the current components are non-null, as bathymetry
     print("Calculating bathymetry of current dataset...")
-    return xr.merge((currents, create_bathymetry(currents)), combine_attrs="override")
+    first_timestep = currents.isel(time=0)  # only need one timestep
+    land_mask = first_timestep.U.isnull() | first_timestep.V.isnull() | first_timestep.W.isnull()
+
+    return xr.merge((currents, create_bathymetry_from_land_mask(land_mask)), combine_attrs="override")
 
 
 def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
@@ -70,19 +72,18 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
         (key for key, value in variable_mapping.items() if value == "time"), "time"
     )
     print("\tOpening NetCDF files...")
-    with ProgressBar():
-        vectors = xr.merge(
-            (
-                xr.open_mfdataset(
-                    sorted(glob.glob(path)),
-                    data_vars="minimal",
-                    parallel=True,
-                    concat_dim=concat_dim,
-                )
-                for path in paths
-            ),
-            combine_attrs="override",
-        )  # use first file's attributes
+    vectors = xr.merge(
+        (
+            xr.open_mfdataset(
+                sorted(glob.glob(path)),
+                data_vars="minimal",
+                parallel=True,
+                concat_dim=concat_dim,
+            )
+            for path in paths
+        ),
+        combine_attrs="override",
+    )  # use first file's attributes
     vectors = vectors.rename(variable_mapping)
     vectors = vectors[list(varnames)]  # drop any additional variables
 
@@ -107,8 +108,7 @@ def open_vectorfield(paths: List[str], varnames: Set[str], variable_mapping: Opt
         print("\tRolling longitude domain from [0, 360) to [-180, 180).")
         print("\tThis operation is expensive.  You may want to preprocess your data to the correct domain.")
         with dask.config.set(**{'array.slicing.split_large_chunks': True}):
-            with ProgressBar():
-                vectors['lon'] = ((vectors.lon + 180) % 360) - 180
-                vectors = vectors.sortby('lon')
+            vectors['lon'] = ((vectors.lon + 180) % 360) - 180
+            vectors = vectors.sortby('lon')
 
     return vectors
