@@ -33,7 +33,9 @@ class OutputWriter(ABC):
         :param api_arguments: dictionary containing info on the top-level API call
         """
         if out_dir.exists() and any(out_dir.iterdir()):
-            print(f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!")
+            print(
+                f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!"
+            )
             answer = ""
             while answer not in {"y", "n"}:
                 answer = input("Continue anyway? [y/n]: ")
@@ -47,7 +49,10 @@ class OutputWriter(ABC):
         self.paths = []
 
         self.sourcefile = sourcefile
-        self.forcing_meta = {forcing: xr.Dataset(ds.coords, attrs=ds.attrs) for forcing, ds in forcing_data.items()}
+        self.forcing_meta = {
+            forcing: xr.Dataset(ds.coords, attrs=ds.attrs)
+            for forcing, ds in forcing_data.items()
+        }
         self.api_entry = api_entry
         self.api_arguments = api_arguments
 
@@ -96,8 +101,10 @@ class OutputWriter(ABC):
             )
             ds.institution = "The Ocean Cleanup"
             ds.source = f"ADVECTOR Version {__version__}"
-            ds.arguments = f"The arguments of the call to {self.api_entry} which produced this " \
-                           f"file are: {str(self.api_arguments)}"
+            ds.arguments = (
+                f"The arguments of the call to {self.api_entry} which produced this "
+                f"file are: {str(self.api_arguments)}"
+            )
 
             ds.createDimension("p_id", len(chunk.p_id))
             ds.createDimension("time", None)  # unlimited dimension
@@ -109,13 +116,19 @@ class OutputWriter(ABC):
             release_date = ds.createVariable("release_date", np.float64, ("p_id",))
             release_date.units = "seconds since 1970-01-01 00:00:00.0"
             release_date.calendar = "gregorian"
-            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(np.float64)
+            release_date[:] = chunk.release_date.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
             exit_code = ds.createVariable("exit_code", np.byte, ("p_id",))
-            exit_code.description = "These codes are returned by the kernel when unexpected behavior occurs and the" \
-                                    "kernel must be terminated.  Their semantic meaning is provided in the " \
-                                    "'code_to_meaning' attribute of this variable."
-            exit_code.code_to_meaning = str({code: meaning for code, meaning in EXIT_CODES.items() if code >= 0})
+            exit_code.description = (
+                "These codes are returned by the kernel when unexpected behavior occurs and the"
+                "kernel must be terminated.  Their semantic meaning is provided in the "
+                "'code_to_meaning' attribute of this variable."
+            )
+            exit_code.code_to_meaning = str(
+                {code: meaning for code, meaning in EXIT_CODES.items() if code >= 0}
+            )
             exit_code[:] = chunk.exit_code.values.astype(np.byte)
 
             # Variables that expand between chunks
@@ -141,7 +154,7 @@ class OutputWriter(ABC):
                 "dataset, after it has been loaded into ADVECTOR, and global attributes "
                 "from the first file in the dataset."
             )
-            meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name+"_meta")
+            meta.to_netcdf(self.paths[-1], mode="a", group=forcing.name + "_meta")
 
     def _copy_unexpected_variables(self, chunk: xr.Dataset):
         """copy any variables along only p_id should be copied over as well"""
@@ -157,7 +170,9 @@ class OutputWriter(ABC):
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
             time = ds.variables["time"]
             start_t = len(time)
-            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(np.float64)
+            time[start_t:] = chunk.time.values.astype("datetime64[s]").astype(
+                np.float64
+            )
 
             lon = ds.variables["lon"]
             lon[:, start_t:] = chunk.lon.values
@@ -177,15 +192,19 @@ class OutputWriter2D(OutputWriter):
             (forcing_data[Forcing.current]["U"].isel(time=0).isnull())
             .drop_vars(("time", "depth"), errors="ignore")
             .rename(land_mask_varname)
-            .assign_attrs({
-                "description": "boolean mask which identifies 'land', defined as "
-                               "the null cells in the sea surface current velocity field."
-            })
+            .assign_attrs(
+                {
+                    "description": "boolean mask which identifies 'land', defined as "
+                    "the null cells in the sea surface current velocity field."
+                }
+            )
             .to_dataset()
-            .assign_attrs({
-                "domain_definition": "The internal model domain is defined as all grid cells which are "
-                                     f"not land; land is defined by the variable '{land_mask_varname}'."
-            })
+            .assign_attrs(
+                {
+                    "domain_definition": "The internal model domain is defined as all grid cells which are "
+                    f"not land; land is defined by the variable '{land_mask_varname}'."
+                }
+            )
         )
 
     @property
@@ -194,10 +213,7 @@ class OutputWriter2D(OutputWriter):
 
     @property
     def _group_names(self) -> List[str]:
-        return [
-           MODEL_DOMAIN_GROUP_NAME,
-           SOURCEFILE_GROUP_NAME
-        ] + list(
+        return [MODEL_DOMAIN_GROUP_NAME, SOURCEFILE_GROUP_NAME] + list(
             forcing.name + "_meta" for forcing in self.forcing_meta.keys()
         )
 
@@ -243,7 +259,9 @@ class OutputWriter3D(OutputWriter):
             density.units = "kg m^-3"
             density[:] = chunk.density.values.astype(np.float64)
 
-            corey_shape_factor = ds.createVariable("corey_shape_factor", np.float64, ("p_id",))
+            corey_shape_factor = ds.createVariable(
+                "corey_shape_factor", np.float64, ("p_id",)
+            )
             corey_shape_factor.units = "unitless"
             corey_shape_factor[:] = chunk.corey_shape_factor.values.astype(np.float64)
 
@@ -257,23 +275,27 @@ class OutputWriter3D(OutputWriter):
             start_t = len(ds.variables["time"])
         super()._append_chunk(chunk=chunk)
         with netCDF4.Dataset(self.paths[-1], mode="a") as ds:
-            depth = ds.variables['depth']
+            depth = ds.variables["depth"]
             depth[:, start_t:] = chunk.depth.values
 
     def _get_ocean_domain(self, forcing_data: Dict[Forcing, xr.Dataset]) -> xr.Dataset:
         return (
             forcing_data[Forcing.current]["bathymetry"]
-            .assign_attrs({
-                "description": "depth of ocean floor, defined as the bottom bound "
-                               "of the first non-null cell of the ocean current "
-                               "velocity field along the ascending depth dimension."
-            })
+            .assign_attrs(
+                {
+                    "description": "depth of ocean floor, defined as the bottom bound "
+                    "of the first non-null cell of the ocean current "
+                    "velocity field along the ascending depth dimension."
+                }
+            )
             .to_dataset()
-            .assign_attrs({
-                "domain_definition": "The internal model domain is defined as all points in "
-                                     "(lat, lon, depth) space where depth >= bathymetry, "
-                                     "excluding cells where bathymetry == 0."
-            })
+            .assign_attrs(
+                {
+                    "domain_definition": "The internal model domain is defined as all points in "
+                    "(lat, lon, depth) space where depth >= bathymetry, "
+                    "excluding cells where bathymetry == 0."
+                }
+            )
         )
 
     @property
@@ -286,6 +308,4 @@ class OutputWriter3D(OutputWriter):
             MODEL_DOMAIN_GROUP_NAME,
             SOURCEFILE_GROUP_NAME,
             CONFIGFILE_GROUP_NAME,
-        ] + list(
-            forcing.name + "_meta" for forcing in self.forcing_meta.keys()
-        )
+        ] + list(forcing.name + "_meta" for forcing in self.forcing_meta.keys())
