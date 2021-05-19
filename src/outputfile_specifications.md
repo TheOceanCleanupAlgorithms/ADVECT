@@ -9,6 +9,7 @@ NetCDF-4 added support for hierarchical groups within netCDF datasets; each grou
 | Name | Description |
 | --- | --- |
 | root group | contains trajectory data and particle information, as well as descriptive attributes |
+| model_domain | contains information defining the spatial domain of the simulation (i.e. the ocean) |
 | configfile | a copy of the configfile passed to ADVECTOR (only present for 3D Outputfiles) |
 | sourcefile | a copy of the sourcefile passed to ADVECTOR |
 | currents_meta | contains the coordinates of the current dataset passed to ADVECTOR, as well as the global attributes from the first file in the dataset |
@@ -59,6 +60,7 @@ These are generally identical to 2D Outputfiles, just with additional groups/var
 | corey_shape_factor | (p_id) | float64 | "corey shape factor" of particle, unitless; see sourcefile_specifications.md for definition |
 
 ## Exit Codes
+These codes are attached to each particle, for the sake of tracing the cause of a bugged out particle.
 
 | Code | Semantic Name | Description |
 | --- | --- | --- |
