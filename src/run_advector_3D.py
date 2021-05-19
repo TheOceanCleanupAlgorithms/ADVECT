@@ -15,6 +15,8 @@ import datetime
 from pathlib import Path
 from typing import Tuple
 
+from dask.diagnostics import ProgressBar
+
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
@@ -48,6 +50,7 @@ def run_advector_3D(
     wind_varname_map: dict = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
+    show_progress_bar: bool = True,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -94,8 +97,11 @@ def run_advector_3D(
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
+    :param show_progress_bar: whether to show progress bars for dask operations
     :return: list of paths to the outputfiles
     """
+    if show_progress_bar:
+        ProgressBar().register()
     arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
@@ -134,8 +140,8 @@ def run_advector_3D(
     output_writer = OutputWriter3D(
         out_dir=Path(output_directory),
         basename="ADVECTOR_3D_output",
-        configfile_path=configfile_path,
-        sourcefile_path=sourcefile_path,
+        configfile=xr.open_dataset(configfile_path),
+        sourcefile=p0,
         forcing_data=forcing_data,
         api_entry="src/run_advector_3D.py::run_advector_3D",
         api_arguments=arguments,

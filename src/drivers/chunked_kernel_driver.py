@@ -8,7 +8,7 @@ import xarray as xr
 import pandas as pd
 
 from tqdm import tqdm
-from typing import Tuple, List, Type
+from typing import Dict, Tuple, List, Type
 from pathlib import Path
 from drivers.advection_chunking import chunk_advection_params
 from enums.forcings import Forcing
@@ -18,7 +18,7 @@ from kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def execute_chunked_kernel_computation(
-    forcing_data: dict[Forcing, xr.Dataset],
+    forcing_data: Dict[Forcing, xr.Dataset],
     kernel_cls: Type[Kernel],
     kernel_config: KernelConfig,
     output_writer: OutputWriter,
@@ -74,6 +74,7 @@ def execute_chunked_kernel_computation(
         desc="PROGRESS",
         unit="chunk",
     ):
+        print("")  # newline after the progress bar
         print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
         # create the kernel wrapper object, pass it arguments
         print("\tInitializing Kernel...")
@@ -108,11 +109,11 @@ def execute_chunked_kernel_computation(
                 previous_initial_state=p0_chunk,
         )
 
-        print("\t---BUFFER SIZES---")
+        print("\t----------BUFFER SIZES-----------")
         for key, value in memory_usage.items():
             print(f'\t{key+":":<20}{value / 1e6:10.3f} MB')
         print(f'\t{"Total:":<20}{sum(memory_usage.values()) / 1e6:10.3f} MB')
-        print("\t---EXECUTION TIME---")
+        print("\t---------EXECUTION TIME----------")
         print(f"\tData Loading:         {data_loading_time:10.3f}s")
         print(f"\tBuffer Read/Write:    {buffer_time:10.3f}s")
         print(f"\tKernel Execution:     {execution_time:10.3f}s")

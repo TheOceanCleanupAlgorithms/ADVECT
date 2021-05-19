@@ -3,13 +3,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3
+  - python>=3.8
   - numpy
   - pandas
   - xarray
   - netcdf4
   - dask
   - pyopencl
+  - pocl
   - matplotlib
   - cartopy
   - tqdm

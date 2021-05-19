@@ -14,6 +14,8 @@ import datetime
 from pathlib import Path
 from typing import Tuple
 
+from dask.diagnostics import ProgressBar
+
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
 from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter2D
@@ -42,6 +44,7 @@ def run_advector_2D(
     v_wind_path: Optional[str] = None,
     wind_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
+    show_progress_bar: bool = True,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -88,8 +91,11 @@ def run_advector_2D(
     :param windage_coeff: fraction of wind speed that is transferred to particle.
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
         Note: this value has a profound impact on results.
+    :param show_progress_bar: whether to show progress bars for dask operations
     :return: list of paths to the outputfiles
     """
+    if show_progress_bar:
+        ProgressBar().register()
     arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
@@ -119,7 +125,7 @@ def run_advector_2D(
     output_writer = OutputWriter2D(
         out_dir=Path(output_directory),
         basename="ADVECTOR_2D_output",
-        sourcefile_path=sourcefile_path,
+        sourcefile=p0,
         forcing_data=forcing_data,
         api_entry="src/run_advector_2D.py::run_advector_2D",
         api_arguments=arguments,
