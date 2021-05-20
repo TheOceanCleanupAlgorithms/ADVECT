@@ -10,7 +10,7 @@ import xarray as xr
 
 from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
-from kernel_wrappers.Field3D import Field3D
+from kernel_wrappers.Field3D import Field3D, create_empty_2d_field
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
 KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_2d.cl"
@@ -72,14 +72,7 @@ class Kernel2D(Kernel):
         if Forcing.wind in forcing_data:
             self.wind = Field3D(ds=forcing_data[Forcing.wind], varnames=["U", "V"])
         else:  # Windage disabled; pass a dummy field with singleton dimensions
-            dummy_var = (["time", "lat", "lon"], [[[0]]])
-            self.wind = Field3D(
-                ds=xr.Dataset(
-                    data_vars={"U": dummy_var, "V": dummy_var},
-                    coords={"time": [0], "lat": [0], "lon": [0]},
-                ),
-                varnames=["U", "V"],
-            )
+            self.wind = create_empty_2d_field()
             # to flag the kernel that windage is disabled
             self.windage_coefficient = np.nan
         self.data_load_time = time.time() - data_loading_start

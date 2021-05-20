@@ -1,9 +1,10 @@
 from collections import OrderedDict
-from typing import List, Tuple, Optional
+from typing import List
 
-import xarray as xr
 import numpy as np
 import pyopencl as cl
+import xarray as xr
+
 from kernel_wrappers import kernel_constants
 
 
@@ -34,6 +35,7 @@ class Field3D:
         self,
         ds: xr.Dataset,
         varnames: List[str],
+        non_uniform_time: bool = False,
     ):
         """
         :param ds: xarray dataset with some variables with coordinates {"time", "depth" (optional), "lat", "lon"},
@@ -61,7 +63,10 @@ class Field3D:
         # float64 representation of unix timestamp
         self.coords["t"] = ds.time.values.astype("datetime64[s]").astype(np.float64)
         assert 1 <= len(self.coords["t"]) <= kernel_constants.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.coords["t"])
+        if non_uniform_time:
+            assert is_sorted_ascending(self.coords["t"])
+        else:
+            assert is_uniformly_spaced_ascending(self.coords["t"])
 
         # put variables in an ordered dict, correct datatype, persisted into RAM
         if "z" in self.coords:
@@ -89,3 +94,14 @@ class Field3D:
         return sum(coord.nbytes for coord in self.coords.values()) + sum(
             var.nbytes for var in self.variables.values()
         )
+
+
+def create_empty_2d_field():
+    dummy_var = (["time", "lat", "lon"], [[[0]]])
+    return Field3D(
+        ds=xr.Dataset(
+            data_vars={"U": dummy_var, "V": dummy_var},
+            coords={"time": [0], "lat": [0], "lon": [0]},
+        ),
+        varnames=["U", "V"],
+    )
