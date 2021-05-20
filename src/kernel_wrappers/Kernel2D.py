@@ -8,9 +8,9 @@ import pandas as pd
 import pyopencl as cl
 import xarray as xr
 
-import kernel_wrappers.kernel_constants as cl_const
 from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
+from kernel_wrappers.Field3D import Field3D
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
 KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_2d.cl"
@@ -64,67 +64,49 @@ class Kernel2D(Kernel):
 
         # ---KERNEL ARGUMENT INITIALIZATION--- #
         # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
-
         print("\t\tLoading Current Data...")
         data_loading_start = time.time()
-        current = forcing_data[Forcing.current].transpose(
-            "time", "lat", "lon"
-        )  # coerce values into correct shape before flattening
-        self.current_x = current.lon.values.astype(np.float64)
-        self.current_y = current.lat.values.astype(np.float64)
-        self.current_t = current.time.values.astype("datetime64[s]").astype(
-            np.float64
-        )  # float64 representation of unix timestamp
-        self.current_U = current.U.values.astype(
-            np.float32, copy=False
-        ).ravel()  # astype will still copy if variable is not already float32
-        self.current_V = current.V.values.astype(np.float32, copy=False).ravel()
-        # wind vector field
+        self.current = Field3D(ds=forcing_data[Forcing.current], varnames=["U", "V"])
+
         print("\t\tLoading Wind Data...")
-        if "wind" in forcing_data:
-            wind = forcing_data[Forcing.wind].transpose(
-                "time", "lat", "lon"
-            )  # coerce values into correct shape before flattening
-            self.wind_x = wind.lon.values.astype(np.float64)
-            self.wind_y = wind.lat.values.astype(np.float64)
-            self.wind_t = wind.time.values.astype("datetime64[s]").astype(
-                np.float64
-            )  # float64 representation of unix timestamp
-            self.wind_U = wind.U.values.astype(
-                np.float32, copy=False
-            ).ravel()  # astype will still copy if variable is not already float32
-            self.wind_V = wind.V.values.astype(np.float32, copy=False).ravel()
+        if Forcing.wind in forcing_data:
+            self.wind = Field3D(ds=forcing_data[Forcing.wind], varnames=["U", "V"])
         else:  # Windage disabled; pass a dummy field with singleton dimensions
-            self.wind_x, self.wind_y, self.wind_t = [np.zeros(1, dtype=np.float64)] * 3
-            self.wind_U, self.wind_V = [np.zeros((1, 1, 1), dtype=np.float32)] * 2
-            self.windage_coefficient = (
-                np.nan
-            )  # to flag the kernel that windage is disabled
+            dummy_var = (["time", "lat", "lon"], [[[0]]])
+            self.wind = Field3D(
+                ds=xr.Dataset(
+                    data_vars={"U": dummy_var, "V": dummy_var},
+                    coords={"time": [0], "lat": [0], "lon": [0]},
+                ),
+                varnames=["U", "V"],
+            )
+            # to flag the kernel that windage is disabled
+            self.windage_coefficient = np.nan
         self.data_load_time = time.time() - data_loading_start
+
         # particle initialization
         self.x0 = p0.lon.values.astype(np.float32)
         self.y0 = p0.lat.values.astype(np.float32)
         self.release_date = p0.release_date.values.astype("datetime64[s]").astype(
             np.float64
         )
+
         # advection time parameters
         self.start_time = np.float64(advect_time[0].timestamp())
         self.dt = np.float64(pd.Timedelta(advect_time.freq).total_seconds())
-        self.ntimesteps = np.uint32(
-            len(advect_time) - 1
-        )  # minus one bc initial position given
+        self.ntimesteps = np.uint32(len(advect_time) - 1)  # initial position given
         self.save_every = np.uint32(save_every)
-        # output_vectors
-        self.X_out = np.full(
-            (len(p0.lon) * len(self.out_time)), np.nan, dtype=np.float32
-        )  # output will have this value
-        self.Y_out = np.full(
-            (len(p0.lat) * len(self.out_time)), np.nan, dtype=np.float32
-        )  # until overwritten (e.g. pre-release)
+
+        # output_vectors (initialized to nan)
+        out_shape = len(p0.lon) * len(self.out_time)
+        self.X_out = np.full(out_shape, np.nan, dtype=np.float32)
+        self.Y_out = np.full(out_shape, np.nan, dtype=np.float32)
+
         # physics
         self.advection_scheme = config.advection_scheme.value
         self.windage_coefficient = config.windage_coefficient
         self.eddy_diffusivity = config.eddy_diffusivity
+
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
 
@@ -148,37 +130,15 @@ class Kernel2D(Kernel):
         # write arguments to compute device
         print("\t\tWriting buffers to compute device...")
         write_start = time.time()
-        (
-            d_current_x,
-            d_current_y,
-            d_current_t,
-            d_current_U,
-            d_current_V,
-            d_wind_x,
-            d_wind_y,
-            d_wind_t,
-            d_wind_U,
-            d_wind_V,
-            d_x0,
-            d_y0,
-            d_release_date,
-        ) = (
+        current_args = self.current.create_kernel_arguments(context=self.context)
+        wind_args = self.wind.create_kernel_arguments(context=self.context)
+        (d_x0, d_y0, d_release_date,) = (
             cl.Buffer(
                 self.context,
                 cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
                 hostbuf=hostbuf,
             )
             for hostbuf in (
-                self.current_x,
-                self.current_y,
-                self.current_t,
-                self.current_U,
-                self.current_V,
-                self.wind_x,
-                self.wind_y,
-                self.wind_t,
-                self.wind_U,
-                self.wind_V,
                 self.x0,
                 self.y0,
                 self.release_date,
@@ -208,22 +168,8 @@ class Kernel2D(Kernel):
             self.queue,
             (len(self.x0),),
             None,
-            d_current_x,
-            np.uint32(len(self.current_x)),
-            d_current_y,
-            np.uint32(len(self.current_y)),
-            d_current_t,
-            np.uint32(len(self.current_t)),
-            d_current_U,
-            d_current_V,
-            d_wind_x,
-            np.uint32(len(self.wind_x)),
-            d_wind_y,
-            np.uint32(len(self.wind_y)),
-            d_wind_t,
-            np.uint32(len(self.wind_t)),
-            d_wind_U,
-            d_wind_V,
+            *current_args,
+            *wind_args,
             d_x0,
             d_y0,
             d_release_date,
@@ -263,20 +209,8 @@ class Kernel2D(Kernel):
         return self.execution_result
 
     def get_memory_footprint(self) -> dict:
-        current_bytes = (
-            self.current_x.nbytes
-            + self.current_y.nbytes
-            + self.current_t.nbytes
-            + self.current_U.nbytes
-            + self.current_V.nbytes
-        )
-        wind_bytes = (
-            self.wind_x.nbytes
-            + self.wind_y.nbytes
-            + self.wind_t.nbytes
-            + self.wind_U.nbytes
-            + self.wind_V.nbytes
-        )
+        current_bytes = self.current.memory_usage_bytes()
+        wind_bytes = self.wind.memory_usage_bytes()
         particle_bytes = (
             self.x0.nbytes
             + self.y0.nbytes
@@ -302,34 +236,6 @@ class Kernel2D(Kernel):
 
     def _check_args(self):
         """ensure kernel arguments satisfy constraints"""
-
-        def is_uniformly_spaced_ascending(arr):
-            tol = 1e-3
-            return len(arr) == 1 or all(np.abs(np.diff(arr) - np.diff(arr)[0]) < tol)
-
-        # check current field valid
-        assert max(self.current_x) <= 180
-        assert min(self.current_x) >= -180
-        assert 1 <= len(self.current_x) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.current_x)
-        assert max(self.current_y) <= 90
-        assert min(self.current_y) >= -90
-        assert 1 <= len(self.current_y) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.current_y)
-        assert 1 <= len(self.current_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.current_t)
-
-        # check wind field valid
-        assert max(self.wind_x) <= 180
-        assert min(self.wind_x) >= -180
-        assert 1 <= len(self.wind_x) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.wind_x)
-        assert max(self.wind_y) <= 90
-        assert min(self.wind_y) >= -90
-        assert 1 <= len(self.wind_y) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.wind_y)
-        assert 1 <= len(self.wind_t) <= cl_const.UINT_MAX + 1
-        assert is_uniformly_spaced_ascending(self.wind_t)
 
         # check particle positions valid
         assert np.nanmax(self.x0) < 180
