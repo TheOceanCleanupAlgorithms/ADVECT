@@ -40,7 +40,7 @@ def run_advector_3D(
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
-    advection_scheme: str = 'taylor2',
+    advection_scheme: str = "taylor2",
     save_period: int = 1,
     sourcefile_varname_map: dict = None,
     water_varname_map: dict = None,
@@ -108,8 +108,10 @@ def run_advector_3D(
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
-        raise ValueError(f"Invalid argument advection_scheme; must be one of "
-                         f"{set(scheme.name for scheme in AdvectionScheme)}.")
+        raise ValueError(
+            f"Invalid argument advection_scheme; must be one of "
+            f"{set(scheme.name for scheme in AdvectionScheme)}."
+        )
 
     print("---INITIALIZING DATASETS---")
     print("Opening Sourcefiles...")
@@ -119,18 +121,23 @@ def run_advector_3D(
     )
 
     print("Opening Configfile...")
-    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor \
-        = unpack_configfile(configfile_path=configfile_path)
+    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor = unpack_configfile(
+        configfile_path=configfile_path
+    )
 
     forcing_data = {}
     print("Initializing Ocean Current...")
     forcing_data[Forcing.current] = open_3d_currents(
-        u_path=u_water_path, v_path=v_water_path, w_path=w_water_path, variable_mapping=water_varname_map
+        u_path=u_water_path,
+        v_path=v_water_path,
+        w_path=w_water_path,
+        variable_mapping=water_varname_map,
     )
 
     print("Initializing Seawater Density...")
     forcing_data[Forcing.seawater_density] = open_seawater_density(
-        path=seawater_density_path, variable_mapping=seawater_density_varname_map,
+        path=seawater_density_path,
+        variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:

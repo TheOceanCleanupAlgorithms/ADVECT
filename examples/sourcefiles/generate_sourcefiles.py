@@ -35,12 +35,20 @@ def generate_3D_sourcefile(
         land_mask_path=land_mask_path,
     )
     rng = np.random.default_rng()
-    ds = ds.assign({
-        "depth": ("p_id", rng.uniform(*depth_range, num_particles)),
-        "radius": ("p_id", 10 ** rng.uniform(*np.log10(radius_range), num_particles)),
-        "density": ("p_id", rng.uniform(*density_range, num_particles)),
-        "corey_shape_factor": ("p_id", rng.uniform(*corey_shape_factor_range, num_particles)),
-    })
+    ds = ds.assign(
+        {
+            "depth": ("p_id", rng.uniform(*depth_range, num_particles)),
+            "radius": (
+                "p_id",
+                10 ** rng.uniform(*np.log10(radius_range), num_particles),
+            ),
+            "density": ("p_id", rng.uniform(*density_range, num_particles)),
+            "corey_shape_factor": (
+                "p_id",
+                rng.uniform(*corey_shape_factor_range, num_particles),
+            ),
+        }
+    )
     ds.attrs["title"] = f"3D Sourcefile for ADVECTOR"
     ds.to_netcdf(out_path)
 

@@ -18,11 +18,13 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
     :return displacement [dx, dy, dz]
     """
     prg = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(
-            options=["-I", str(MODEL_CORE_DIR)]
+        options=["-I", str(MODEL_CORE_DIR)]
     )
     d_field_x, d_field_y, d_field_z, d_field_t, d_field_U, d_field_V, d_field_W = (
         cl.Buffer(
-            CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=hostbuf
+            CL_CONTEXT,
+            cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
+            hostbuf=hostbuf,
         )
         for hostbuf in (
             field["x"].astype(np.float64),
@@ -36,7 +38,9 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
     )
 
     displacement_out = np.empty(3)
-    d_displacement_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
+    d_displacement_out = cl.Buffer(
+        CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes
+    )
 
     prg.test_taylor2(
         CL_QUEUE,
@@ -68,7 +72,9 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
 
 
 def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
-    prg = cl.Program(CL_CONTEXT, """
+    prg = cl.Program(
+        CL_CONTEXT,
+        """
     #include "advection_schemes.cl"
     __kernel void test_taylor2_formula(
         const double u, const double v, const double w,
@@ -88,22 +94,33 @@ def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
         displacement_out[0] = displacement_meters.x;
         displacement_out[1] = displacement_meters.y;
         displacement_out[2] = displacement_meters.z;
-    } """).build(
-            options=["-I", str(MODEL_CORE_DIR)]
-    )
+    } """,
+    ).build(options=["-I", str(MODEL_CORE_DIR)])
 
     displacement_out = np.empty(3)
-    d_displacement_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes)
+    d_displacement_out = cl.Buffer(
+        CL_CONTEXT, cl.mem_flags.WRITE_ONLY, displacement_out.nbytes
+    )
 
     prg.test_taylor2_formula(
         CL_QUEUE,
         (1,),
         None,
-        np.float64(V[0]), np.float64(V[1]), np.float64(V[2]),
-        np.float64(V_x[0]), np.float64(V_x[1]), np.float64(V_x[2]),
-        np.float64(V_y[0]), np.float64(V_y[1]), np.float64(V_y[2]),
-        np.float64(V_z[0]), np.float64(V_z[1]), np.float64(V_z[2]),
-        np.float64(V_t[0]), np.float64(V_t[1]), np.float64(V_t[2]),
+        np.float64(V[0]),
+        np.float64(V[1]),
+        np.float64(V[2]),
+        np.float64(V_x[0]),
+        np.float64(V_x[1]),
+        np.float64(V_x[2]),
+        np.float64(V_y[0]),
+        np.float64(V_y[1]),
+        np.float64(V_y[2]),
+        np.float64(V_z[0]),
+        np.float64(V_z[1]),
+        np.float64(V_z[2]),
+        np.float64(V_t[0]),
+        np.float64(V_t[1]),
+        np.float64(V_t[2]),
         np.float64(dt),
         d_displacement_out,
     )
@@ -115,21 +132,27 @@ def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
 
 
 def test_linear_displacement():
-    p = {'x': 0, 'y': 0, 'z': 0, 't': 0}
-    field = {'x': np.linspace(-2, 2, 10), 'y': np.linspace(-1, 1, 5), 'z': np.linspace(-2, 0, 4),
-             't': np.linspace(0, 10, 7)}
-    field['U'] = np.ones((len(field['t']), len(field['z']), len(field['y']), len(field['x'])))
-    field.update({'V': np.zeros_like(field['U']), 'W': np.zeros_like(field['U'])})
+    p = {"x": 0, "y": 0, "z": 0, "t": 0}
+    field = {
+        "x": np.linspace(-2, 2, 10),
+        "y": np.linspace(-1, 1, 5),
+        "z": np.linspace(-2, 0, 4),
+        "t": np.linspace(0, 10, 7),
+    }
+    field["U"] = np.ones(
+        (len(field["t"]), len(field["z"]), len(field["y"]), len(field["x"]))
+    )
+    field.update({"V": np.zeros_like(field["U"]), "W": np.zeros_like(field["U"])})
     dt = 1
     # test linear displacement in each dimension
     disp = advect_taylor2(p, field, dt)
     np.testing.assert_allclose(disp, [1, 0, 0])
 
-    field.update({'U': field['V'], 'V': field['U']})
+    field.update({"U": field["V"], "V": field["U"]})
     disp = advect_taylor2(p, field, dt)
     np.testing.assert_allclose(disp, [0, 1, 0])
 
-    field.update({'W': field['V'], 'V': field['U']})
+    field.update({"W": field["V"], "V": field["U"]})
     disp = advect_taylor2(p, field, dt)
     np.testing.assert_allclose(disp, [0, 0, 1])
 
@@ -150,22 +173,26 @@ def test_dimensional_symmetry():
     orig_disp = taylor2_formula(V, V_x, V_y, V_z, V_t, dt)
 
     # rotate x-->y, y-->z, z-->x
-    roll1_disp = taylor2_formula(np.roll(V, 1),
-                                 np.roll(V_z, 1),
-                                 np.roll(V_x, 1),
-                                 np.roll(V_y, 1),
-                                 np.roll(V_t, 1),
-                                 dt)
+    roll1_disp = taylor2_formula(
+        np.roll(V, 1),
+        np.roll(V_z, 1),
+        np.roll(V_x, 1),
+        np.roll(V_y, 1),
+        np.roll(V_t, 1),
+        dt,
+    )
 
     np.testing.assert_allclose(orig_disp, np.roll(roll1_disp, -1))
 
     # rotate x-->z, y-->x, z-->y
 
-    roll2_disp = taylor2_formula(np.roll(V, 2),
-                                 np.roll(V_y, 2),
-                                 np.roll(V_z, 2),
-                                 np.roll(V_x, 2),
-                                 np.roll(V_t, 2),
-                                 dt)
+    roll2_disp = taylor2_formula(
+        np.roll(V, 2),
+        np.roll(V_y, 2),
+        np.roll(V_z, 2),
+        np.roll(V_x, 2),
+        np.roll(V_t, 2),
+        dt,
+    )
 
     np.testing.assert_allclose(orig_disp, np.roll(roll2_disp, -2))

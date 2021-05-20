@@ -18,9 +18,7 @@ def chunk_advection_params(
     num_particles: int,
     advect_time: pd.DatetimeIndex,
     save_every: int,
-) -> Tuple[
-    List[pd.DatetimeIndex], List[Dict[Forcing, xr.Dataset]]
-]:
+) -> Tuple[List[pd.DatetimeIndex], List[Dict[Forcing, xr.Dataset]]]:
     """given the parameters for advection, return parameters for an iterative advection"""
     out_time = advect_time[::save_every]
     # each element of out_time marks a time at which the driver will return particle position
@@ -36,7 +34,7 @@ def chunk_advection_params(
     # then if any of the chunks we create don't fit into RAM, we just increment the number of chunks and try again.
     print("\tIncrementing number of chunks until data fits...")
     num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))
-    with tqdm(total=len(out_time)-num_chunks) as pbar:
+    with tqdm(total=len(out_time) - num_chunks) as pbar:
         while True:
             if num_chunks > len(out_time):
                 raise RuntimeError(
@@ -97,7 +95,9 @@ def estimate_memory_bytes(
     for ds in forcing_data.values():
         field_shape = list(ds.data_vars.values())[0].shape
         # when passed to the kernel, field variables are represented as float32, coordinates as float64
-        forcing_data_bytes += len(ds.data_vars) * 4 * math.prod(field_shape) + 8 * sum(field_shape)
+        forcing_data_bytes += len(ds.data_vars) * 4 * math.prod(field_shape) + 8 * sum(
+            field_shape
+        )
 
     # output has three 4-byte variables for each particle per timestep, plus 1-byte exit codes
     output_bytes = 3 * 4 * num_particles * out_timesteps + 1 * num_particles

@@ -17,18 +17,36 @@ def generate_configfile(
     """
     config = xr.Dataset(
         {
-            "horizontal_diffusivity": ("z_hd", horizontal_diffusivity,
-                                       {"units": "m^2 s^-1"}),
-            "vertical_diffusivity": ("z_vd", vertical_diffusivity,
-                                     {"units": "m^2 s^-1"}),
+            "horizontal_diffusivity": (
+                "z_hd",
+                horizontal_diffusivity,
+                {"units": "m^2 s^-1"},
+            ),
+            "vertical_diffusivity": (
+                "z_vd",
+                vertical_diffusivity,
+                {"units": "m^2 s^-1"},
+            ),
         },
         coords={
-            "z_hd": ("z_hd", z_hd,
-                     {"long_name": "depth coordinate for horizontal_diffusivity",
-                      "units": "m", "positive": "up"}),
-            "z_vd": ("z_vd", z_vd,
-                     {"long_name": "depth coordinate for vertical_diffusivity",
-                      "units": "m", "positive": "up"}),
+            "z_hd": (
+                "z_hd",
+                z_hd,
+                {
+                    "long_name": "depth coordinate for horizontal_diffusivity",
+                    "units": "m",
+                    "positive": "up",
+                },
+            ),
+            "z_vd": (
+                "z_vd",
+                z_vd,
+                {
+                    "long_name": "depth coordinate for vertical_diffusivity",
+                    "units": "m",
+                    "positive": "up",
+                },
+            ),
         },
         attrs={
             "title": f"Configuration File for ADVECTOR",
