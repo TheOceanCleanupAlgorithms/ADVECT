@@ -125,11 +125,7 @@ class Kernel3D(Kernel):
         self.Y_out = np.full(out_shape, np.nan, dtype=np.float32)
         self.Z_out = np.full(out_shape, np.nan, dtype=np.float32)
         # physics
-        self.advection_scheme = config.advection_scheme.value
-        self.windage_multiplier = config.windage_multiplier
-        self.wind_mixing_enabled = config.wind_mixing_enabled
-        self.max_wave_height = config.max_wave_height
-        self.wave_mixing_depth_factor = config.wave_mixing_depth_factor
+        self.config = config
         # eddy diffusivity
         self.horizontal_eddy_diffusivity_z = config.eddy_diffusivity.z_hd.values.astype(
             np.float64
@@ -215,11 +211,11 @@ class Kernel3D(Kernel):
             *wind_args,
             *seawater_density_args,
             *p0_buffers,
-            np.uint32(self.advection_scheme),
+            np.uint32(self.config.advection_scheme),
             np.float64(self.windage_multiplier),
-            np.uint32(self.wind_mixing_enabled),
-            np.float64(self.max_wave_height),
-            np.float64(self.wave_mixing_depth_factor),
+            np.uint32(self.config.wind_mixing_enabled),
+            np.float64(self.config.max_wave_height),
+            np.float64(self.config.wave_mixing_depth_factor),
             *eddy_diffusity_buffers,
             np.uint32(len(self.horizontal_eddy_diffusivity_values)),
             np.uint32(len(self.vertical_eddy_diffusivity_values)),
@@ -254,24 +250,23 @@ class Kernel3D(Kernel):
         return self.execution_result
 
     def get_memory_footprint(self) -> dict:
-        particle_bytes = (
-            self.x0.nbytes
-            + self.y0.nbytes
-            + self.z0.nbytes
-            + self.release_date.nbytes
-            + self.density.nbytes
-            + self.radius.nbytes
-            + self.corey_shape_factor.nbytes
-            + self.X_out.nbytes
-            + self.Y_out.nbytes
-            + self.Z_out.nbytes
-            + self.exit_code.nbytes
-        )
         return {
             "current": self.current.memory_usage_bytes(),
             "wind": self.wind.memory_usage_bytes(),
             "seawater_density": self.seawater_density.memory_usage_bytes(),
-            "particles": particle_bytes,
+            "particles": (
+                self.x0.nbytes
+                + self.y0.nbytes
+                + self.z0.nbytes
+                + self.release_date.nbytes
+                + self.density.nbytes
+                + self.radius.nbytes
+                + self.corey_shape_factor.nbytes
+                + self.X_out.nbytes
+                + self.Y_out.nbytes
+                + self.Z_out.nbytes
+                + self.exit_code.nbytes
+            ),
         }
 
     def get_data_loading_time(self) -> float:
