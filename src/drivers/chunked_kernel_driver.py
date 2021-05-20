@@ -2,14 +2,15 @@ import datetime
 import gc
 import logging
 import time
-import pyopencl as cl
-import numpy as np
-import xarray as xr
-import pandas as pd
-
-from tqdm import tqdm
-from typing import Dict, Tuple, List, Type
 from pathlib import Path
+from typing import Dict, Tuple, List, Type
+
+import numpy as np
+import pandas as pd
+import pyopencl as cl
+import xarray as xr
+from tqdm import tqdm
+
 from drivers.advection_chunking import chunk_advection_params
 from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter
@@ -104,9 +105,9 @@ def execute_chunked_kernel_computation(
         output_time = time.time() - output_start
 
         p0_chunk = convert_final_state_to_initial_state(
-                execution_result=P_chunk,
-                advect_time=advect_time_chunks[i],
-                previous_initial_state=p0_chunk,
+            execution_result=P_chunk,
+            advect_time=advect_time_chunks[i],
+            previous_initial_state=p0_chunk,
         )
 
         print("\t----------BUFFER SIZES-----------")

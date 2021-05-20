@@ -1,5 +1,5 @@
 """
-advect on HYCOM surface currents
+advect on ECCO surface currents
 """
 import glob
 import sys

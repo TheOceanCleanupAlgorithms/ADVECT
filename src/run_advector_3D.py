@@ -1,6 +1,8 @@
 """
 This is the ADVECTOR 3D entry-point.
-To use, create a python script within this repo, import this file, and execute.  E.g.
+To use, add this repo's "src" directory to the python path, import this file, and execute.  E.g.
+    import sys
+    sys.path.append("<path_to_repo>/src")
     from run_advector_3D import run_advector_3D
     run_advector_3D(...)
 See examples/ECCO_advect_3D.py for an example usage.
@@ -18,13 +20,13 @@ from typing import Tuple
 from dask.diagnostics import ProgressBar
 
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
+from enums.advection_scheme import AdvectionScheme
+from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter3D
 from io_tools.open_configfiles import unpack_configfile
-from enums.advection_scheme import AdvectionScheme
-from kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
 from io_tools.open_sourcefiles import open_3d_sourcefiles
 from io_tools.open_vectorfiles import *
-from enums.forcings import Forcing
+from kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
 
 
 def run_advector_3D(

@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List
 
@@ -30,6 +30,7 @@ class OutputWriter(ABC):
         :param basename: base name of each outputfile (e.g. out_name = "3d_output" --> "3d_output_1993.nc")
         :param sourcefile: sourcefile, to be copied to outputfiles.
         :param forcing_data: xr.Datasets containing forcing datasets (e.g. currents, wind...)
+        :param api_entry: the function where this is being called from (for traceability)
         :param api_arguments: dictionary containing info on the top-level API call
         """
         if out_dir.exists() and any(out_dir.iterdir()):

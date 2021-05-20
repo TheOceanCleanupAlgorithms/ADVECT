@@ -1,17 +1,18 @@
-import xarray as xr
 import glob
+from typing import Optional, Set, List
+
 import dask
 import numpy as np
+import xarray as xr
 
-from typing import Optional, Set, List
 from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]):
     """
-    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
-    :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
-    :param w_path: wildcard path to the vertical vector files.  See u_path for more details.
+    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
+    :param v_path: wildcard path to the meridional vector files.
+    :param w_path: wildcard path to the vertical vector files.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
     currents = open_vectorfield(
@@ -30,8 +31,8 @@ def open_3d_currents(u_path: str, v_path: str, w_path: str, variable_mapping: Op
 
 def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
     """
-    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
-    :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
+    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
+    :param v_path: wildcard path to the meridional vector files.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
     return open_vectorfield(
@@ -43,6 +44,10 @@ def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict])
 
 
 def open_seawater_density(path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
+    """
+    :param path: wildcard path to the seawater density files.  Fed to glob.glob.
+    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    """
     return open_vectorfield(
         paths=[path],
         varnames={"rho"},
@@ -53,8 +58,8 @@ def open_seawater_density(path: str, variable_mapping: Optional[dict]) -> xr.Dat
 
 def open_wind(u_path: str, v_path: str, variable_mapping: Optional[dict]):
     """
-    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.  Assumes sorting paths by name == sorting paths in time
-    :param v_path: wildcard path to the meridional vector files.  See u_path for more details.
+    :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
+    :param v_path: wildcard path to the meridional vector files.
     :param variable_mapping: mapping from names in vector file to advector standard variable names
     """
     return open_vectorfield(

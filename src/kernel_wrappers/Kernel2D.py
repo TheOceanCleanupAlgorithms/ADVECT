@@ -1,17 +1,12 @@
-"""
-Since we can't raise errors inside kernels, the best practice is to wrap every kernel in a python object.
-Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
-of executing kernels.
-"""
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
-import pyopencl as cl
-import time
-import xarray as xr
 import pandas as pd
-from pathlib import Path
+import pyopencl as cl
+import xarray as xr
 
 import kernel_wrappers.kernel_constants as cl_const
 from enums.advection_scheme import AdvectionScheme

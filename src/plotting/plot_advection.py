@@ -1,14 +1,14 @@
+import subprocess
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
 import cartopy.crs as ccrs
-import xarray as xr
+import matplotlib.animation as manimation
 import matplotlib.cm as cm
 import matplotlib.colors as mcol
-import matplotlib.animation as manimation
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
 from tqdm import tqdm
-import subprocess
 
 
 def plot_ocean_trajectories(outputfile_path: str, current_path: str, current_varname_map: dict = None):

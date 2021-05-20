@@ -5,7 +5,7 @@
 #include "particle.h"
 #include "vector.h"
 
-#define EULERIAN 0  // matches definitions in src/kernel_wrappers/Kernel2D.py
+#define EULERIAN 0  // matches definitions in src/enums/advection_scheme.py
 #define TAYLOR2 1
 
 vector eulerian_displacement(particle p, field3d field, double dt);

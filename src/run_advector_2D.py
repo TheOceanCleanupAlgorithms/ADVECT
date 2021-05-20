@@ -1,6 +1,8 @@
 """
 This is the ADVECTOR 2D entry-point.
-To use, create a python script within this repo, import this file, and execute.  E.g.
+To use, add this repo's "src" directory to the python path, import this file, and execute.  E.g.
+    import sys
+    sys.path.append("<path_to_repo>/src")
     from run_advector_2D import run_advector_2D
     run_advector_2D(...)
 See examples/ECCO_advect_2D.py for an example usage.
@@ -17,9 +19,9 @@ from typing import Tuple
 from dask.diagnostics import ProgressBar
 
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
+from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
 from io_tools.OutputWriter import OutputWriter2D
-from enums.advection_scheme import AdvectionScheme
 from io_tools.open_sourcefiles import open_2d_sourcefiles
 from io_tools.open_vectorfiles import *
 from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
