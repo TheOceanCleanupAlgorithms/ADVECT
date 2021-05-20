@@ -10,7 +10,7 @@ import xarray as xr
 
 from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
-from kernel_wrappers.Field3D import Field3D, create_empty_2d_field
+from kernel_wrappers.Field3D import Field3D, create_empty_2d_field, buffer_from_array
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
 KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_2d.cl"
@@ -96,9 +96,7 @@ class Kernel2D(Kernel):
         self.Y_out = np.full(out_shape, np.nan, dtype=np.float32)
 
         # physics
-        self.advection_scheme = config.advection_scheme.value
-        self.windage_coefficient = config.windage_coefficient
-        self.eddy_diffusivity = config.eddy_diffusivity
+        self.config = config
 
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
@@ -125,33 +123,23 @@ class Kernel2D(Kernel):
         write_start = time.time()
         current_args = self.current.create_kernel_arguments(context=self.context)
         wind_args = self.wind.create_kernel_arguments(context=self.context)
-        (d_x0, d_y0, d_release_date,) = (
-            cl.Buffer(
-                self.context,
-                cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
-                hostbuf=hostbuf,
-            )
-            for hostbuf in (
+        p0_buffers = (
+            buffer_from_array(arr=arr, context=self.context)
+            for arr in (
                 self.x0,
                 self.y0,
                 self.release_date,
             )
         )
-        d_X_out = cl.Buffer(
-            self.context,
-            cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
-            hostbuf=self.X_out,
-        )
-        d_Y_out = cl.Buffer(
-            self.context,
-            cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
-            hostbuf=self.Y_out,
-        )
-        d_exit_codes = cl.Buffer(
-            self.context,
-            cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
-            hostbuf=self.exit_code,
-        )
+        out_arrays = (self.X_out, self.Y_out, self.exit_code)
+        out_buffers = [
+            cl.Buffer(
+                self.context,
+                cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
+                hostbuf=arr,
+            )
+            for arr in out_arrays
+        ]
         self.buf_time = time.time() - write_start
 
         # execute the program
@@ -163,19 +151,15 @@ class Kernel2D(Kernel):
             None,
             *current_args,
             *wind_args,
-            d_x0,
-            d_y0,
-            d_release_date,
-            np.uint32(self.advection_scheme),
-            np.float64(self.windage_coefficient),
-            np.float64(self.eddy_diffusivity),
+            *p0_buffers,
+            np.uint32(self.config.advection_scheme.value),
+            np.float64(self.config.windage_coefficient),
+            np.float64(self.config.eddy_diffusivity),
             self.start_time,
             self.dt,
             self.ntimesteps,
             self.save_every,
-            d_X_out,
-            d_Y_out,
-            d_exit_codes,
+            *out_buffers,
         )
 
         # wait for the computation to complete
@@ -185,9 +169,8 @@ class Kernel2D(Kernel):
         # Read back the results from the compute device
         print("\t\tCopying results back to host device...")
         read_start = time.time()
-        cl.enqueue_copy(self.queue, self.X_out, d_X_out)
-        cl.enqueue_copy(self.queue, self.Y_out, d_Y_out)
-        cl.enqueue_copy(self.queue, self.exit_code, d_exit_codes)
+        for arr, buffer in zip(out_arrays, out_buffers):
+            cl.enqueue_copy(self.queue, arr, buffer)
         self.buf_time += time.time() - read_start
 
         # create and return dataset
@@ -202,20 +185,17 @@ class Kernel2D(Kernel):
         return self.execution_result
 
     def get_memory_footprint(self) -> dict:
-        current_bytes = self.current.memory_usage_bytes()
-        wind_bytes = self.wind.memory_usage_bytes()
-        particle_bytes = (
-            self.x0.nbytes
-            + self.y0.nbytes
-            + self.release_date.nbytes
-            + self.X_out.nbytes
-            + self.Y_out.nbytes
-            + self.exit_code.nbytes
-        )
         return {
-            "current": current_bytes,
-            "wind": wind_bytes,
-            "particles": particle_bytes,
+            "current": self.current.memory_usage_bytes(),
+            "wind": self.wind.memory_usage_bytes(),
+            "particles": (
+                self.x0.nbytes
+                + self.y0.nbytes
+                + self.release_date.nbytes
+                + self.X_out.nbytes
+                + self.Y_out.nbytes
+                + self.exit_code.nbytes
+            ),
         }
 
     def get_data_loading_time(self) -> float:
@@ -237,4 +217,4 @@ class Kernel2D(Kernel):
         assert np.nanmin(self.y0) >= -90
 
         # check enum valid
-        assert self.advection_scheme in (0, 1)
+        assert self.config.advection_scheme.value in (0, 1)
