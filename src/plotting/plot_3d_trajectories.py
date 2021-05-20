@@ -38,10 +38,10 @@ def plot_3d_trajectories(
         )
     ax.set_xlim([land_mask.lon.min(), land_mask.lon.max()])
     ax.set_ylim([land_mask.lat.min(), land_mask.lat.max()])
-    ax.set_zlim([min(land_mask.depth), -1*(min(land_mask.depth))])
-    ax.set_xlabel('Longitude (deg E)')
-    ax.set_ylabel('Latitude (deg N)')
-    ax.set_zlabel('Depth (m)')
+    ax.set_zlim([min(land_mask.depth), -1 * (min(land_mask.depth))])
+    ax.set_xlabel("Longitude (deg E)")
+    ax.set_ylabel("Latitude (deg N)")
+    ax.set_zlabel("Depth (m)")
 
 
 def plot_gridded_bathymetry(
@@ -57,8 +57,18 @@ def plot_gridded_bathymetry(
     facecolors[:] = "tab:blue"
     facecolors[bathy.values.ravel() == 0, 1] = "tab:green"
 
-    ax.bar3d(X.ravel(), Y.ravel(), floor, dx, dy, bathy.values.ravel()-floor,
-             edgecolor="k", linewidth=.1, alpha=.8, color=facecolors.ravel())
+    ax.bar3d(
+        X.ravel(),
+        Y.ravel(),
+        floor,
+        dx,
+        dy,
+        bathy.values.ravel() - floor,
+        edgecolor="k",
+        linewidth=0.1,
+        alpha=0.8,
+        color=facecolors.ravel(),
+    )
 
 
 def plot_contour_bathymetry(
@@ -69,10 +79,10 @@ def plot_contour_bathymetry(
     X, Y = np.meshgrid(bathy.lon, bathy.lat)
     color = np.zeros_like(bathy)
     color[bathy.values == 0] = 1
-    cmap = colors.ListedColormap(['tab:blue', 'tab:green'])
+    cmap = colors.ListedColormap(["tab:blue", "tab:green"])
 
     my_col = cmap(color)
-    ax.plot_surface(X=X, Y=Y, Z=bathy.values, alpha=.9, facecolors=my_col)
+    ax.plot_surface(X=X, Y=Y, Z=bathy.values, alpha=0.9, facecolors=my_col)
 
 
 if __name__ == "__main__":
@@ -81,21 +91,22 @@ if __name__ == "__main__":
     lat_range = (-70, -30)
     depth_range = (-10000, 0)
     P = xr.open_dataset(
-        '../../examples/outputfiles/ECCO_2015_3D/3D_uniform_source_2015/ADVECTOR_3D_output_2015.nc',
+        "../../examples/outputfiles/ECCO_2015_3D/3D_uniform_source_2015/ADVECTOR_3D_output_2015.nc",
     )
     P = P.isel(
         p_id=(
-            (P.lon >= lon_range[0]) &
-            (P.lon <= lon_range[1]) &
-            (P.lat >= lat_range[0]) &
-            (P.lat <= lat_range[1]) &
-            (P.depth >= depth_range[0]) &
-            (P.depth <= depth_range[1])
+            (P.lon >= lon_range[0])
+            & (P.lon <= lon_range[1])
+            & (P.lat >= lat_range[0])
+            & (P.lat <= lat_range[1])
+            & (P.depth >= depth_range[0])
+            & (P.depth <= depth_range[1])
         ).any(dim="time")
     )
     ECCO_land_mask = (
-        xr.open_dataset('../../examples/ECCO/ECCO_interp/U_2015-01-01.nc')
-        .squeeze().U.isnull()
+        xr.open_dataset("../../examples/ECCO/ECCO_interp/U_2015-01-01.nc")
+        .squeeze()
+        .U.isnull()
         .sortby("depth")
         .sel(
             lon=slice(*lon_range),

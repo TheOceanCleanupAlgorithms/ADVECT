@@ -59,7 +59,9 @@ def execute_chunked_kernel_computation(
 
     # get the minimum RAM available on the specified compute devices.
     print("Chunking Datasets...")
-    available_RAM = min(device.global_mem_size for device in context.devices) * memory_utilization
+    available_RAM = (
+        min(device.global_mem_size for device in context.devices) * memory_utilization
+    )
     advect_time_chunks, forcing_data_chunks = chunk_advection_params(
         device_bytes=available_RAM,
         forcing_data=forcing_data,
@@ -69,14 +71,16 @@ def execute_chunked_kernel_computation(
     )
 
     create_logger(output_writer.folder_path / "warnings.log")
-    p0_chunk = p0.assign({'exit_code': ('p_id', np.zeros(len(p0.p_id)))})
+    p0_chunk = p0.assign({"exit_code": ("p_id", np.zeros(len(p0.p_id)))})
     for i in tqdm(
         range(len(advect_time_chunks)),
         desc="PROGRESS",
         unit="chunk",
     ):
         print("")  # newline after the progress bar
-        print(f'Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}...')
+        print(
+            f"Advecting from {advect_time_chunks[i][0]} to {advect_time_chunks[i][-1]}..."
+        )
         # create the kernel wrapper object, pass it arguments
         print("\tInitializing Kernel...")
         kernel = kernel_cls(
@@ -126,35 +130,49 @@ def execute_chunked_kernel_computation(
 def convert_final_state_to_initial_state(
     execution_result: xr.Dataset,
     previous_initial_state: xr.Dataset,
-    advect_time: pd.DatetimeIndex
+    advect_time: pd.DatetimeIndex,
 ) -> xr.Dataset:
     """Takes the final timestep of a computation, and convert it into an initial state to send to another kernel"""
-    final_state = execution_result.isel(time=-1).copy(deep=True)  # copy in order to avoid mutating execution result
+    final_state = execution_result.isel(time=-1).copy(
+        deep=True
+    )  # copy in order to avoid mutating execution result
     # problem is, this ^ has nans for location of all the unreleased particles.  Restore that information here
     unreleased = final_state.release_date > advect_time[-2]
     for var in execution_result.data_vars:
         if "time" in execution_result[var].dims:
-            final_state[var].loc[unreleased] = previous_initial_state[var].loc[unreleased]
+            final_state[var].loc[unreleased] = previous_initial_state[var].loc[
+                unreleased
+            ]
     return final_state
 
 
 def create_logger(log_path: Path):
     """this sets up logging such that logs with level WARNING go to log_path,
-        logs with level ERROR or greater go to log_path and stdout."""
-    logging.basicConfig(filename=str(log_path), filemode='w', level=logging.WARNING,
-                        format="%(asctime)s %(message)s")
+    logs with level ERROR or greater go to log_path and stdout."""
+    logging.basicConfig(
+        filename=str(log_path),
+        filemode="w",
+        level=logging.WARNING,
+        format="%(asctime)s %(message)s",
+    )
     console = logging.StreamHandler()
     console.setLevel(logging.ERROR)
-    logging.getLogger('').addHandler(console)
+    logging.getLogger("").addHandler(console)
 
 
 def handle_errors(chunk: xr.Dataset, chunk_num: int):
     if not np.all(chunk.exit_code == 0):
         bad_codes = np.unique(chunk.exit_code[chunk.exit_code != 0])
-        logging.error(f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
-                      f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in bad_codes]}")
+        logging.error(
+            f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
+            f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in bad_codes]}"
+        )
         for code in chunk.exit_code[chunk.exit_code != 0]:
-            logging.warning(f"Chunk {chunk_num: 3}: Particle ID {int(code.p_id)} exited with error code {int(code)}.")
+            logging.warning(
+                f"Chunk {chunk_num: 3}: Particle ID {int(code.p_id)} exited with error code {int(code)}."
+            )
     if np.any(chunk.exit_code < 0):
-        raise ValueError(f"Fatal error encountered, error code(s) "
-                         f"{np.unique(chunk.exit_code[chunk.exit_code < 0])}; aborting")
+        raise ValueError(
+            f"Fatal error encountered, error code(s) "
+            f"{np.unique(chunk.exit_code[chunk.exit_code < 0])}; aborting"
+        )

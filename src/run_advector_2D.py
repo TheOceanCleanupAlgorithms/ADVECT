@@ -36,7 +36,7 @@ def run_advector_2D(
     timestep: datetime.timedelta,
     num_timesteps: int,
     eddy_diffusivity: float = 0,
-    advection_scheme: str = 'taylor2',
+    advection_scheme: str = "taylor2",
     save_period: int = 1,
     sourcefile_varname_map: Optional[dict] = None,
     water_varname_map: Optional[dict] = None,
@@ -102,8 +102,10 @@ def run_advector_2D(
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
-        raise ValueError(f"Invalid argument advection_scheme; must be one of "
-                         f"{set(scheme.name for scheme in AdvectionScheme)}.")
+        raise ValueError(
+            f"Invalid argument advection_scheme; must be one of "
+            f"{set(scheme.name for scheme in AdvectionScheme)}."
+        )
 
     print("---INITIALIZING DATASETS---")
     print("Opening Sourcefiles...")

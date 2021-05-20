@@ -67,5 +67,5 @@ def test_resolve_sort():
     result = resolve_and_sort(-7.3, 5.2, -100)
     np.testing.assert_allclose(result, [[0, 5.2, 0], [-7.3, 0, 0], [0, 0, -100]])
 
-    result = resolve_and_sort(357.6,  -29.7, -203.0)
+    result = resolve_and_sort(357.6, -29.7, -203.0)
     np.testing.assert_allclose(result, [[0, -29.7, 0], [0, 0, -203.0], [357.6, 0, 0]])
