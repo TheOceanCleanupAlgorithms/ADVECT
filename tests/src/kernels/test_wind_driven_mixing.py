@@ -1,8 +1,8 @@
-import pyopencl as cl
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 
 def sample_concentration_profile(wind_10m: float, rise_velocity: float, nsamples: int) -> np.ndarray:
@@ -25,7 +25,7 @@ def sample_concentration_profile(wind_10m: float, rise_velocity: float, nsamples
             out[i] = sample_concentration_profile(wind_10m, rise_velocity, 20, 10, &rstate);
         }
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(nsamples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -98,7 +98,7 @@ def calculate_significant_wave_height(wind_stress: float) -> float:
 
         out[0] = calculate_significant_wave_height(wind_stress, 20);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(1).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -142,7 +142,7 @@ def calculate_wind_stress(wind_speed_10m: float) -> float:
 
         out[0] = calculate_wind_stress(wind_speed_10m);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(1).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)

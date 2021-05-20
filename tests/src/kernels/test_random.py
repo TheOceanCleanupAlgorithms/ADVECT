@@ -1,7 +1,7 @@
-import pyopencl as cl
 import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 
 def random(seed: int, num_samples: int) -> np.ndarray:
@@ -20,7 +20,7 @@ def random(seed: int, num_samples: int) -> np.ndarray:
             out[i] = random(&rstate);
         }
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(num_samples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -68,7 +68,7 @@ def random_in_range(low: float, high: float, seed: int, num_samples: int) -> np.
             out[i] = random_in_range(low, high, &rstate);
         }
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(num_samples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -117,7 +117,7 @@ def standard_normal(seed: int, num_samples: int) -> np.ndarray:
             out[i] = standard_normal(&rstate);
         }
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(num_samples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -167,7 +167,7 @@ def random_normal(mean: float, std: float, seed: int, num_samples: int) -> np.nd
             out[i] = random_normal(mean, std, &rstate);
         }
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(num_samples).astype(np.float64)
     d_out = cl.Buffer(CL_CONTEXT, cl.mem_flags.WRITE_ONLY, out.nbytes)

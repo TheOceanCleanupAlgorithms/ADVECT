@@ -1,5 +1,5 @@
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 
 def create_bathymetry_from_land_mask(land_mask: xr.DataArray) -> xr.DataArray:

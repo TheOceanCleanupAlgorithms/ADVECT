@@ -1,14 +1,14 @@
 from pathlib import Path
 from typing import List
 
-import pyopencl as cl
 import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 KERNEL_SOURCE = Path(__file__).with_suffix('.cl')
 CL_PROGRAM = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(
-    options=["-I", str(ROOT_DIR / "src/kernels")])
+    options=["-I", str(MODEL_CORE_DIR)])
 
 
 def x_is_circular(x: np.ndarray) -> np.ndarray:
@@ -28,7 +28,7 @@ def x_is_circular(x: np.ndarray) -> np.ndarray:
         field3d field = {.x = x, .x_len = x_len, .x_spacing = calculate_spacing(x, x_len)};
         out[0] = x_is_circular(field);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     d_x = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=x.astype(np.float64))
 

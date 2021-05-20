@@ -3,16 +3,16 @@ Since we can't raise errors inside kernels, the best practice is to wrap every k
 Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
 of executing kernels.
 """
+import time
 import warnings
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Optional
 
 import numpy as np
-import pyopencl as cl
-import time
-import xarray as xr
 import pandas as pd
-from pathlib import Path
+import pyopencl as cl
+import xarray as xr
 
 import kernel_wrappers.kernel_constants as cl_const
 from enums.advection_scheme import AdvectionScheme
@@ -28,8 +28,8 @@ class Kernel3DConfig(KernelConfig):
     advection_scheme: which mathematical scheme to use for an advection step
     windage_multiplier: scales the physically-motivated windage contribution
     wind_mixing_enabled: toggles wind-driven mixing
-    max_wave_height: (m) see config_specifications.md for details
-    wave_mixing_depth_factor: see config_specifications.md for details
+    max_wave_height: (m) see configfile_specifications.md for details
+    wave_mixing_depth_factor: see configfile_specifications.md for details
     eddy_diffusivity: dataset with vertical profiles of horizontal/vertical eddy diffusivity
         variables [m^2 / s] (dim [m]):
         horizontal_diffusivity (z_hd)

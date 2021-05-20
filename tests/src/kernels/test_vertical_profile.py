@@ -1,7 +1,7 @@
-import pyopencl as cl
 import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 
 def sample_profile(sample_z: np.ndarray, z: np.ndarray, var: np.ndarray) -> np.ndarray:
@@ -21,7 +21,7 @@ def sample_profile(sample_z: np.ndarray, z: np.ndarray, var: np.ndarray) -> np.n
         vertical_profile prof = {.z = z, .values = var, .len = len};
         out[get_global_id(0)] = sample_profile(prof, sample_z[get_global_id(0)]);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(sample_z.shape).astype(np.float64)
 

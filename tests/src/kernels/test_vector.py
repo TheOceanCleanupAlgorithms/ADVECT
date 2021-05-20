@@ -1,8 +1,9 @@
-import pyopencl as cl
-import numpy as np
 from pathlib import Path
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+import numpy as np
+import pyopencl as cl
+
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 KERNEL_SOURCE = Path(__file__).parent / "test_vector.cl"
 
@@ -11,7 +12,7 @@ def resolve_and_sort(x, y, z) -> np.ndarray:
     """run a vector through the opencl program"""
     test = (
         cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read())
-        .build(options=["-I", str(ROOT_DIR / "src/kernels")])
+        .build(options=["-I", str(MODEL_CORE_DIR)])
         .resolve_and_sort_test
     )
 

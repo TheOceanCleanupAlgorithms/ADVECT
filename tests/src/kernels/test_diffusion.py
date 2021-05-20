@@ -1,14 +1,15 @@
-import pyopencl as cl
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+import matplotlib.pyplot as plt
+import numpy as np
+import pyopencl as cl
+
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 KERNEL_SOURCE = Path(__file__).parent / "test_diffusion.cl"
 
 prg = (cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read())
-       .build(options=["-I", str(ROOT_DIR / "src/kernels")]))
+       .build(options=["-I", str(MODEL_CORE_DIR)]))
 
 
 def single_diffusion_step(

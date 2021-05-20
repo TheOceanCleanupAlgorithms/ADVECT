@@ -1,12 +1,12 @@
 """
 Utilities which help split up advection based on memory constraints
 """
+import math
+from typing import Dict, List, Tuple
+
+import numpy as np
 import pandas as pd
 import xarray as xr
-import math
-import numpy as np
-
-from typing import Dict, List, Tuple
 from tqdm import tqdm
 
 from enums.forcings import Forcing

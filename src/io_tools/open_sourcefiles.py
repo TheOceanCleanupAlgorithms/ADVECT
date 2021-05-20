@@ -1,6 +1,7 @@
-import xarray as xr
 import glob
 from typing import Optional, Set
+
+import xarray as xr
 
 
 def open_3d_sourcefiles(
