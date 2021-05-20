@@ -162,19 +162,23 @@ def create_logger(log_path: Path):
 
 def handle_errors(chunk: xr.Dataset, chunk_num: int):
     reported_codes = np.unique(chunk.exit_code)
-    if np.any(reported_codes < 0):
+    if all(reported_codes == 0):
+        return
+
+    bad_codes = reported_codes[reported_codes != 0]
+    logging.error(
+        f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
+        f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in bad_codes]}"
+    )
+    for code in bad_codes:
+        bad_ids = chunk.p_id[chunk.exit_code == code]
+        logging.warning(
+            f"Chunk {chunk_num}: {len(bad_ids)} particles exited with code {code}.  IDs: {list(bad_ids.values)}"
+        )
+
+    fatal_codes = bad_codes[bad_codes < 0]
+    if fatal_codes:
         raise ValueError(
             f"Fatal error encountered, error code(s) "
-            f"{[f'{code} ({EXIT_CODES[code]})' for code in reported_codes if code < 0]}; aborting"
+            f"{[f'{code} ({EXIT_CODES[code]})' for code in fatal_codes]}; aborting"
         )
-    if np.any(reported_codes > 0):
-        logging.error(
-            f"Error: {np.count_nonzero(chunk.exit_code)} particle(s) did not exit successfully: "
-            f"exit code(s) {[f'{code} ({EXIT_CODES[code]})' for code in reported_codes if code > 0]}"
-        )
-        for code in reported_codes:
-            bad_ids = chunk.p_id[chunk.exit_code == code]
-            if code > 0:
-                logging.warning(
-                    f"Chunk {chunk_num}: {len(bad_ids)} particles exited with code {code}.  IDs: {list(bad_ids.values)}"
-                )
