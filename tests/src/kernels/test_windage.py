@@ -1,7 +1,9 @@
-import pyopencl as cl
 import os
+
 import numpy as np
-from tests.config import ROOT_DIR
+import pyopencl as cl
+
+from tests.config import MODEL_CORE_DIR
 
 os.environ["PYOPENCL_COMPILER_OUTPUT"] = "1"
 
@@ -24,7 +26,7 @@ def calculate_windage_coeff(r, z) -> np.ndarray:
 
         out[0] = calculate_windage_coeff(r, z);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(1).astype(np.float64)
     d_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, out.nbytes)
@@ -74,7 +76,7 @@ def circular_segment_area(R, r) -> np.ndarray:
 
         out[0] = circular_segment_area(R, r);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     out = np.zeros(1).astype(np.float64)
     d_out = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, out.nbytes)

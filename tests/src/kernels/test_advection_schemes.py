@@ -1,8 +1,9 @@
-import pyopencl as cl
-import numpy as np
 from pathlib import Path
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+import numpy as np
+import pyopencl as cl
+
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 KERNEL_SOURCE = Path(__file__).parent / "test_advection_schemes.cl"
 
@@ -17,7 +18,7 @@ def advect_taylor2(p: dict, field: dict, dt: float) -> np.ndarray:
     :return displacement [dx, dy, dz]
     """
     prg = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(
-            options=["-I", str(ROOT_DIR / "src/kernels")]
+            options=["-I", str(MODEL_CORE_DIR)]
     )
     d_field_x, d_field_y, d_field_z, d_field_t, d_field_U, d_field_V, d_field_W = (
         cl.Buffer(
@@ -88,7 +89,7 @@ def taylor2_formula(V, V_x, V_y, V_z, V_t, dt):
         displacement_out[1] = displacement_meters.y;
         displacement_out[2] = displacement_meters.z;
     } """).build(
-            options=["-I", str(ROOT_DIR / "src/kernels")]
+            options=["-I", str(MODEL_CORE_DIR)]
     )
 
     displacement_out = np.empty(3)

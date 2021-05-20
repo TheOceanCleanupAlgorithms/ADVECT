@@ -1,8 +1,8 @@
-import pyopencl as cl
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 
 def buoyancy_vertical_velocity(density: np.ndarray, radius: np.ndarray, corey_shape_factor: np.ndarray) -> np.ndarray:
@@ -23,7 +23,7 @@ def buoyancy_vertical_velocity(density: np.ndarray, radius: np.ndarray, corey_sh
         int id = get_global_id(0);
         out[id] = buoyancy_vertical_velocity(radius[id], density[id], CSF[id], 1025);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     d_density = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(density))
     d_radius = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=np.float64(radius))

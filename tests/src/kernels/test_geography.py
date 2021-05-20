@@ -1,7 +1,7 @@
-import pyopencl as cl
 import numpy as np
+import pyopencl as cl
 
-from tests.config import ROOT_DIR, CL_CONTEXT, CL_QUEUE
+from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
 
 
 def degrees_lon_to_meters(deg_lon: np.ndarray, lat: float) -> np.ndarray:
@@ -20,7 +20,7 @@ def degrees_lon_to_meters(deg_lon: np.ndarray, lat: float) -> np.ndarray:
 
         meters[get_global_id(0)] = degrees_lon_to_meters(deg_lon[get_global_id(0)], lat);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     d_deg_lon = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=deg_lon.astype(np.float64))
     meters = np.zeros(1).astype(np.float64)
@@ -50,7 +50,7 @@ def degrees_lat_to_meters(deg_lat: np.ndarray, lat: float) -> np.ndarray:
 
         meters[get_global_id(0)] = degrees_lat_to_meters(deg_lat[get_global_id(0)], lat);
     }
-    """).build(options=["-I", str(ROOT_DIR / "src/kernels")])
+    """).build(options=["-I", str(MODEL_CORE_DIR)])
 
     d_deg_lat = cl.Buffer(CL_CONTEXT, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf=deg_lat.astype(np.float64))
     meters = np.zeros_like(deg_lat).astype(np.float64)
