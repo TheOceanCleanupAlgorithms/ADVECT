@@ -4,7 +4,7 @@ import numpy as np
 import pyopencl as cl
 
 from tests.config import CL_CONTEXT, CL_QUEUE, MODEL_CORE_DIR
-from tests.src.kernels.test_geography import degrees_lon_to_meters, degrees_lat_to_meters
+from tests.src.model_core.test_geography import degrees_lon_to_meters, degrees_lat_to_meters
 
 KERNEL_SOURCE = Path(__file__).parent / "test_gradients.cl"
 prg = cl.Program(CL_CONTEXT, open(KERNEL_SOURCE).read()).build(

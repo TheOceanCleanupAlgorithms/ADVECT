@@ -1,8 +1,3 @@
-"""
-Since we can't raise errors inside kernels, the best practice is to wrap every kernel in a python object.
-Args are passed upon initialization, execution is triggered by method "execute".  Streamlines process
-of executing kernels.
-"""
 import time
 import warnings
 from dataclasses import dataclass
@@ -19,7 +14,8 @@ from enums.advection_scheme import AdvectionScheme
 from enums.forcings import Forcing
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
-KERNEL_SOURCE = Path(__file__).parent / Path('../kernels/kernel_3d.cl')
+KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_3d.cl"
+MODEL_CORE = Path(__file__).parent.parent / "model_core"
 
 
 @dataclass
@@ -147,7 +143,7 @@ class Kernel3D(Kernel):
         self.context = context
         self.queue = cl.CommandQueue(context)
         self.cl_kernel = cl.Program(context, open(KERNEL_SOURCE).read())\
-            .build(options=['-I', str(KERNEL_SOURCE.parent)]).advect
+            .build(options=['-I', str(MODEL_CORE)]).advect
 
         self.execution_result = None
 
