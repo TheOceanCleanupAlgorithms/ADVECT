@@ -19,9 +19,6 @@ from kernel_wrappers.Field3D import (
 )
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
-KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_3d.cl"
-MODEL_CORE = Path(__file__).parent.parent / "model_core"
-
 
 @dataclass
 class Kernel3DConfig(KernelConfig):
@@ -67,25 +64,23 @@ class Kernel3D(Kernel):
         :param config: see Kernel3DConfig definition for details
         :param context: PyopenCL context for executing OpenCL programs
         """
-        # save some arguments for creating output dataset
-        self.p0 = p0
-        self.out_time = advect_time[::save_every][1:]
-        self.advect_time = advect_time
-
-        # some handy timers
-        self.data_load_time = 0
-        self.buf_time = 0
-        self.kernel_time = 0
+        super().__init__(
+            forcing_data=forcing_data,
+            p0=p0,
+            advect_time=advect_time,
+            save_every=save_every,
+            config=config,
+            context=context,
+        )
 
         # ---KERNEL ARGUMENT INITIALIZATION--- #
         # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
-
         print("\t\tLoading Current Data...")
         data_loading_start = time.time()
         self.current = Field3D(
             ds=forcing_data[Forcing.current], varnames=["U", "V", "W", "bathymetry"]
         )
-        # wind vector field
+
         print("\t\tLoading Wind Data...")
         if "wind" in forcing_data:
             self.wind = Field3D(ds=forcing_data[Forcing.wind], varnames=["U", "V"])
@@ -94,7 +89,7 @@ class Kernel3D(Kernel):
             self.windage_multiplier = (
                 np.nan
             )  # to flag the kernel that windage is disabled
-        # seawater_density vector field
+
         print("\t\tLoading Seawater Density Data...")
         self.seawater_density = Field3D(
             ds=forcing_data[Forcing.seawater_density],
@@ -102,6 +97,7 @@ class Kernel3D(Kernel):
             non_uniform_time=True,
         )
         self.data_load_time = time.time() - data_loading_start
+
         # particle initialization
         self.x0 = p0.lon.values.astype(np.float32)
         self.y0 = p0.lat.values.astype(np.float32)
@@ -112,20 +108,16 @@ class Kernel3D(Kernel):
         self.radius = p0.radius.values.astype(np.float64)
         self.density = p0.density.values.astype(np.float64)
         self.corey_shape_factor = p0.corey_shape_factor.values.astype(np.float64)
-        # advection time parameters
-        self.start_time = np.float64(advect_time[0].timestamp())
-        self.dt = np.float64(pd.Timedelta(advect_time.freq).total_seconds())
-        self.ntimesteps = np.uint32(
-            len(advect_time) - 1
-        )  # minus one bc initial position given
-        self.save_every = np.uint32(save_every)
+
         # output_vectors (initialized to nan)
         out_shape = len(p0.lon) * len(self.out_time)
         self.X_out = np.full(out_shape, np.nan, dtype=np.float32)
         self.Y_out = np.full(out_shape, np.nan, dtype=np.float32)
         self.Z_out = np.full(out_shape, np.nan, dtype=np.float32)
+
         # physics
         self.config = config
+
         # eddy diffusivity
         self.horizontal_eddy_diffusivity_z = config.eddy_diffusivity.z_hd.values.astype(
             np.float64
@@ -139,20 +131,9 @@ class Kernel3D(Kernel):
         self.vertical_eddy_diffusivity_values = (
             config.eddy_diffusivity.vertical_diffusivity.values.astype(np.float64)
         )
+
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
-
-        # ---HOST INITIALIZATIONS--- #
-        # create opencl objects
-        self.context = context
-        self.queue = cl.CommandQueue(context)
-        self.cl_kernel = (
-            cl.Program(context, open(KERNEL_SOURCE).read())
-            .build(options=["-I", str(MODEL_CORE)])
-            .advect
-        )
-
-        self.execution_result = None
 
     def execute(self) -> xr.Dataset:
         """tranfers arguments to the compute device, triggers execution, returns result"""
@@ -203,7 +184,7 @@ class Kernel3D(Kernel):
         # execute the program
         print("\t\tExecuting kernel...")
         execution_start = time.time()
-        self.cl_kernel(
+        self.cl_kernel.advect(
             self.queue,
             (len(self.x0),),
             None,
@@ -211,7 +192,7 @@ class Kernel3D(Kernel):
             *wind_args,
             *seawater_density_args,
             *p0_buffers,
-            np.uint32(self.config.advection_scheme),
+            np.uint32(self.config.advection_scheme.value),
             np.float64(self.windage_multiplier),
             np.uint32(self.config.wind_mixing_enabled),
             np.float64(self.config.max_wave_height),
@@ -225,7 +206,6 @@ class Kernel3D(Kernel):
             self.save_every,
             *out_buffers,
         )
-
         # wait for the computation to complete
         self.queue.finish()
         self.kernel_time = time.time() - execution_start
@@ -237,9 +217,9 @@ class Kernel3D(Kernel):
             cl.enqueue_copy(self.queue, arr, buffer)
         self.buf_time += time.time() - read_start
 
-        # create and return dataset
-        P = self.p0.assign_coords({"time": self.out_time})  # add a time dimension
-        self.execution_result = P.assign(  # overwrite with new data
+        # create output dataset on top of initial state
+        P = self.p0.copy(deep=True).assign_coords({"time": self.out_time})
+        return P.assign(
             {
                 "lon": (["p_id", "time"], self.X_out.reshape([len(P.p_id), -1])),
                 "lat": (["p_id", "time"], self.Y_out.reshape([len(P.p_id), -1])),
@@ -247,7 +227,6 @@ class Kernel3D(Kernel):
                 "exit_code": (["p_id"], self.exit_code),
             }
         )
-        return self.execution_result
 
     def get_memory_footprint(self) -> dict:
         return {
@@ -296,7 +275,7 @@ class Kernel3D(Kernel):
         assert np.all((0.15 < self.corey_shape_factor) & (self.corey_shape_factor <= 1))
 
         # check enum valid
-        assert self.advection_scheme in (0, 1)
+        assert self.config.advection_scheme.value in (0, 1)
 
         # issue warning if wind timestep is smaller than one day
         if np.any(
@@ -307,3 +286,7 @@ class Kernel3D(Kernel):
                 "wind datum; short timesteps mean this is a bad assumption.  Use wind data averaged over a longer "
                 "timestep, or complain to the developers (or both)."
             )
+
+    @property
+    def _kernel_source_path(self):
+        return Path(__file__).parent.parent / "kernels/kernel_3d.cl"

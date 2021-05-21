@@ -13,9 +13,6 @@ from enums.forcings import Forcing
 from kernel_wrappers.Field3D import Field3D, create_empty_2d_field, buffer_from_array
 from kernel_wrappers.Kernel import Kernel, KernelConfig
 
-KERNEL_SOURCE = Path(__file__).parent.parent / "kernels/kernel_2d.cl"
-MODEL_CORE = Path(__file__).parent.parent / "model_core"
-
 
 @dataclass
 class Kernel2DConfig(KernelConfig):
@@ -52,15 +49,14 @@ class Kernel2D(Kernel):
         :param config: see Kernel2DConfig definition for details
         :param context: PyopenCL context for executing OpenCL programs
         """
-        # save some arguments for creating output dataset
-        self.p0 = p0
-        self.out_time = advect_time[::save_every][1:]
-        self.advect_time = advect_time
-
-        # some handy timers
-        self.data_load_time = 0
-        self.buf_time = 0
-        self.kernel_time = 0
+        super().__init__(
+            forcing_data=forcing_data,
+            p0=p0,
+            advect_time=advect_time,
+            save_every=save_every,
+            config=config,
+            context=context,
+        )
 
         # ---KERNEL ARGUMENT INITIALIZATION--- #
         # 1-to-1 for arguments in kernel_3d.cl::advect; see comments there for details
@@ -84,12 +80,6 @@ class Kernel2D(Kernel):
             np.float64
         )
 
-        # advection time parameters
-        self.start_time = np.float64(advect_time[0].timestamp())
-        self.dt = np.float64(pd.Timedelta(advect_time.freq).total_seconds())
-        self.ntimesteps = np.uint32(len(advect_time) - 1)  # initial position given
-        self.save_every = np.uint32(save_every)
-
         # output_vectors (initialized to nan)
         out_shape = len(p0.lon) * len(self.out_time)
         self.X_out = np.full(out_shape, np.nan, dtype=np.float32)
@@ -100,18 +90,6 @@ class Kernel2D(Kernel):
 
         # debugging
         self.exit_code = p0.exit_code.values.astype(np.byte)
-
-        # ---HOST INITIALIZATIONS--- #
-        # create opencl objects
-        self.context = context
-        self.queue = cl.CommandQueue(context)
-        self.cl_kernel = (
-            cl.Program(context, open(KERNEL_SOURCE).read())
-            .build(options=["-I", str(MODEL_CORE)])
-            .advect
-        )
-
-        self.execution_result = None
 
     def execute(self) -> xr.Dataset:
         """tranfers arguments to the compute device, triggers execution, returns result"""
@@ -145,7 +123,7 @@ class Kernel2D(Kernel):
         # execute the program
         print("\t\tExecuting kernel...")
         execution_start = time.time()
-        self.cl_kernel(
+        self.cl_kernel.advect(
             self.queue,
             (len(self.x0),),
             None,
@@ -161,7 +139,6 @@ class Kernel2D(Kernel):
             self.save_every,
             *out_buffers,
         )
-
         # wait for the computation to complete
         self.queue.finish()
         self.kernel_time = time.time() - execution_start
@@ -173,16 +150,15 @@ class Kernel2D(Kernel):
             cl.enqueue_copy(self.queue, arr, buffer)
         self.buf_time += time.time() - read_start
 
-        # create and return dataset
-        P = self.p0.assign_coords({"time": self.out_time})  # add a time dimension
-        self.execution_result = P.assign(  # overwrite with new data
+        # create output dataset on top of initial state
+        P = self.p0.copy(deep=True).assign_coords({"time": self.out_time})
+        return P.assign(
             {
                 "lon": (["p_id", "time"], self.X_out.reshape([len(P.p_id), -1])),
                 "lat": (["p_id", "time"], self.Y_out.reshape([len(P.p_id), -1])),
                 "exit_code": (["p_id"], self.exit_code),
             }
         )
-        return self.execution_result
 
     def get_memory_footprint(self) -> dict:
         return {
@@ -218,3 +194,7 @@ class Kernel2D(Kernel):
 
         # check enum valid
         assert self.config.advection_scheme.value in (0, 1)
+
+    @property
+    def _kernel_source_path(self):
+        return Path(__file__).parent.parent / "kernels/kernel_2d.cl"
