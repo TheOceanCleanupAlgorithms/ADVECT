@@ -2,7 +2,7 @@
 This document walks you through downloading some sample data to test out ADVECTOR.  If you want to test the 2D version only, you need only to download ocean currents and wind data (optional).  If you want to test the 3D version, you'll additionally need to download seawater density data. 
 
 ### Ocean Current Data
-JPL's ECCO model provides a convenient python API for downloading and processing their model output in coarse resolution.  Run `python examples/ECCO/download_and_process_ECCO.py` to acquire 3D ocean currents for the year 2015.
+JPL's ECCO model provides a convenient python API for downloading and processing their model output in coarse resolution.  Run `python examples/ECCO/download_and_process_ECCO.py` to acquire 3D ocean currents for the year 2015 (~25 GB).
 
 ### 10-meter wind
 The NCEP-NCAR Reanalysis 2, while a bit outdated, hosts easily downloadable 10m wind data.  Run `python examples/ncep_ncar_doe_ii/download_10m_wind.py` to acquire data for the year 2015.
