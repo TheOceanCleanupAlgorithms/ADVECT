@@ -7,5 +7,6 @@ examples/configfiles/*.nc
 examples/HYCOM_currents
 .DS_Store
 .idea
+.vscode
 examples/ECCO/ECCO_interp
 examples/ECCO/ECCO_native

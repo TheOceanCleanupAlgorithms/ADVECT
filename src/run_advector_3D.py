@@ -46,7 +46,7 @@ def run_advector_3D(
     water_varname_map: dict = None,
     seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
-    memory_utilization: float = 0.5,
+    memory_utilization: float = 0.4,
     u_wind_path: str = None,
     v_wind_path: str = None,
     wind_varname_map: dict = None,
