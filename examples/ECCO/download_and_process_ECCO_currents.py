@@ -3,13 +3,14 @@ import shutil
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
-from download_ECCO_currents import download_ECCO_currents, download_ECCO_grid
+from download_ECCO_grid import download_ECCO_grid
+from download_ECCO_currents import download_ECCO_currents
 from interp_ECCO_to_latlon import interp_ECCO_currents
 
 if __name__ == "__main__":
     native_grid_dir = Path(__file__).parent / "ECCO_native/"
     native_grid_dir.mkdir(exist_ok=True)
-    print("Directing you to the ECCO grid download...")
+    print("Downloading native ECCO grid...")
     download_ECCO_grid(OUT_DIR=native_grid_dir)
     print("Downloading ECCO currents on native grid...")
     download_ECCO_currents(OUT_DIR=native_grid_dir)

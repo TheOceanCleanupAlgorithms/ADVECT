@@ -1,22 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import subprocess
-import webbrowser
 from tqdm import tqdm
-
-
-def download_ECCO_grid(OUT_DIR: Path):
-    if (OUT_DIR / "ECCO-GRID.nc").exists():
-        print("Grid file already exists.")
-        return
-    print(
-        "You need to download the grid file yourself, "
-        "as it requires an EarthData login; you may need to create one.\n"
-        "Place the file at examples/ECCO/ECCO_NATIVE/ECCO-GRID.nc."
-    )
-    webbrowser.open(
-        "https://ecco.jpl.nasa.gov/drive/files/Version4/Release4/nctiles_grid/ECCO-GRID.nc"
-    )
 
 
 def download_ECCO_currents(OUT_DIR: Path):
