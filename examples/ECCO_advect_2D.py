@@ -3,25 +3,38 @@ advect on ECCO surface currents
 """
 import glob
 import sys
+import pandas as pd
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent / "src"))
+
+examples_root = Path(__file__).parent
+sys.path.append(str(examples_root))
+sys.path.append(str(examples_root.parent / "src"))
+
+
+from sourcefiles.generate_sourcefiles import generate_2D_sourcefile
 from run_advector_2D import run_advector_2D
 from plotting.plot_advection import animate_ocean_advection, plot_ocean_trajectories
 from datetime import datetime, timedelta
 
-ECCO_U_PATH = "ECCO/ECCO_interp/U_2015*.nc"
-ECCO_V_PATH = "ECCO/ECCO_interp/V_2015*.nc"
+
+ECCO_U_PATH = examples_root / "ECCO/ECCO_interp/U_2015*.nc"
+ECCO_V_PATH = examples_root / "ECCO/ECCO_interp/V_2015*.nc"
 
 if __name__ == "__main__":
-    sourcefile = "sourcefiles/2D_uniform_source_2015.nc"
+    sourcefile_path = examples_root / "sourcefiles/2D_uniform_source_2015.nc"
+    generate_2D_sourcefile(
+        num_particles=5000,
+        release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
+        out_path=sourcefile_path,
+    )
     ADVECTION_START = datetime(2015, 1, 1)
     ADVECTION_END = datetime(2016, 1, 1)
     out_paths = run_advector_2D(
-        output_directory=f"outputfiles/ECCO_2015_2D/{Path(sourcefile).stem}",
-        sourcefile_path=sourcefile,
-        u_water_path=ECCO_U_PATH,
-        v_water_path=ECCO_V_PATH,
+        output_directory=f"outputfiles/ECCO_2015_2D/{sourcefile_path.stem}",
+        sourcefile_path=str(sourcefile_path),
+        u_water_path=str(ECCO_U_PATH),
+        v_water_path=str(ECCO_V_PATH),
         u_wind_path="ncep_ncar_doe_ii/uwnd.10m.gauss.2015.nc",  # comment out these
         v_wind_path="ncep_ncar_doe_ii/vwnd.10m.gauss.2015.nc",  # lines to disable
         wind_varname_map={"uwnd": "U", "vwnd": "V", "level": "depth"},  # wind
