@@ -4,7 +4,7 @@ import subprocess
 from tqdm import tqdm
 
 
-def download_ECCO_currents(OUT_DIR: Path):
+def download_currents(OUT_DIR: Path):
     while True:
         date_and_varname = []
         for date in pd.date_range("2015", "2016", freq="D", closed="left"):

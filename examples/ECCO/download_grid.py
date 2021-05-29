@@ -6,12 +6,10 @@ sys.path.append(str(Path(__file__).parent))
 from get_ECCO_credentials import get_ECCO_credentials
 
 
-def download_ECCO_grid(OUT_DIR: Path):
-    grid_path = OUT_DIR / "ECCO-GRID.nc"
+def download_grid(grid_path: Path, user: str, password: str):
     if grid_path.exists():
         print("Grid file already exists.")
         return
-    user, password = get_ECCO_credentials()
     subprocess.run(
         [
             "wget",
