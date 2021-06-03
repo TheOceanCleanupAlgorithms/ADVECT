@@ -16,7 +16,7 @@ from get_ECCO_credentials import get_ECCO_credentials
 if __name__ == "__main__":
     user, password = get_ECCO_credentials()
 
-    native_dir = Path("/mnt/advectorbigdata/") / "ECCO_native/"
+    native_dir = Path(__file__).parent / "ECCO_native/"
     grid_path = native_dir / "ECCO-GRID.nc"
     native_dir.mkdir(exist_ok=True)
     print("Downloading native ECCO grid...")
