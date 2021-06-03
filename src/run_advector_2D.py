@@ -41,7 +41,7 @@ def run_advector_2D(
     sourcefile_varname_map: Optional[dict] = None,
     water_varname_map: Optional[dict] = None,
     opencl_device: Tuple[int, ...] = None,
-    memory_utilization: float = 0.5,
+    memory_utilization: float = 0.4,
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
     wind_varname_map: Optional[dict] = None,

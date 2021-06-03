@@ -1,11 +1,10 @@
+import glob
+from pathlib import Path
+
 import numpy as np
 import xarray as xr
-import ecco_v4_py as ecco
+from ecco_v4_py import resample_to_latlon
 from tqdm import tqdm
-import os
-import glob
-
-OUT_DIR = "ECCO_interp/"
 
 
 def interpolate_variable(
@@ -17,16 +16,22 @@ def interpolate_variable(
     new_grid_min_lon,
     new_grid_max_lon,
     new_grid_delta_lon,
+    native_dir: Path,
+    interp_dir: Path,
+    native_grid_path: Path,
 ):
     print(f"Interpolating all {ECCO_varname} files...")
-    ECCO_grid = xr.open_dataset("ECCO_native/ECCO-GRID.nc")
-    files = sorted(glob.glob(f"ECCO_native/{ECCO_varname}*.nc"))
+    ECCO_grid = xr.open_dataset(native_grid_path)
+    files = sorted(glob.glob(str(native_dir / f"{ECCO_varname}*.nc")))
     for file in tqdm(files):
         ds = xr.open_dataset(file)
+        date = ds.time.dt.strftime("%Y-%m-%d").values[0]
+        out_path = interp_dir / f"{local_varname}_{date}.nc"
+        if out_path.exists():
+            continue
 
-        if (
-            ECCO_varname == "WVELMASS"
-        ):  # interpolate vertical grid to Z from Zl; change vertical indexer name
+        if ECCO_varname == "WVELMASS":
+            # interpolate vertical grid to Z from Zl; change vertical indexer name
             ds[ECCO_varname] = (
                 ds[ECCO_varname]
                 .swap_dims({"k_l": "Zl"})
@@ -35,9 +40,10 @@ def interpolate_variable(
                 .swap_dims({"Z": "k"})
                 .assign_coords({"k": ECCO_grid.k.values})
             )
+
         interp_levels = []
         for lev in ds.k:
-            new_grid_lon, new_grid_lat, var_interp = ecco.resample_to_latlon(
+            new_grid_lon, new_grid_lat, var_interp = resample_to_latlon(
                 ds.XC,
                 ds.YC,
                 ds[ECCO_varname]
@@ -82,37 +88,4 @@ def interpolate_variable(
             "long_name": "longitude",
         }
 
-        if not os.path.exists(OUT_DIR):
-            os.mkdir(OUT_DIR)
-
-        field_interpd_to_latlon.to_netcdf(
-            OUT_DIR
-            + f'{local_varname}_{field_interpd_to_latlon.time.dt.strftime("%Y-%m-%d").values[0]}.nc'
-        )
-
-
-if __name__ == "__main__":
-    variables = {
-        "EVEL": "U",  # ECCO_native varname: [local varname, vertical grid name]
-        "NVEL": "V",
-        "WVELMASS": "W",
-    }
-    for ECCO_varname, local_varname in variables.items():
-        new_grid_delta_lat = 1  # resolution of interpolated field (deg)
-        new_grid_delta_lon = 1
-        new_grid_min_lat = (
-            -90 + new_grid_delta_lat / 2
-        )  # domain of interpolated field (deg)
-        new_grid_max_lat = 90 - new_grid_delta_lat / 2
-        new_grid_min_lon = -180 + new_grid_delta_lon / 2
-        new_grid_max_lon = 180 - new_grid_delta_lon / 2
-        interpolate_variable(
-            ECCO_varname,
-            local_varname,
-            new_grid_min_lat,
-            new_grid_max_lat,
-            new_grid_delta_lat,
-            new_grid_min_lon,
-            new_grid_max_lon,
-            new_grid_delta_lon,
-        )
+        field_interpd_to_latlon.to_netcdf(out_path)
