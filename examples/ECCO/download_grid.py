@@ -1,9 +1,8 @@
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
-from get_ECCO_credentials import get_ECCO_credentials
 
 
 def download_grid(grid_path: Path, user: str, password: str):

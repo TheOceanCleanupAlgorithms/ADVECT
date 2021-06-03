@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
-from get_ECCO_credentials import get_ECCO_credentials
 
 
 def download_density(out_dir: Path, user: str, password: str):

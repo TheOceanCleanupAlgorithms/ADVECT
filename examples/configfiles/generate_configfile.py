@@ -1,16 +1,17 @@
-import xarray as xr
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import xarray as xr
 
 
 def generate_configfile(
+    out_path: Path,
     horizontal_diffusivity: np.ndarray,
     z_hd: np.ndarray,
     vertical_diffusivity: np.ndarray,
     z_vd: np.ndarray,
     max_wave_height: float = None,
     wave_mixing_depth_factor: float = None,
-    out_name: str = "config.nc",
 ):
     """
     script to generate a configuration file given requisite parameters
@@ -59,16 +60,19 @@ def generate_configfile(
     if wave_mixing_depth_factor:
         config["wave_mixing_depth_factor"] = wave_mixing_depth_factor
 
-    out_path = Path(__file__).parent / out_name
     config.to_netcdf(out_path)
 
 
-# a sample configuration file, diffusivity profiles are NOT based on true ocean state
-if __name__ == "__main__":
+def generate_sample_configfile(out_path: Path):
+    """a sample configuration file, diffusivity profiles are NOT based on true ocean state"""
     generate_configfile(
         horizontal_diffusivity=np.linspace(1500, 1, 20),  # m^2 s^-1
         z_hd=-np.logspace(0, 4, 20),  # m
         vertical_diffusivity=np.linspace(-5e-3, 1e-2, 10) ** 2,
         z_vd=np.linspace(-1e4, 0, 10),  # m
-        out_name="config.nc",
+        out_path=out_path,
     )
+
+
+if __name__ == "__main__":
+    generate_sample_configfile(out_path=Path(__file__).parent / "sample_config.nc")

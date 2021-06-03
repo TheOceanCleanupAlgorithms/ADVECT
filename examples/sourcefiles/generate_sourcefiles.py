@@ -1,9 +1,9 @@
+from pathlib import Path
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-from pathlib import Path
-from typing import Tuple
 
 
 def generate_3D_sourcefile(
@@ -13,7 +13,7 @@ def generate_3D_sourcefile(
     corey_shape_factor_range: Tuple[float, float],
     depth_range: Tuple[float, float],
     release_date_range: Tuple[pd.Timestamp, pd.Timestamp],
-    out_path: str,
+    out_path: Path,
     land_mask_path: str = Path(__file__).parent / "land_mask.nc",
 ):
     """
@@ -106,12 +106,7 @@ def create_2D_source_dataset(
     return ds
 
 
-if __name__ == "__main__":
-    generate_2D_sourcefile(
-        num_particles=5000,
-        release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
-        out_path=str(Path(__file__).parent / "2D_uniform_source_2015.nc"),
-    )
+def generate_uniform_3D_sourcefile(out_path):
     generate_3D_sourcefile(
         num_particles=5000,
         density_range=(900, 1100),
@@ -119,5 +114,22 @@ if __name__ == "__main__":
         corey_shape_factor_range=(0.15, 1),
         release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
         depth_range=(0, 0),
-        out_path=str(Path(__file__).parent / "3D_uniform_source_2015.nc"),
+        out_path=out_path,
+    )
+
+
+def generate_uniform_2D_sourcefile(out_path):
+    generate_2D_sourcefile(
+        num_particles=5000,
+        release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
+        out_path=out_path,
+    )
+
+
+if __name__ == "__main__":
+    generate_uniform_2D_sourcefile(
+        out_path=Path(__file__).parent / "2D_uniform_source_2015.nc"
+    )
+    generate_uniform_3D_sourcefile(
+        out_path=Path(__file__).parent / "3D_uniform_source_2015.nc"
     )

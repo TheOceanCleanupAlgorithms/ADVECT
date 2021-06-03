@@ -1,9 +1,10 @@
+import glob
+from pathlib import Path
+
 import numpy as np
 import xarray as xr
 from ecco_v4_py import resample_to_latlon
 from tqdm import tqdm
-import glob
-from pathlib import Path
 
 
 def interpolate_variable(

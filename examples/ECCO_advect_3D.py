@@ -2,28 +2,35 @@
 advect on ECCO currents
 """
 import sys
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
 examples_root = Path(__file__).parent
-sys.path.append(str(examples_root))
+sys.path.append(str(examples_root.parent))
 sys.path.append(str(examples_root.parent / "src"))
 
-from plotting.plot_advection import animate_ocean_advection
-from run_advector_3D import run_advector_3D
+from examples.sourcefiles.generate_sourcefiles import generate_uniform_3D_sourcefile
+from examples.configfiles.generate_configfile import generate_sample_configfile
+from src.plotting.plot_advection import animate_ocean_advection
+from src.run_advector_3D import run_advector_3D
 
-WINDAGE_MULTIPLIER = (
-    1  # multiplier of default windage formulation (based on emerged surface area)
-)
 
-sourcefile = str(examples_root / "sourcefiles/3D_uniform_source_2015.nc")
 if __name__ == "__main__":
+    # generate a sourcefile
+    sourcefile_path = examples_root / "sourcefiles/3D_uniform_source_2015.nc"
+    generate_uniform_3D_sourcefile(out_path=sourcefile_path)
+
+    # generate a configfile
+    configfile_path = examples_root / "configfiles/config.nc"
+    generate_sample_configfile(out_path=configfile_path)
+
+    # run the model!
     out_paths = run_advector_3D(
         output_directory=str(
-            examples_root / f"outputfiles/ECCO_2015_3D/{Path(sourcefile).stem}/"
+            examples_root / f"outputfiles/ECCO_2015_3D/{Path(sourcefile_path).stem}/"
         ),
-        sourcefile_path=sourcefile,
-        configfile_path=str(examples_root / "configfiles/config.nc"),
+        sourcefile_path=str(sourcefile_path),
+        configfile_path=str(configfile_path),
         u_water_path=str(examples_root / "ECCO/currents/U_2015*.nc"),
         v_water_path=str(examples_root / "ECCO/currents/V_2015*.nc"),
         w_water_path=str(examples_root / "ECCO/currents/W_2015*.nc"),
@@ -35,11 +42,8 @@ if __name__ == "__main__":
         timestep=timedelta(hours=1),
         num_timesteps=24 * 365,
         save_period=24,
-        advection_scheme="taylor2",
-        windage_multiplier=WINDAGE_MULTIPLIER,
-        wind_mixing_enabled=True,
-        memory_utilization=0.4,
     )
 
     for out_path in out_paths:
+        print("Animating trajectories...")
         animate_ocean_advection(out_path, save=False)

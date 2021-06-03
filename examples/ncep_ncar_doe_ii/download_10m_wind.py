@@ -3,10 +3,10 @@ simple script to download daily-mean 10m wind from the ncep ncar doe ii reanalys
 """
 import subprocess
 import tempfile
-
-import xarray as xr
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import xarray as xr
 
 
 def download_and_interpolate_ncep_ncar_wind(out_dir: Path):

@@ -1,7 +1,7 @@
 """all-in-one script which downloads and interpolates 3D currents and seawater density data."""
 
-import sys
 import shutil
+import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))

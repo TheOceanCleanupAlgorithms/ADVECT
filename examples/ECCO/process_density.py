@@ -1,7 +1,8 @@
 import glob
 import os
-import xarray as xr
 from pathlib import Path
+
+import xarray as xr
 
 
 def process_density(

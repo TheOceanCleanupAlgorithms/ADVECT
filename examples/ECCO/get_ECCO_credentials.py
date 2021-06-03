@@ -1,6 +1,6 @@
+import subprocess
 import tempfile
 from getpass import getpass
-import subprocess
 
 
 def get_ECCO_credentials():
