@@ -51,4 +51,4 @@ if __name__ == "__main__":
 
     for path in out_paths:
         animate_ocean_advection(outputfile_path=path, save=False)
-        plot_ocean_trajectories(path, glob.glob(ECCO_U_PATH)[0])
+        plot_ocean_trajectories(path, glob.glob(str(ECCO_U_PATH))[0])

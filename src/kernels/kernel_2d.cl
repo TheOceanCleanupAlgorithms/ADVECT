@@ -8,6 +8,7 @@
 #include "windage.cl"
 #include "gradients.cl"
 #include "exit_codes.cl"
+#include "vertical_profile.cl"
 
 __kernel void advect(
     /* current vector field */
