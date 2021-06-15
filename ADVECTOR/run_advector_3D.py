@@ -1,14 +1,15 @@
 """
-This is the ADVECTOR 2D entry-point.
+This is the ADVECTOR 3D entry-point.
 To use, add this repo's "src" directory to the python path, import this file, and execute.  E.g.
     import sys
     sys.path.append("<path_to_repo>/src")
-    from run_advector_2D import run_advector_2D
-    run_advector_2D(...)
-See examples/ECCO_advect_2D.py for an example usage.
+    from run_advector_3D import run_advector_3D
+    run_advector_3D(...)
+See examples/ECCO_advect_3D.py for an example usage.
 See docstring below for descriptions of arguments.
 See src/forcing_data_specifications.md for detailed description of forcing data requirements.
 See src/sourcefile_specifications.md for detailed description of sourcefile requirements.
+See src/configfile_specifications.md for detailed description of configfile requirements.
 See src/outputfile_specifications.md for detailed description of the outputfile created by this program.
 """
 
@@ -18,55 +19,60 @@ from typing import Tuple
 
 from dask.diagnostics import ProgressBar
 
-from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
-from enums.advection_scheme import AdvectionScheme
-from enums.forcings import Forcing
-from io_tools.OutputWriter import OutputWriter2D
-from io_tools.open_sourcefiles import open_2d_sourcefiles
-from io_tools.open_vectorfiles import *
-from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
+from .drivers.chunked_kernel_driver import execute_chunked_kernel_computation
+from .enums.advection_scheme import AdvectionScheme
+from .enums.forcings import Forcing
+from .io_tools.OutputWriter import OutputWriter3D
+from .io_tools.open_configfiles import unpack_configfile
+from .io_tools.open_sourcefiles import open_3d_sourcefiles
+from .io_tools.open_vectorfiles import *
+from .kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
 
 
-def run_advector_2D(
+def run_advector_3D(
     sourcefile_path: str,
+    configfile_path: str,
     output_directory: str,
     u_water_path: str,
     v_water_path: str,
+    w_water_path: str,
+    seawater_density_path: str,
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
-    eddy_diffusivity: float = 0,
     advection_scheme: str = "taylor2",
     save_period: int = 1,
-    sourcefile_varname_map: Optional[dict] = None,
-    water_varname_map: Optional[dict] = None,
+    sourcefile_varname_map: dict = None,
+    water_varname_map: dict = None,
+    seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
-    u_wind_path: Optional[str] = None,
-    v_wind_path: Optional[str] = None,
-    wind_varname_map: Optional[dict] = None,
-    windage_coeff: Optional[float] = None,
+    u_wind_path: str = None,
+    v_wind_path: str = None,
+    wind_varname_map: dict = None,
+    windage_multiplier: float = 1,
+    wind_mixing_enabled: bool = True,
     show_progress_bar: bool = True,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
         Can be a wildcard path as long as the individual sourcefiles can be properly concatenated along particle axis.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
+    :param configfile_path: path to the configfile netcdf file.
+        See configfile_specifications.md for details
     :param output_directory: directory which will be populated with the outfiles.
         Existing files in this directory may be overwritten.
-        See data_specifications.md for outputfile format details.
+        See forcing_data_specifications.md for outputfile format details.
     :param u_water_path: wildcard path to the zonal current files.
-        See data_specifications.md for data requirements.
+        See forcing_data_specifications.md for data requirements.
     :param v_water_path: wildcard path to the meridional current files; see 'u_water_path'.
+    :param w_water_path: wildcard path to the vertical current files; see 'u_water_path'.
+    :param seawater_density_path: wildcard path to the seawater seawater_density files.
+        See forcing_data_specifications.md for data requirements.
     :param advection_start_date: python datetime object denoting the start of the advection timeseries.
         Any particles which are scheduled to be released prior to this date will be released at this date.
     :param timestep: python timedelta object denoting the duration of each advection timestep.
     :param num_timesteps: length of the advection timeseries.
-    :param eddy_diffusivity: (m^2 / s) controls the scale of each particle's random walk.  0 (default) has no effect.
-        Note: since eddy diffusivity parameterizes ocean mechanics at smaller scales than the current files resolve,
-            the value chosen should reflect the resolution of the current files.  Further, though eddy diffusivity in
-            the real ocean varies widely in space and time, ADVECTOR uses one value everywhere, and the value should be
-            selected with this in mind.
     :param advection_scheme: one of {"taylor2", "eulerian"}.
         "taylor2" is a second-order advection scheme as described in Black/Gay 1990 which improves adherence to circular
             streamlines compared to a first-order scheme.  This is the default.
@@ -74,8 +80,9 @@ def run_advector_2D(
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
+        forcing_data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
+    :param seawater_density_varname_map: mapping from names in seawater_density files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -90,9 +97,8 @@ def run_advector_2D(
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
     :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
-    :param windage_coeff: fraction of wind speed that is transferred to particle.
-        If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
-        Note: this value has a profound impact on results.
+    :param windage_multiplier: multiplies the default windage, which is based on emerged area.
+    :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
     :param show_progress_bar: whether to show progress bars for dask operations
     :return: list of paths to the outputfiles
     """
@@ -109,15 +115,29 @@ def run_advector_2D(
 
     print("---INITIALIZING DATASETS---")
     print("Opening Sourcefiles...")
-    p0 = open_2d_sourcefiles(
+    p0 = open_3d_sourcefiles(
         sourcefile_path=sourcefile_path,
         variable_mapping=sourcefile_varname_map,
     )
 
+    print("Opening Configfile...")
+    eddy_diffusivity, max_wave_height, wave_mixing_depth_factor = unpack_configfile(
+        configfile_path=configfile_path
+    )
+
     forcing_data = {}
     print("Initializing Ocean Current...")
-    forcing_data[Forcing.current] = open_2d_currents(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map
+    forcing_data[Forcing.current] = open_3d_currents(
+        u_path=u_water_path,
+        v_path=v_water_path,
+        w_path=w_water_path,
+        variable_mapping=water_varname_map,
+    )
+
+    print("Initializing Seawater Density...")
+    forcing_data[Forcing.seawater_density] = open_seawater_density(
+        path=seawater_density_path,
+        variable_mapping=seawater_density_varname_map,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
@@ -126,23 +146,27 @@ def run_advector_2D(
             u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
         )
 
-    output_writer = OutputWriter2D(
+    output_writer = OutputWriter3D(
         out_dir=Path(output_directory),
-        basename="ADVECTOR_2D_output",
+        basename="ADVECTOR_3D_output",
+        configfile=xr.open_dataset(configfile_path),
         sourcefile=p0,
         forcing_data=forcing_data,
-        api_entry="src/run_advector_2D.py::run_advector_2D",
+        api_entry="src/run_advector_3D.py::run_advector_3D",
         api_arguments=arguments,
     )
 
     print("---COMMENCING ADVECTION---")
     out_paths = execute_chunked_kernel_computation(
         forcing_data=forcing_data,
-        kernel_cls=Kernel2D,
-        kernel_config=Kernel2DConfig(
+        kernel_cls=Kernel3D,
+        kernel_config=Kernel3DConfig(
             advection_scheme=scheme_enum,
-            windage_coefficient=windage_coeff,
             eddy_diffusivity=eddy_diffusivity,
+            max_wave_height=max_wave_height,
+            wave_mixing_depth_factor=wave_mixing_depth_factor,
+            windage_multiplier=windage_multiplier,
+            wind_mixing_enabled=wind_mixing_enabled,
         ),
         output_writer=output_writer,
         p0=p0,

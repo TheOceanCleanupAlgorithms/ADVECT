@@ -5,7 +5,7 @@ import numpy as np
 import pyopencl as cl
 import xarray as xr
 
-from kernel_wrappers import kernel_constants
+from ..kernel_wrappers import kernel_constants
 
 
 def is_uniformly_spaced_ascending(arr):

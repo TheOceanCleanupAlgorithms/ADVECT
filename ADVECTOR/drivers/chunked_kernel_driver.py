@@ -11,11 +11,11 @@ import pyopencl as cl
 import xarray as xr
 from tqdm import tqdm
 
-from drivers.advection_chunking import chunk_advection_params
-from enums.forcings import Forcing
-from io_tools.OutputWriter import OutputWriter
-from kernel_wrappers.Kernel import Kernel, KernelConfig
-from kernel_wrappers.kernel_constants import EXIT_CODES
+from .advection_chunking import chunk_advection_params
+from ..enums.forcings import Forcing
+from ..io_tools.OutputWriter import OutputWriter
+from ..kernel_wrappers.Kernel import Kernel, KernelConfig
+from ..kernel_wrappers.kernel_constants import EXIT_CODES
 
 
 def execute_chunked_kernel_computation(

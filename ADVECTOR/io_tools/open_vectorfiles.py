@@ -5,7 +5,7 @@ import dask
 import numpy as np
 import xarray as xr
 
-from io_tools.create_bathymetry import create_bathymetry_from_land_mask
+from ..io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(

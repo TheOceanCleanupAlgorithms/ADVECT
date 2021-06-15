@@ -8,7 +8,7 @@ import pandas as pd
 import pyopencl as cl
 import xarray as xr
 
-from enums.forcings import Forcing
+from ..enums.forcings import Forcing
 
 
 @dataclass

@@ -9,7 +9,7 @@ import pandas as pd
 import xarray as xr
 from tqdm import tqdm
 
-from enums.forcings import Forcing
+from ..enums.forcings import Forcing
 
 
 def chunk_advection_params(

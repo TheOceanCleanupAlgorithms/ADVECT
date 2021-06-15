@@ -9,15 +9,15 @@ import pandas as pd
 import pyopencl as cl
 import xarray as xr
 
-from enums.advection_scheme import AdvectionScheme
-from enums.forcings import Forcing
-from kernel_wrappers.Field3D import (
+from ..enums.advection_scheme import AdvectionScheme
+from ..enums.forcings import Forcing
+from ..kernel_wrappers.Field3D import (
     Field3D,
     create_empty_2d_field,
     is_sorted_ascending,
     buffer_from_array,
 )
-from kernel_wrappers.Kernel import Kernel, KernelConfig
+from ..kernel_wrappers.Kernel import Kernel, KernelConfig
 
 
 @dataclass

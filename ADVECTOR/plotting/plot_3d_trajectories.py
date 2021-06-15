@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 from matplotlib import colors
 
-from io_tools.create_bathymetry import create_bathymetry_from_land_mask
+from ..io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 class BathyPlotType(Enum):
@@ -87,8 +87,8 @@ def plot_contour_bathymetry(
 
 if __name__ == "__main__":
     # example plotting around cape horn
-    lon_range = (-80, -40)
-    lat_range = (-70, -30)
+    lon_range = (-80, -50)
+    lat_range = (-60, -40)
     depth_range = (-10000, 0)
     P = xr.open_dataset(
         "../../examples/outputfiles/ECCO_2015_3D/3D_uniform_source_2015/ADVECTOR_3D_output_2015.nc",
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         ).any(dim="time")
     )
     ECCO_land_mask = (
-        xr.open_dataset("../../examples/ECCO/ECCO_interp/U_2015-01-01.nc")
+        xr.open_dataset("../../examples/ECCO/currents/U_2015-01-01.nc")
         .squeeze()
         .U.isnull()
         .sortby("depth")
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         )
     )
     plot_3d_trajectories(
-        particles=P,
+        particles=P.isel(p_id=0),
         land_mask=ECCO_land_mask,
-        bathymetry_plot_type=BathyPlotType.contour,
+        bathymetry_plot_type=BathyPlotType.gridded,
     )

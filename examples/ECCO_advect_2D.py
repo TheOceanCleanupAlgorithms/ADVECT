@@ -2,20 +2,18 @@
 advect on ECCO surface currents
 """
 import glob
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-examples_root = Path(__file__).parent
-sys.path.append(str(examples_root.parent))
-sys.path.append(str(examples_root.parent / "src"))
-
-
 from examples.sourcefiles.generate_sourcefiles import generate_uniform_2D_sourcefile
-from src.run_advector_2D import run_advector_2D
-from src.plotting.plot_advection import animate_ocean_advection, plot_ocean_trajectories
+from ADVECTOR.run_advector_2D import run_advector_2D
+from ADVECTOR.plotting.plot_advection import (
+    animate_ocean_advection,
+    plot_ocean_trajectories,
+)
 
 
+examples_root = Path(__file__).parent
 ECCO_U_PATH = examples_root / "ECCO/currents/U_2015*.nc"
 ECCO_V_PATH = examples_root / "ECCO/currents/V_2015*.nc"
 

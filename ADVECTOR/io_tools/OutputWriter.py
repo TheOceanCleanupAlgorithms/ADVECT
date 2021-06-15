@@ -7,8 +7,8 @@ import numpy as np
 import xarray as xr
 
 import _version
-from enums.forcings import Forcing
-from kernel_wrappers.kernel_constants import EXIT_CODES
+from ..enums.forcings import Forcing
+from ..kernel_wrappers.kernel_constants import EXIT_CODES
 
 SOURCEFILE_GROUP_NAME = "sourcefile"
 MODEL_DOMAIN_GROUP_NAME = "model_domain"

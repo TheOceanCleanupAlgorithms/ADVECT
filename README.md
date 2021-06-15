@@ -40,6 +40,10 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
    conda env create -f environment.yml  # creates a conda environment, installs dependencies
    conda activate ADVECTOR  # activates the conda environment
     ```
+4. Install ADVECTOR as a package
+    ```
+   pip install -e .
+   ```
 4. (Optional) Run tests
 
     To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the project root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.

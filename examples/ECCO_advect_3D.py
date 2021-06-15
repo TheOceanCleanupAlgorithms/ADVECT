@@ -1,19 +1,16 @@
 """
 advect on ECCO currents
 """
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-examples_root = Path(__file__).parent
-sys.path.append(str(examples_root.parent))
-sys.path.append(str(examples_root.parent / "src"))
 
 from examples.sourcefiles.generate_sourcefiles import generate_uniform_3D_sourcefile
 from examples.configfiles.generate_configfile import generate_sample_configfile
-from src.plotting.plot_advection import animate_ocean_advection
-from src.run_advector_3D import run_advector_3D
+from ADVECTOR.plotting.plot_advection import animate_ocean_advection
+from ADVECTOR.run_advector_3D import run_advector_3D
 
+examples_root = Path(__file__).parent
 
 if __name__ == "__main__":
     # generate a sourcefile
