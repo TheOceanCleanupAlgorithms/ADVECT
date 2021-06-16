@@ -34,20 +34,20 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
 
 ## Installation Instructions
 1. In a terminal, clone this repository and navigate to its root.
-2. Install ADVECTOR as a package
+1. Install ADVECTOR as a package
     ```
-   pip install -e .
+   pip install git+ssh://git@github.com/TheOceanCleanupAlgorithms/ADVECTOR.git@pip_install
    ```
 3. (Optional) Run tests
 
     To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the project root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
-5. Acquire forcing data
+4. Acquire forcing data
 
     Instructions for downloading sample forcing data can be found in `examples/README.txt`.
     
     At minimum, ADVECTOR's 2D kernel requires surface current data, and the 3D kernel requires whole-ocean current, as well as seawater density.  Often, ocean models only offer their zonal/meridional current velocity to download; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.
 
-6. Run example advection
+5. Run example advection
 
     Once you're all set up with the necessary forcing data according to `examples/README.txt`, you can execute `examples/ECCO_advect_2D.py` and/or `examples/ECCO_advect_3D.py`. 
 
