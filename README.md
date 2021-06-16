@@ -33,18 +33,12 @@ Finally, the user may specify a vertical profile of vertical and horizontal eddy
 The model domain only includes the waters of the ocean above bathymetry (as defined by the non-null region in the ocean current vectorfield); particles cannot leave this domain, and thus the model does not include beaching or sedimentation.  Instead, when particles are pushed against coastline/bathymetry, their out-of-domain displacement components are cropped to keep them in the model domain.  This is the 3D analog of the frictionless coastlines used in the 2D kernel, and similarly allows particles to travel parallel to domain boundaries.
 
 ## Installation Instructions
-1. Install miniconda, found [here](https://docs.conda.io/en/latest/miniconda.html).
-2. In a terminal, clone this repository and navigate to its root.
-3. Install dependencies by running
-    ```
-   conda env create -f environment.yml  # creates a conda environment, installs dependencies
-   conda activate ADVECTOR  # activates the conda environment
-    ```
-4. Install ADVECTOR as a package
+1. In a terminal, clone this repository and navigate to its root.
+2. Install ADVECTOR as a package
     ```
    pip install -e .
    ```
-4. (Optional) Run tests
+3. (Optional) Run tests
 
     To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the project root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
 5. Acquire forcing data

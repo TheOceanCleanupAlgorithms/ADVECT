@@ -44,6 +44,7 @@ if __name__ == "__main__":
 
     for path in out_paths:
         print("Animating trajectories...")
-        animate_ocean_advection(outputfile_path=path, save=False)
+        animate_ocean_advection(outputfile_path=path, save=False,
+                                current_path=glob.glob(str(ECCO_U_PATH))[0])
         print("Plotting trajectories...")
         plot_ocean_trajectories(path, glob.glob(str(ECCO_U_PATH))[0])

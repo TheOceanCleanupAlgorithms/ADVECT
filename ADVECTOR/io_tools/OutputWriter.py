@@ -6,7 +6,7 @@ import netCDF4
 import numpy as np
 import xarray as xr
 
-import _version
+from .. import _version
 from ..enums.forcings import Forcing
 from ..kernel_wrappers.kernel_constants import EXIT_CODES
 

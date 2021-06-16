@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 
-import cartopy.crs as ccrs
 import matplotlib.animation as manimation
 import matplotlib.cm as cm
 import matplotlib.colors as mcol
@@ -15,21 +14,7 @@ def plot_ocean_trajectories(
     outputfile_path: str, current_path: str, current_varname_map: dict = None
 ):
     fig, ax = plt.subplots(figsize=[14, 8])
-
-    # show current data grid
-    grid = (
-        xr.open_dataset(current_path).rename(current_varname_map).U.squeeze().isnull()
-    )
-    if "depth" in grid.dims:
-        grid = grid.sel(depth=0, method="nearest")
-    if grid.lon.max() > 180:
-        grid["lon"] = ((grid.lon + 180) % 360) - 180
-        grid = grid.sortby("lon")
-    xspacing = np.diff(grid.lon).mean()
-    yspacing = np.diff(grid.lat).mean()
-    lon_edges = np.append((grid.lon - xspacing / 2), grid.lon[-1] + xspacing / 2)
-    lat_edges = np.append((grid.lat - yspacing / 2), grid.lat[-1] + yspacing / 2)
-    plt.pcolormesh(lon_edges, lat_edges, ~grid, cmap="gray")
+    plot_grid(ax=ax, current_path=current_path, current_varname_map=current_varname_map)
 
     # plot trajectories
     P = xr.open_dataset(outputfile_path)
@@ -39,20 +24,15 @@ def plot_ocean_trajectories(
 
 def animate_ocean_advection(
     outputfile_path: str,
-    lon_range=(-180, 180),
-    lat_range=(-90, 90),
+    current_path: str,
+    current_varname_map: dict = None,
     save: bool = False,
     colorbar_depth=None,
 ):
     P = xr.open_dataset(outputfile_path)
     # plot le advection
-    proj = ccrs.PlateCarree()
-    fig = plt.figure(figsize=[14, 8])
-    ax = plt.axes(projection=proj)
-    ax.coastlines()
-
-    # invisible line forces map to at least cover the specified area, regardless of particle tracks
-    ax.plot(np.linspace(*lon_range), np.linspace(*lat_range), alpha=0)
+    fig, ax = plt.subplots(figsize=[14, 8])
+    plot_grid(ax=ax, current_path=current_path, current_varname_map=current_varname_map)
 
     # initialize the scatter plot with dummy data.
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, 0.8, 100)))
@@ -114,3 +94,20 @@ def animate_ocean_advection_to_disk(
     plt.close()
     print("Opening Movie...")
     subprocess.call(["open", outfile])  # this won't work except on mac.
+
+
+def plot_grid(ax, current_path: str, current_varname_map: dict = None):
+    # show current data grid
+    grid = (
+        xr.open_dataset(current_path).rename(current_varname_map).U.squeeze().isnull()
+    )
+    if "depth" in grid.dims:
+        grid = grid.sel(depth=0, method="nearest")
+    if grid.lon.max() > 180:
+        grid["lon"] = ((grid.lon + 180) % 360) - 180
+        grid = grid.sortby("lon")
+    xspacing = np.diff(grid.lon).mean()
+    yspacing = np.diff(grid.lat).mean()
+    lon_edges = np.append((grid.lon - xspacing / 2), grid.lon[-1] + xspacing / 2)
+    lat_edges = np.append((grid.lat - yspacing / 2), grid.lat[-1] + yspacing / 2)
+    return ax.pcolormesh(lon_edges, lat_edges, ~grid, cmap="gray")

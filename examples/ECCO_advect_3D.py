@@ -43,4 +43,8 @@ if __name__ == "__main__":
 
     for out_path in out_paths:
         print("Animating trajectories...")
-        animate_ocean_advection(out_path, save=False)
+        animate_ocean_advection(
+            out_path,
+            save=False,
+            current_path=str(examples_root / "ECCO/currents/U_2015-01-01.nc"),
+        )
