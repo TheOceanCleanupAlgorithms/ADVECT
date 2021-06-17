@@ -18,6 +18,11 @@ def download_and_interpolate_ncep_ncar_wind(out_dir: Path):
         filenames = [url.split("/")[-1] for url in urls]
 
         for filename, url in zip(filenames, urls):
+            out_path = out_dir / filename
+            print(out_path)
+            if out_path.exists():
+                print(f"skipping {out_path}, already exists")
+                continue
             subprocess.run(
                 [
                     "wget",
@@ -34,14 +39,9 @@ def download_and_interpolate_ncep_ncar_wind(out_dir: Path):
                 ]
             )
 
-        # interpolate to regular grids
-        for filename in filenames:
+            # interpolate to regular grids
             print(f"Interpolating latitude to evenly spaced grid for file {filename}")
             ds = xr.open_dataset(Path(temp_dir) / filename)
             ds = ds.sortby("lat", ascending=True)
             ds = ds.interp(lat=np.linspace(ds.lat.min(), ds.lat.max(), len(ds.lat)))
-            ds.to_netcdf(out_dir / filename)
-
-
-if __name__ == "__main__":
-    download_and_interpolate_ncep_ncar_wind(out_dir=Path(__file__).parent)
+            ds.to_netcdf(out_path)
