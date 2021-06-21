@@ -9,7 +9,6 @@ examples_root = Path(__file__).parent
 sys.path.append(str(examples_root.parent))
 sys.path.append(str(examples_root.parent / "src"))
 
-
 from helpers.generate_sourcefiles import generate_uniform_2D_sourcefile
 from src.run_advector_2D import run_advector_2D
 from src.plotting.plot_advection import animate_ocean_advection, plot_ocean_trajectories
@@ -22,7 +21,7 @@ if __name__ == "__main__":
     output_root = Path(
         "/Users/dklink/Desktop/outputfiles"
     )  # input("Input path to directory for outputfiles: "))
-    output_root.mkdir(parents=True, exist_ok=True)
+    output_root.mkdir(exist_ok=True)
 
     sourcefile_path = output_root / "2D_uniform_source_2015.nc"
     generate_uniform_2D_sourcefile(

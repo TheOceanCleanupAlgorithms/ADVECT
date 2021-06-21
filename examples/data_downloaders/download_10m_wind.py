@@ -19,7 +19,6 @@ def download_and_interpolate_ncep_ncar_wind(out_dir: Path):
 
         for filename, url in zip(filenames, urls):
             out_path = out_dir / filename
-            print(out_path)
             if out_path.exists():
                 print(f"skipping {out_path}, already exists")
                 continue

@@ -11,16 +11,18 @@ from data_downloaders.download_and_process_density import download_and_process_d
 
 if __name__ == "__main__":
     data_root = Path(input("Input directory to download data into: "))
-    user, password = get_ECCO_credentials()
+    data_root.mkdir(exist_ok=True)
+    print("")
     print("Downloading ncep-ncar reanalysis ii 10m wind...")
     download_and_interpolate_ncep_ncar_wind(out_dir=data_root)
 
     print("")
+    print("Downloading Seawater Density from JPL's ECCOv4r4...")
     density_path = data_root / "RHO_2015.nc"
     if density_path.exists():
         print(f"{density_path} already exists.  Skipping...")
     else:
-        print("Downloading Seawater Density from JPL's ECCOv4r4...")
+        user, password = get_ECCO_credentials()
         download_and_process_density(
             out_path=density_path, user=user, password=password
         )
