@@ -1,10 +1,10 @@
-name: Format with Black 
+name: Check formatting using Black
 on: [push]
 jobs:
-  Black-Format:
+  Check-Black-Format:
     runs-on: ubuntu-latest
     steps:
-      - name: Black Code Formatter
+      - name: Black Code Formatter Check
         uses: lgeiger/black-action@v1.0.1
         with:
           args: . --check
