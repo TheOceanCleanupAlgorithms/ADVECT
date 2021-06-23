@@ -15,12 +15,8 @@ from src.plotting.plot_advection import animate_ocean_advection, plot_ocean_traj
 
 
 if __name__ == "__main__":
-    data_root = Path(
-        "/Users/dklink/data_science/metocean_data/ADVECTOR_sample_data"
-    )  # input("Input path to example data directory: "))
-    output_root = Path(
-        "/Users/dklink/Desktop/outputfiles"
-    )  # input("Input path to directory for outputfiles: "))
+    data_root = Path(input("Input path to example data directory: "))
+    output_root = Path(input("Input path to directory for outputfiles: "))
     output_root.mkdir(exist_ok=True)
 
     sourcefile_path = output_root / "2D_uniform_source_2015.nc"
