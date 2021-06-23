@@ -4,11 +4,13 @@ accessible to the python runtime.
 """
 
 # this is defined by the OpenCL runtime itself; this matches the definition in the OpenCL 1.2 standard.
-UINT_MAX = 0xffffffff
+UINT_MAX = 0xFFFFFFFF
 
-# these match the definitions in kernel_2d.cl.
-EXIT_CODES = {'SUCCESS': 0,
-              'NULL_LOCATION': 1,
-              'INVALID_LATITUDE': 2,
-              'INVALID_ADVECTION_SCHEME': -1,
-              }
+# these match the definitions in src/kernels/exit_codes.cl.
+EXIT_CODES = {
+    0: "SUCCESS",
+    1: "NULL_LOCATION",
+    2: "INVALID_LATITUDE",
+    3: "SEAWATER_DENSITY_LOOKUP_FAILURE",
+    -1: "INVALID_ADVECTION_SCHEME",
+}

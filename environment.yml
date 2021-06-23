@@ -3,18 +3,19 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3
+  - python>=3.8
+  - wget
   - numpy
   - pandas
   - xarray
   - netcdf4
   - dask
   - pyopencl
+  - pocl
   - matplotlib
   - cartopy
-  - scipy
   - tqdm
-  - click
-  - nco
-  - python-wget
+  - ecco_v4_py
+  - docrep=0.2.7  # fixes bug importing ecco_v4_py
+  - pytest
 prefix: /opt/miniconda3/envs/ADVECTOR

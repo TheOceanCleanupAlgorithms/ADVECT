@@ -1,1 +1,0 @@
-Currents go here, downloaded by ../download_hycom_currents.py
