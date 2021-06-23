@@ -1,3 +1,9 @@
-- name: Black Code Formatter
-  uses: lgeiger/black-action@v1.0.1
+name: Format with Black 
+on: [push]
+jobs:
+  Black-Format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Black Code Formatter
+        uses: lgeiger/black-action@v1.0.1
 
