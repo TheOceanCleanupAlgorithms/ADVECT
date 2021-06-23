@@ -29,8 +29,6 @@ def run_advector(
     eddy_diffusivity: float = 0,
     advection_scheme: str = 'taylor2',
     save_period: int = 1,
-    sourcefile_format: str = 'advector',
-    sourcefile_varname_map: Optional[dict] = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: Optional[str] = None,
@@ -39,6 +37,7 @@ def run_advector(
     verbose: bool = False,
     water_preprocessor: Optional[Callable] = None,
     wind_preprocessor: Optional[Callable] = None,
+    sourcefile_preprocessor: Optional[Callable] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -65,9 +64,6 @@ def run_advector(
         "eulerian" is the forward Euler method.
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
-    :param sourcefile_format: one of {"advector", "trashtracker"}.  See data_specifications.md for more details.
-    :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -87,22 +83,17 @@ def run_advector(
     :param verbose: whether to print detailed information about kernel execution.
     :param water_preprocessor: func to call on the xarray water dataset to perform operation before loading in advector, such as renaming variables.
     :param wind_preprocessor: func to call on the xarray wind dataset to perform operation before loading in advector, such as renaming variables.
+    :param sourcefile_preprocessor: func to call on each xarray sourcefile dataset to perform operation before merging, such as renaming variables.
     """
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
     except KeyError:
         raise ValueError(f"Invalid argument advection_scheme; must be one of "
                          f"{set(scheme.name for scheme in AdvectionScheme)}.")
-    try:
-        sourcefile_format_enum = SourceFileFormat[sourcefile_format]
-    except KeyError:
-        raise ValueError(f"Invalid argument sourcefile_format; must be one of "
-                         f"{set(fmt.name for fmt in SourceFileFormat)}.")
 
     p0 = open_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=sourcefile_varname_map,
-        source_file_type=sourcefile_format_enum,
+        preprocessor=sourcefile_preprocessor,
     )
     currents = open_netcdf_vectorfield(
         u_path=u_water_path, v_path=v_water_path, preprocessor=water_preprocessor
