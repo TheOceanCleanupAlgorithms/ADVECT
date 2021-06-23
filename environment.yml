@@ -15,7 +15,5 @@ dependencies:
   - matplotlib
   - cartopy
   - tqdm
-  - ecco_v4_py
-  - docrep=0.2.7  # fixes bug importing ecco_v4_py
   - pytest
 prefix: /opt/miniconda3/envs/ADVECTOR
