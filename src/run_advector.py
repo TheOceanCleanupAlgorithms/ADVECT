@@ -31,15 +31,14 @@ def run_advector(
     save_period: int = 1,
     sourcefile_format: str = 'advector',
     sourcefile_varname_map: Optional[dict] = None,
-    water_varname_map: Optional[dict] = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.5,
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
-    wind_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
     verbose: bool = False,
-    currents_preprocessor: Optional[Callable] = None,
+    water_preprocessor: Optional[Callable] = None,
+    wind_preprocessor: Optional[Callable] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -69,7 +68,6 @@ def run_advector(
     :param sourcefile_format: one of {"advector", "trashtracker"}.  See data_specifications.md for more details.
     :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
         data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
-    :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -83,11 +81,12 @@ def run_advector(
     :param u_wind_path: wildcard path to zonal surface wind files; see 'u_water_path'.
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional surface wind files; see 'u_wind_path'.
-    :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_coeff: fraction of wind speed that is transferred to particle.
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
         Note: this value has a profound impact on results.
     :param verbose: whether to print detailed information about kernel execution.
+    :param water_preprocessor: func to call on the xarray water dataset to perform operation before loading in advector, such as renaming variables.
+    :param wind_preprocessor: func to call on the xarray wind dataset to perform operation before loading in advector, such as renaming variables.
     """
     try:
         scheme_enum = AdvectionScheme[advection_scheme]
@@ -106,13 +105,13 @@ def run_advector(
         source_file_type=sourcefile_format_enum,
     )
     currents = open_netcdf_vectorfield(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map, preprocessor=currents_preprocessor
+        u_path=u_water_path, v_path=v_water_path, preprocessor=water_preprocessor
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         assert windage_coeff is not None, "Wind data must be accompanied by windage coefficient."
         wind = open_netcdf_vectorfield(
-            u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
+            u_path=u_wind_path, v_path=v_wind_path, preprocessor=wind_preprocessor
         )
     else:
         wind = empty_vectorfield()
