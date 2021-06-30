@@ -9,7 +9,7 @@ examples_root = Path(__file__).parent
 sys.path.append(str(examples_root.parent))
 sys.path.append(str(examples_root.parent / "src"))
 
-from helpers.generate_sourcefiles import generate_uniform_3D_sourcefile
+from helpers.generate_sourcefiles import generate_3D_sourcefile
 from helpers.generate_configfile import generate_sample_configfile
 from src.plotting.plot_advection import animate_ocean_advection
 from src.run_advector_3D import run_advector_3D
@@ -19,10 +19,24 @@ if __name__ == "__main__":
     data_root = Path(input("Input path to example data directory: "))
     output_root = Path(input("Input path to directory for outputfiles: "))
     output_root.mkdir(exist_ok=True)
+
+    ADVECTION_START = datetime(2015, 1, 1)
+    ADVECTION_END = datetime(2015, 2, 1)
+
     # generate a sourcefile
     sourcefile_path = output_root / "3D_uniform_source_2015.nc"
-    generate_uniform_3D_sourcefile(out_path=sourcefile_path)
-
+    generate_3D_sourcefile(
+        num_particles=5000,
+        density_range=(800, 1000),
+        radius_range=(1e-6, 1),
+        corey_shape_factor_range=(0.15, 1),
+        release_date_range=(
+            ADVECTION_START,
+            ADVECTION_START + (ADVECTION_END - ADVECTION_START) / 2,
+        ),
+        depth_range=(0, 0),
+        out_path=sourcefile_path,
+    )
     # generate a configfile
     configfile_path = output_root / "config.nc"
     generate_sample_configfile(out_path=configfile_path)
@@ -52,10 +66,10 @@ if __name__ == "__main__":
         v_wind_path=str(data_root / "vwnd.10m.gauss.2015.nc"),
         wind_varname_map={"uwnd": "U", "vwnd": "V", "level": "depth"},  # wind
         seawater_density_path=str(data_root / "RHO_2015.nc"),
-        advection_start_date=datetime(year=2015, month=1, day=1, hour=12),
+        advection_start_date=ADVECTION_START,
         timestep=timedelta(hours=1),
-        num_timesteps=24 * 365,
-        save_period=24,
+        num_timesteps=24 * (ADVECTION_END - ADVECTION_START).days,
+        save_period=4,
         memory_utilization=0.4,
     )
 
