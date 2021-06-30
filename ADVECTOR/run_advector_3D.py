@@ -103,7 +103,7 @@ def run_advector_3D(
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
-        ProgressBar().register()
+        ProgressBar(minimum=1).register()
     arguments = locals()
     try:
         scheme_enum = AdvectionScheme[advection_scheme]

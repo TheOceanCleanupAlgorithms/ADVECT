@@ -4,7 +4,7 @@ advect on ECCO surface currents
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from helpers.generate_sourcefiles import generate_uniform_2D_sourcefile
+from helpers.generate_sourcefiles import generate_2D_sourcefile
 from ADVECTOR.run_advector_2D import run_advector_2D
 from ADVECTOR.plotting.plot_advection import (
     animate_ocean_advection,
@@ -21,16 +21,22 @@ if __name__ == "__main__":
     )  # input("Input path to directory for outputfiles: "))
     output_root.mkdir(exist_ok=True)
 
+    ADVECTION_START = datetime(2015, 1, 1)
+    ADVECTION_END = datetime(2015, 2, 1)
+
     sourcefile_path = output_root / "2D_uniform_source_2015.nc"
-    generate_uniform_2D_sourcefile(
+    generate_2D_sourcefile(
+        num_particles=5000,
+        release_date_range=(
+            ADVECTION_START,
+            ADVECTION_START + (ADVECTION_END - ADVECTION_START) / 2,
+        ),
         out_path=sourcefile_path,
     )
 
     out_dir = output_root / sourcefile_path.stem
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    ADVECTION_START = datetime(2015, 1, 1)
-    ADVECTION_END = datetime(2016, 1, 1)
     water_varname_map = {
         "longitude": "lon",
         "latitude": "lat",
@@ -52,7 +58,7 @@ if __name__ == "__main__":
         advection_start_date=ADVECTION_START,
         timestep=timedelta(hours=1),
         num_timesteps=24 * (ADVECTION_END - ADVECTION_START).days,
-        save_period=24,
+        save_period=4,
     )
 
     water_varname_map.pop("NVEL")

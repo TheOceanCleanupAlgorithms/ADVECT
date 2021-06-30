@@ -125,7 +125,7 @@ def open_vectorfield(
         expected_dims = {"lat", "lon", "time"}
     assert (
         set(vectors.dims) == expected_dims
-    ), f"Unexpected/missing dimension(s) ({vectors.dims})"
+    ), f"Unexpected/missing dimension(s) (Found : {set(vectors.dims)}, Expected : {expected_dims})"
 
     if max(vectors.lon) > 180:
         print("\tRolling longitude domain from [0, 360) to [-180, 180).")

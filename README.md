@@ -43,13 +43,17 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
     To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the project root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
 4. Acquire forcing data
 
-    Instructions for downloading sample forcing data can be found in `examples/README.txt`.
-    
-    At minimum, ADVECTOR's 2D kernel requires surface current data, and the 3D kernel requires whole-ocean current, as well as seawater density.  Often, ocean models only offer their zonal/meridional current velocity to download; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.
+    Instructions for downloading sample forcing data and running example advections on the data can be found in `examples/README.md`.
 
 5. Run example advection
 
-    Once you're all set up with the necessary forcing data according to `examples/README.txt`, you can execute `examples/ECCO_advect_2D.py` and/or `examples/ECCO_advect_3D.py`. 
+    The key entry-point scripts to the ADVECTOR are `src/run_advector_2D.py` and `src/run_advector_3D.py`.  They include documentation on all their respective arguments, along with supplementary documentation files `src/*_specifications.md`; you'll want to read all of these carefully.
+
+    In practice, you can pretty much copy the structure of `examples/ECCO_advect_2D.py` or `examples/ECCO_advect_3D.py`, providing your own data and generating your own source/configfiles.
+
+7. Vertical Velocity Generation
+
+    Note for 3D advector: ocean model output generally only includes the zonal/meridional current velocity; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.
 
 ### Hardware compatability
 At this time, ADVECTOR only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  Running tests is one way to check if your hardware is compatible.  If they fail, you can run this in a python prompt to directly check your driver version:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple
 
@@ -12,7 +13,7 @@ def generate_3D_sourcefile(
     radius_range: Tuple[float, float],
     corey_shape_factor_range: Tuple[float, float],
     depth_range: Tuple[float, float],
-    release_date_range: Tuple[pd.Timestamp, pd.Timestamp],
+    release_date_range: Tuple[datetime, datetime],
     out_path: Path,
     land_mask_path: str = Path(__file__).parent / "land_mask.nc",
 ):
@@ -55,7 +56,7 @@ def generate_3D_sourcefile(
 
 def generate_2D_sourcefile(
     num_particles: int,
-    release_date_range: Tuple[pd.Timestamp, pd.Timestamp],
+    release_date_range: Tuple[datetime, datetime],
     out_path: str,
     land_mask_path: str = Path(__file__).parent / "land_mask.nc",
 ):
@@ -78,7 +79,7 @@ def generate_2D_sourcefile(
 
 def create_2D_source_dataset(
     num_particles: int,
-    release_date_range: Tuple[pd.Timestamp, pd.Timestamp],
+    release_date_range: Tuple[datetime, datetime],
     land_mask_path: str = Path(__file__).parent / "land_mask.nc",
 ):
     rng = np.random.default_rng()
@@ -104,32 +105,3 @@ def create_2D_source_dataset(
     ds = xr.Dataset(p0.set_index("p_id"))
     ds.attrs["institution"] = "The Ocean Cleanup"
     return ds
-
-
-def generate_uniform_3D_sourcefile(out_path):
-    generate_3D_sourcefile(
-        num_particles=5000,
-        density_range=(900, 1100),
-        radius_range=(1e-6, 1e-1),
-        corey_shape_factor_range=(0.15, 1),
-        release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
-        depth_range=(0, 0),
-        out_path=out_path,
-    )
-
-
-def generate_uniform_2D_sourcefile(out_path):
-    generate_2D_sourcefile(
-        num_particles=5000,
-        release_date_range=(pd.Timestamp(2015, 1, 1), pd.Timestamp(2015, 12, 31)),
-        out_path=out_path,
-    )
-
-
-if __name__ == "__main__":
-    generate_uniform_2D_sourcefile(
-        out_path=Path(__file__).parent / "2D_uniform_source_2015.nc"
-    )
-    generate_uniform_3D_sourcefile(
-        out_path=Path(__file__).parent / "3D_uniform_source_2015.nc"
-    )
