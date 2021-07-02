@@ -43,7 +43,6 @@ def run_advector_2D(
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
     windage_coeff: Optional[float] = None,
-    verbose: bool = False,
     show_progress_bar: bool = True,
     water_preprocessor: Optional[Callable] = None,
     wind_preprocessor: Optional[Callable] = None,

@@ -42,17 +42,17 @@ def run_advector_3D(
     num_timesteps: int,
     advection_scheme: str = "taylor2",
     save_period: int = 1,
-    sourcefile_varname_map: dict = None,
-    water_varname_map: dict = None,
-    seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
     u_wind_path: str = None,
     v_wind_path: str = None,
-    wind_varname_map: dict = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
     show_progress_bar: bool = True,
+    water_preprocessor: Optional[Callable] = None,
+    wind_preprocessor: Optional[Callable] = None,
+    seawater_density_preprocessor: Optional[Callable] = None,
+    sourcefile_preprocessor: Optional[Callable] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -117,7 +117,7 @@ def run_advector_3D(
     print("Opening Sourcefiles...")
     p0 = open_3d_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=sourcefile_varname_map,
+        preprocessor=water_preprocessor,
     )
 
     print("Opening Configfile...")
@@ -131,19 +131,19 @@ def run_advector_3D(
         u_path=u_water_path,
         v_path=v_water_path,
         w_path=w_water_path,
-        variable_mapping=water_varname_map,
+        preprocessor=wind_preprocessor,
     )
 
     print("Initializing Seawater Density...")
     forcing_data[Forcing.seawater_density] = open_seawater_density(
         path=seawater_density_path,
-        variable_mapping=seawater_density_varname_map,
+        preprocessor=seawater_density_preprocessor,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
         forcing_data[Forcing.wind] = open_wind(
-            u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
+            u_path=u_wind_path, v_path=v_wind_path, preprocessor=wind_preprocessor
         )
 
     output_writer = OutputWriter3D(
