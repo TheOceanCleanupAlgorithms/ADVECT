@@ -5,6 +5,8 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from preprocessors import rename_var_preprocessor
+
 examples_root = Path(__file__).parent
 sys.path.append(str(examples_root.parent))
 sys.path.append(str(examples_root.parent / "src"))
@@ -42,15 +44,16 @@ if __name__ == "__main__":
         "EVEL": "U",
         "NVEL": "V",
     }
+    wind_varname_map = {"uwnd": "U", "vwnd": "V", "level": "depth"}
     out_paths = run_advector_2D(
         output_directory=str(out_dir),
         sourcefile_path=str(sourcefile_path),
         u_water_path=str(data_root / "EVEL_2015_01*.nc"),
         v_water_path=str(data_root / "NVEL_2015_01*.nc"),
-        water_varname_map=water_varname_map,
+        water_preprocessor=rename_var_preprocessor(water_varname_map),
         u_wind_path=str(data_root / "uwnd.10m.gauss.2015.nc"),
         v_wind_path=str(data_root / "vwnd.10m.gauss.2015.nc"),
-        wind_varname_map={"uwnd": "U", "vwnd": "V", "level": "depth"},  # wind
+        wind_preprocessor=rename_var_preprocessor(wind_varname_map),  # wind
         windage_coeff=0.005,  # fraction of windspeed transferred to particle
         eddy_diffusivity=200,  # m^2 / s
         advection_start_date=ADVECTION_START,
