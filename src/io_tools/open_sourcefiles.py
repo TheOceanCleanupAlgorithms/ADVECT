@@ -5,11 +5,11 @@ import xarray as xr
 
 def open_3d_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: Optional[dict],
+    preprocessor: Optional[Callable],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=variable_mapping,
+        preprocessor=preprocessor,
         expected_vars={
             "p_id",
             "lon",
@@ -25,11 +25,11 @@ def open_3d_sourcefiles(
 
 def open_2d_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: Optional[dict],
+    preprocessor: Optional[Callable],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=variable_mapping,
+        preprocessor=preprocessor,
         expected_vars={"p_id", "lon", "lat", "release_date"},
     )
 
@@ -50,7 +50,7 @@ def open_sourcefiles(
         parallel=True,
         preprocess=preprocessor,
         combine="nested",
-        concat_dim="p_id"
+        concat_dim="p_id",
     )
 
     # make sure there's only one dimension

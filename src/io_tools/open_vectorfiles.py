@@ -58,10 +58,7 @@ def open_seawater_density(path: str, preprocessor: Optional[Callable]) -> xr.Dat
     :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
     return open_vectorfield(
-        paths=[path],
-        varnames={"rho"},
-        keep_depth_dim=True,
-        preprocessor=preprocessor
+        paths=[path], varnames={"rho"}, keep_depth_dim=True, preprocessor=preprocessor
     )
 
 
@@ -75,7 +72,7 @@ def open_wind(u_path: str, v_path: str, preprocessor: Optional[Callable]):
         paths=[u_path, v_path],
         varnames={"U", "V"},
         keep_depth_dim=False,
-        preprocessor=preprocessor
+        preprocessor=preprocessor,
     )
 
 
@@ -93,15 +90,12 @@ def open_vectorfield(
                 data_vars="minimal",
                 parallel=True,
                 concat_dim="time",
+                preprocess=preprocessor,
             )
             for path in paths
         ),
         combine_attrs="override",
     )  # use first file's attributes
-
-    # Apply preprocessor before doing anything else.
-    if preprocessor is not None:
-        vectors = preprocessor(vectors)
 
     vectors = vectors[list(varnames)]  # drop any additional variables
 
