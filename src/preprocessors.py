@@ -71,9 +71,9 @@ def datenum_to_datetimeNS64(datenum):
 def trashtracker_sourcefile_preprocessor(sourcefile: xr.Dataset):
     sourcefile["x"] = np.arange(sourcefile.releaseDate.shape[0], dtype=np.int32)
 
-    sourcefile = sourcefile.rename(
-        {"releaseDate": "release_date", "x": "p_id"}
-    ).drop('id')
+    sourcefile = sourcefile.rename({"releaseDate": "release_date", "x": "p_id"}).drop(
+        "id"
+    )
 
     dates = np.array(
         list(map(datenum_to_datetimeNS64, sourcefile["release_date"].values))
