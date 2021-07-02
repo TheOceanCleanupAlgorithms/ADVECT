@@ -1,8 +1,12 @@
 __pycache__
 examples/MERRA2_wind/MERRA2*
-examples/HYCOM_currents/*.nc
-examples/outputfiles/*tmp
-examples/outputfiles/*.nc
+examples/ncep_ncar_doe_ii/*.nc
+examples/outputfiles/*/
 examples/sourcefiles/*.nc
+examples/configfiles/*.nc
+examples/HYCOM_currents
 .DS_Store
 .idea
+.vscode
+examples/ECCO/ECCO_interp
+examples/ECCO/ECCO_native
