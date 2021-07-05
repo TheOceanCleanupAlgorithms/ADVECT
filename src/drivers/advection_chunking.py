@@ -33,7 +33,7 @@ def chunk_advection_params(
     # it's hard to pre-compute the exact number of chunks necessary that will fit into RAM.  we start with a guess,
     # then if any of the chunks we create don't fit into RAM, we just increment the number of chunks and try again.
     print("\tIncrementing number of chunks until data fits...")
-    num_chunks = math.ceil((field_bytes + output_bytes) / (device_bytes - p0_bytes))
+    num_chunks = 1 
     with tqdm(total=len(out_time) - num_chunks) as pbar:
         while True:
             if num_chunks > len(out_time):
