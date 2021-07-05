@@ -24,6 +24,7 @@ class OutputWriter(ABC):
         forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
+        skip_existing_file_checking: bool = False,
     ):
         """
         :param out_dir: directory to save outputfiles
@@ -37,7 +38,7 @@ class OutputWriter(ABC):
             print(
                 f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!"
             )
-            answer = ""
+            answer = "" if not skip_existing_file_checking else "y"
             while answer not in {"y", "n"}:
                 answer = input("Continue anyway? [y/n]: ")
             if answer == "n":

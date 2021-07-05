@@ -48,6 +48,7 @@ def run_advector_2D(
     water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    skip_existing_file_checking: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -133,6 +134,7 @@ def run_advector_2D(
         forcing_data=forcing_data,
         api_entry="src/run_advector_2D.py::run_advector_2D",
         api_arguments=arguments,
+        skip_existing_file_checking=skip_existing_file_checking,
     )
 
     print("---COMMENCING ADVECTION---")
