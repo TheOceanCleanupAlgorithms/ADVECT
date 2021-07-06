@@ -9,7 +9,10 @@ from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(
-    u_path: str, v_path: str, w_path: str, preprocessor: Optional[Callable]
+    u_path: str,
+    v_path: str,
+    w_path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
@@ -38,7 +41,11 @@ def open_3d_currents(
     )
 
 
-def open_2d_currents(u_path: str, v_path: str, preprocessor: Optional[Callable]):
+def open_2d_currents(
+    u_path: str,
+    v_path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
+):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
     :param v_path: wildcard path to the meridional vector files.
@@ -52,7 +59,10 @@ def open_2d_currents(u_path: str, v_path: str, preprocessor: Optional[Callable])
     )
 
 
-def open_seawater_density(path: str, preprocessor: Optional[Callable]) -> xr.Dataset:
+def open_seawater_density(
+    path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
+) -> xr.Dataset:
     """
     :param path: wildcard path to the seawater density files.  Fed to glob.glob.
     :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
@@ -62,7 +72,9 @@ def open_seawater_density(path: str, preprocessor: Optional[Callable]) -> xr.Dat
     )
 
 
-def open_wind(u_path: str, v_path: str, preprocessor: Optional[Callable]):
+def open_wind(
+    u_path: str, v_path: str, preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]]
+):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
     :param v_path: wildcard path to the meridional vector files.
@@ -80,7 +92,7 @@ def open_vectorfield(
     paths: List[str],
     varnames: Set[str],
     keep_depth_dim: bool,
-    preprocessor: Optional[Callable],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     print("\tOpening NetCDF files...")
     vectors = xr.merge(
@@ -89,13 +101,13 @@ def open_vectorfield(
                 sorted(glob.glob(path)),
                 data_vars="minimal",
                 parallel=True,
-                concat_dim="time",
-                preprocess=preprocessor,
             )
             for path in paths
         ),
-        combine_attrs="override",
-    )  # use first file's attributes
+        combine_attrs="override",  # use first file's attributes
+    )
+    if preprocessor is not None:
+        vectors = preprocessor(vectors)
 
     vectors = vectors[list(varnames)]  # drop any additional variables
 
@@ -107,9 +119,7 @@ def open_vectorfield(
         if not np.all(np.diff(vectors.depth) >= 0):
             print("\tDepth dimension not sorted.  Sorting..")
             with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-                vectors = vectors.sortby(
-                    "depth", ascending=True
-                )  # depth required to be ascending sorted
+                vectors = vectors.sortby("depth", ascending=True)
         expected_dims = {"lat", "lon", "time", "depth"}
     else:
         if "depth" in vectors.dims:

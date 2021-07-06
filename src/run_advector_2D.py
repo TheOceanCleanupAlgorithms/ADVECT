@@ -16,6 +16,7 @@ import datetime
 from pathlib import Path
 from typing import Callable, Optional, Tuple, List
 
+import xarray as xr
 from dask.diagnostics import ProgressBar
 
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
@@ -44,9 +45,9 @@ def run_advector_2D(
     v_wind_path: Optional[str] = None,
     windage_coeff: Optional[float] = None,
     show_progress_bar: bool = True,
-    water_preprocessor: Optional[Callable] = None,
-    wind_preprocessor: Optional[Callable] = None,
-    sourcefile_preprocessor: Optional[Callable] = None,
+    water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.

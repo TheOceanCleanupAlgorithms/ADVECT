@@ -5,7 +5,7 @@ import xarray as xr
 
 def open_3d_sourcefiles(
     sourcefile_path: str,
-    preprocessor: Optional[Callable],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
@@ -25,7 +25,7 @@ def open_3d_sourcefiles(
 
 def open_2d_sourcefiles(
     sourcefile_path: str,
-    preprocessor: Optional[Callable],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
@@ -36,7 +36,7 @@ def open_2d_sourcefiles(
 
 def open_sourcefiles(
     sourcefile_path: str,
-    preprocessor: Optional[Callable],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
     expected_vars: Set[str],
 ) -> xr.Dataset:
     """
