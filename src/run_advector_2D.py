@@ -87,13 +87,14 @@ def run_advector_2D(
     :param u_wind_path: wildcard path to zonal 10-meter wind files; see 'u_water_path'.
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
-    :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_coeff: fraction of wind speed that is transferred to particle.
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
         Note: this value has a profound impact on results.
-    :param show_progress_bar: whether to show progress bars for dask operations:param water_preprocessor: func to call on the xarray water dataset to perform operation before loading in advector, such as renaming variables.
-    :param wind_preprocessor: func to call on the xarray wind dataset to perform operation before loading in advector, such as renaming variables.
-    :param sourcefile_preprocessor: func to call on each xarray sourcefile dataset to perform operation before merging, such as renaming variables.
+    :param show_progress_bar: whether to show progress bars for dask operations
+    :param water_preprocessor: function to manipulate the water data just after loading.
+        After preprocessor is applied, data must be compliant with forcing_data_specifications.md
+    :param wind_preprocessor: see water_preprocessor
+    :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:

@@ -90,7 +90,7 @@ Encoded as a netcdf dataset, and must adhere to the following specifications:
 
 
 ## Notes:
-* Non-standard names on any dimension or variable are supported via name mappings passed into the top level APIs, `run_advector_2d.py` and `run_avector_3d.py`.
+* If your dataset is non-compliant, you can provide a preprocessor to the top level APIs, `run_advector_2d.py` and `run_avector_3d.py`.  A preprocessor is just a function which takes/returns a xarray.Dataset, and it is applied immediately upon opening the datasets.
 * Any "packed" variables must have the attributes `scale_factor`, `add_offset`, and `_FillValue` in order to be properly unpacked.  See the [netcdf conventions](https://www.unidata.ucar.edu/software/netcdf/docs/attribute_conventions.html) for more details.
 * If longitude domain is detected as [0, 360), it will be internally converted to [-180, 180).  However, this is computationally expensive and will slow down data loading.
 * If detected positive-down, any depth dimensions will be automatically converted to positive-up.

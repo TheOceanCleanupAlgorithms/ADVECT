@@ -96,6 +96,11 @@ def run_advector_3D(
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
     :param show_progress_bar: whether to show progress bars for dask operations
+    :param water_preprocessor: function to manipulate the water data just after loading.
+        After preprocessor is applied, data must be compliant with forcing_data_specifications.md
+    :param wind_preprocessor: see water_preprocessor
+    :param seawater_density_preprocessor: see water_preprocessor
+    :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:

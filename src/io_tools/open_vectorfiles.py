@@ -107,6 +107,7 @@ def open_vectorfield(
         combine_attrs="override",  # use first file's attributes
     )
     if preprocessor is not None:
+        print("\tAppling preprocessor...")
         vectors = preprocessor(vectors)
 
     vectors = vectors[list(varnames)]  # drop any additional variables
