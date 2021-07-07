@@ -1,5 +1,5 @@
 import glob
-from typing import Optional, Set, List
+from typing import Optional, Set, List, Callable
 
 import dask
 import numpy as np
@@ -9,19 +9,22 @@ from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(
-    u_path: str, v_path: str, w_path: str, variable_mapping: Optional[dict]
+    u_path: str,
+    v_path: str,
+    w_path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
     :param v_path: wildcard path to the meridional vector files.
     :param w_path: wildcard path to the vertical vector files.
-    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
     currents = open_vectorfield(
         paths=[u_path, v_path, w_path],
         varnames={"U", "V", "W"},
-        variable_mapping=variable_mapping,
         keep_depth_dim=True,
+        preprocessor=preprocessor,
     )
     # encode the model domain, taken as where all the current components are non-null, as bathymetry
     print("Calculating bathymetry of current dataset...")
@@ -38,58 +41,59 @@ def open_3d_currents(
     )
 
 
-def open_2d_currents(u_path: str, v_path: str, variable_mapping: Optional[dict]):
+def open_2d_currents(
+    u_path: str,
+    v_path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
+):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
     :param v_path: wildcard path to the meridional vector files.
-    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
     return open_vectorfield(
         paths=[u_path, v_path],
         varnames={"U", "V"},
-        variable_mapping=variable_mapping,
         keep_depth_dim=False,
+        preprocessor=preprocessor,
     )
 
 
-def open_seawater_density(path: str, variable_mapping: Optional[dict]) -> xr.Dataset:
+def open_seawater_density(
+    path: str,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
+) -> xr.Dataset:
     """
     :param path: wildcard path to the seawater density files.  Fed to glob.glob.
-    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
     return open_vectorfield(
-        paths=[path],
-        varnames={"rho"},
-        variable_mapping=variable_mapping,
-        keep_depth_dim=True,
+        paths=[path], varnames={"rho"}, keep_depth_dim=True, preprocessor=preprocessor
     )
 
 
-def open_wind(u_path: str, v_path: str, variable_mapping: Optional[dict]):
+def open_wind(
+    u_path: str, v_path: str, preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]]
+):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
     :param v_path: wildcard path to the meridional vector files.
-    :param variable_mapping: mapping from names in vector file to advector standard variable names
+    :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
     return open_vectorfield(
         paths=[u_path, v_path],
         varnames={"U", "V"},
-        variable_mapping=variable_mapping,
         keep_depth_dim=False,
+        preprocessor=preprocessor,
     )
 
 
 def open_vectorfield(
     paths: List[str],
     varnames: Set[str],
-    variable_mapping: Optional[dict],
     keep_depth_dim: bool,
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
-    if variable_mapping is None:
-        variable_mapping = {}
-    concat_dim = next(
-        (key for key, value in variable_mapping.items() if value == "time"), "time"
-    )
     print("\tOpening NetCDF files...")
     vectors = xr.merge(
         (
@@ -97,13 +101,15 @@ def open_vectorfield(
                 sorted(glob.glob(path)),
                 data_vars="minimal",
                 parallel=True,
-                concat_dim=concat_dim,
             )
             for path in paths
         ),
-        combine_attrs="override",
-    )  # use first file's attributes
-    vectors = vectors.rename(variable_mapping)
+        combine_attrs="override",  # use first file's attributes
+    )
+    if preprocessor is not None:
+        print("\tAppling preprocessor...")
+        vectors = preprocessor(vectors)
+
     vectors = vectors[list(varnames)]  # drop any additional variables
 
     if keep_depth_dim:
@@ -114,9 +120,7 @@ def open_vectorfield(
         if not np.all(np.diff(vectors.depth) >= 0):
             print("\tDepth dimension not sorted.  Sorting..")
             with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-                vectors = vectors.sortby(
-                    "depth", ascending=True
-                )  # depth required to be ascending sorted
+                vectors = vectors.sortby("depth", ascending=True)
         expected_dims = {"lat", "lon", "time", "depth"}
     else:
         if "depth" in vectors.dims:

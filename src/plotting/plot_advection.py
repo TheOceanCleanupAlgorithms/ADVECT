@@ -11,25 +11,19 @@ import xarray as xr
 from tqdm import tqdm
 
 
-def plot_ocean_trajectories(
-    outputfile_path: str, current_path: str, current_varname_map: dict = None
-):
+def plot_ocean_trajectories(outputfile_path: str):
+    land_mask = xr.open_dataset(outputfile_path, group="model_domain").land_mask
     fig, ax = plt.subplots(figsize=[14, 8])
 
-    # show current data grid
-    grid = (
-        xr.open_dataset(current_path).rename(current_varname_map).U.squeeze().isnull()
+    xspacing = np.diff(land_mask.lon).mean()
+    yspacing = np.diff(land_mask.lat).mean()
+    lon_edges = np.append(
+        (land_mask.lon - xspacing / 2), land_mask.lon[-1] + xspacing / 2
     )
-    if "depth" in grid.dims:
-        grid = grid.sel(depth=0, method="nearest")
-    if grid.lon.max() > 180:
-        grid["lon"] = ((grid.lon + 180) % 360) - 180
-        grid = grid.sortby("lon")
-    xspacing = np.diff(grid.lon).mean()
-    yspacing = np.diff(grid.lat).mean()
-    lon_edges = np.append((grid.lon - xspacing / 2), grid.lon[-1] + xspacing / 2)
-    lat_edges = np.append((grid.lat - yspacing / 2), grid.lat[-1] + yspacing / 2)
-    plt.pcolormesh(lon_edges, lat_edges, ~grid, cmap="gray")
+    lat_edges = np.append(
+        (land_mask.lat - yspacing / 2), land_mask.lat[-1] + yspacing / 2
+    )
+    plt.pcolormesh(lon_edges, lat_edges, ~land_mask, cmap="gray")
 
     # plot trajectories
     P = xr.open_dataset(outputfile_path)

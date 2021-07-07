@@ -5,6 +5,8 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import xarray as xr
+
 examples_root = Path(__file__).parent
 sys.path.append(str(examples_root.parent))
 sys.path.append(str(examples_root.parent / "src"))
@@ -35,22 +37,29 @@ if __name__ == "__main__":
     out_dir = output_root / sourcefile_path.stem
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    water_varname_map = {
-        "longitude": "lon",
-        "latitude": "lat",
-        "Z": "depth",
-        "EVEL": "U",
-        "NVEL": "V",
-    }
+    def preprocess_currents(currents: xr.Dataset) -> xr.Dataset:
+        return currents.rename(
+            {
+                "longitude": "lon",
+                "latitude": "lat",
+                "Z": "depth",
+                "EVEL": "U",
+                "NVEL": "V",
+            }
+        )
+
+    def preprocess_wind(wind: xr.Dataset) -> xr.Dataset:
+        return wind.rename({"uwnd": "U", "vwnd": "V", "level": "depth"})
+
     out_paths = run_advector_2D(
         output_directory=str(out_dir),
         sourcefile_path=str(sourcefile_path),
         u_water_path=str(data_root / "EVEL_2015_01*.nc"),
         v_water_path=str(data_root / "NVEL_2015_01*.nc"),
-        water_varname_map=water_varname_map,
+        water_preprocessor=preprocess_currents,
         u_wind_path=str(data_root / "uwnd.10m.gauss.2015.nc"),
         v_wind_path=str(data_root / "vwnd.10m.gauss.2015.nc"),
-        wind_varname_map={"uwnd": "U", "vwnd": "V", "level": "depth"},  # wind
+        wind_preprocessor=preprocess_wind,
         windage_coeff=0.005,  # fraction of windspeed transferred to particle
         eddy_diffusivity=200,  # m^2 / s
         advection_start_date=ADVECTION_START,
@@ -59,7 +68,6 @@ if __name__ == "__main__":
         save_period=4,
     )
 
-    water_varname_map.pop("NVEL")
     for path in out_paths:
         print("Animating trajectories...")
         animate_ocean_advection(
@@ -67,8 +75,4 @@ if __name__ == "__main__":
             save=False,
         )
         print("Plotting trajectories...")
-        plot_ocean_trajectories(
-            path,
-            str(data_root / "EVEL_2015_01_01.nc"),
-            current_varname_map=water_varname_map,
-        )
+        plot_ocean_trajectories(outputfile_path=path)

@@ -14,8 +14,9 @@ See src/outputfile_specifications.md for detailed description of the outputfile 
 
 import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Callable, Optional, Tuple, List
 
+import xarray as xr
 from dask.diagnostics import ProgressBar
 
 from drivers.chunked_kernel_driver import execute_chunked_kernel_computation
@@ -38,15 +39,15 @@ def run_advector_2D(
     eddy_diffusivity: float = 0,
     advection_scheme: str = "taylor2",
     save_period: int = 1,
-    sourcefile_varname_map: Optional[dict] = None,
-    water_varname_map: Optional[dict] = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
     u_wind_path: Optional[str] = None,
     v_wind_path: Optional[str] = None,
-    wind_varname_map: Optional[dict] = None,
     windage_coeff: Optional[float] = None,
     show_progress_bar: bool = True,
+    water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -73,9 +74,6 @@ def run_advector_2D(
         "eulerian" is the forward Euler method.
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
-    :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
-    :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -89,11 +87,14 @@ def run_advector_2D(
     :param u_wind_path: wildcard path to zonal 10-meter wind files; see 'u_water_path'.
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
-    :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_coeff: fraction of wind speed that is transferred to particle.
         If u_wind_path is specified, i.e., wind is enabled, this value must be specified.
         Note: this value has a profound impact on results.
     :param show_progress_bar: whether to show progress bars for dask operations
+    :param water_preprocessor: function to manipulate the water data just after loading.
+        After preprocessor is applied, data must be compliant with forcing_data_specifications.md
+    :param wind_preprocessor: see water_preprocessor
+    :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
@@ -110,20 +111,19 @@ def run_advector_2D(
     print("---INITIALIZING DATASETS---")
     print("Opening Sourcefiles...")
     p0 = open_2d_sourcefiles(
-        sourcefile_path=sourcefile_path,
-        variable_mapping=sourcefile_varname_map,
+        sourcefile_path=sourcefile_path, preprocessor=sourcefile_preprocessor
     )
 
     forcing_data = {}
     print("Initializing Ocean Current...")
     forcing_data[Forcing.current] = open_2d_currents(
-        u_path=u_water_path, v_path=v_water_path, variable_mapping=water_varname_map
+        u_path=u_water_path, v_path=v_water_path, preprocessor=water_preprocessor
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
         forcing_data[Forcing.wind] = open_wind(
-            u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
+            u_path=u_wind_path, v_path=v_wind_path, preprocessor=wind_preprocessor
         )
 
     output_writer = OutputWriter2D(
