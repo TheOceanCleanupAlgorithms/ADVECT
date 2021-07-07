@@ -15,7 +15,7 @@ See src/outputfile_specifications.md for detailed description of the outputfile 
 
 import datetime
 from pathlib import Path
-from typing import Tuple, Optional, Callable, List
+from typing import Tuple, Optional, Union, Callable, List
 
 import xarray as xr
 from dask.diagnostics import ProgressBar
@@ -34,10 +34,10 @@ def run_advector_3D(
     sourcefile_path: str,
     configfile_path: str,
     output_directory: str,
-    u_water_path: str,
-    v_water_path: str,
-    w_water_path: str,
-    seawater_density_path: str,
+    u_water_path: Union[List[str], str],
+    v_water_path: Union[List[str], str],
+    w_water_path: Union[List[str], str],
+    seawater_density_path: Union[List[str], str],
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -45,8 +45,8 @@ def run_advector_3D(
     save_period: int = 1,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
-    u_wind_path: str = None,
-    v_wind_path: str = None,
+    u_wind_path: Optional[Union[List[str], str]] = None,
+    v_wind_path: Optional[Union[List[str], str]] = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
     show_progress_bar: bool = True,

@@ -1,5 +1,5 @@
 import glob
-from typing import Optional, Set, List, Callable
+from typing import Optional, Set, List, Union, Callable
 
 import dask
 import numpy as np
@@ -9,9 +9,9 @@ from io_tools.create_bathymetry import create_bathymetry_from_land_mask
 
 
 def open_3d_currents(
-    u_path: str,
-    v_path: str,
-    w_path: str,
+    u_path: Union[List[str], str],
+    v_path: Union[List[str], str],
+    w_path: Union[List[str], str],
     preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ):
     """
@@ -42,8 +42,8 @@ def open_3d_currents(
 
 
 def open_2d_currents(
-    u_path: str,
-    v_path: str,
+    u_path: Union[List[str], str],
+    v_path: Union[List[str], str],
     preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ):
     """
@@ -60,7 +60,7 @@ def open_2d_currents(
 
 
 def open_seawater_density(
-    path: str,
+    path: Union[List[str], str],
     preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     """
@@ -73,7 +73,9 @@ def open_seawater_density(
 
 
 def open_wind(
-    u_path: str, v_path: str, preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]]
+    u_path: Union[List[str], str],
+    v_path: Union[List[str], str],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ):
     """
     :param u_path: wildcard path to the zonal vector files.  Fed to glob.glob.
@@ -89,20 +91,29 @@ def open_wind(
 
 
 def open_vectorfield(
-    paths: List[str],
+    paths: List[Union[List[str], str]],
     varnames: Set[str],
     keep_depth_dim: bool,
     preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     print("\tOpening NetCDF files...")
+
+    unglobbed_paths = []
+    for path in paths:
+        if type(path) == list:
+            for subpath in path:
+                unglobbed_paths.append(sorted(glob.glob(subpath)))
+        else:
+            unglobbed_paths.append(sorted(glob.glob(path)))
+
     vectors = xr.merge(
         (
             xr.open_mfdataset(
-                sorted(glob.glob(path)),
+                path,
                 data_vars="minimal",
                 parallel=True,
             )
-            for path in paths
+            for path in unglobbed_paths
         ),
         combine_attrs="override",  # use first file's attributes
     )
