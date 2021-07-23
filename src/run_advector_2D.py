@@ -48,7 +48,7 @@ def run_advector_2D(
     water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
-    skip_existing_file_checking: bool = False,
+    overwrite_existing_files: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -96,6 +96,8 @@ def run_advector_2D(
         After preprocessor is applied, data must be compliant with forcing_data_specifications.md
     :param wind_preprocessor: see water_preprocessor
     :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
+    :param overwrite_existing_files: flag to skip warning prompts and clobber existing files,
+        useful for running model with no possibility of user input
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
@@ -134,7 +136,7 @@ def run_advector_2D(
         forcing_data=forcing_data,
         api_entry="src/run_advector_2D.py::run_advector_2D",
         api_arguments=arguments,
-        skip_existing_file_checking=skip_existing_file_checking,
+        overwrite_existing_files=overwrite_existing_files,
     )
 
     print("---COMMENCING ADVECTION---")

@@ -24,7 +24,7 @@ class OutputWriter(ABC):
         forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
-        skip_existing_file_checking: bool = False,
+        overwrite_existing_files: bool,
     ):
         """
         :param out_dir: directory to save outputfiles
@@ -38,7 +38,7 @@ class OutputWriter(ABC):
             print(
                 f"DANGER: There are already files in '{out_dir}'! Contents may be overwritten!"
             )
-            answer = "" if not skip_existing_file_checking else "y"
+            answer = "" if not overwrite_existing_files else "y"
             while answer not in {"y", "n"}:
                 answer = input("Continue anyway? [y/n]: ")
             if answer == "n":
@@ -230,6 +230,7 @@ class OutputWriter3D(OutputWriter):
         forcing_data: Dict[Forcing, xr.Dataset],
         api_entry: str,
         api_arguments: dict,
+        overwrite_existing_files: bool,
     ):
         """
         :param configfile: configfile, to be copied to outputfiles
@@ -242,6 +243,7 @@ class OutputWriter3D(OutputWriter):
             forcing_data=forcing_data,
             api_entry=api_entry,
             api_arguments=api_arguments,
+            overwrite_existing_files=overwrite_existing_files,
         )
         self.configfile = configfile
 

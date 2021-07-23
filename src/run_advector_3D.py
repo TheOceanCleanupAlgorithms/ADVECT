@@ -54,6 +54,7 @@ def run_advector_3D(
     wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     seawater_density_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    overwrite_existing_files: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -101,6 +102,8 @@ def run_advector_3D(
     :param wind_preprocessor: see water_preprocessor
     :param seawater_density_preprocessor: see water_preprocessor
     :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
+    :param overwrite_existing_files: flag to skip warning prompts and clobber existing files,
+        useful for running model with no possibility of user input
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
@@ -155,6 +158,7 @@ def run_advector_3D(
         forcing_data=forcing_data,
         api_entry="src/run_advector_3D.py::run_advector_3D",
         api_arguments=arguments,
+        overwrite_existing_files=overwrite_existing_files,
     )
 
     print("---COMMENCING ADVECTION---")

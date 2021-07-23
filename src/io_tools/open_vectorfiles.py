@@ -98,14 +98,6 @@ def open_vectorfield(
 ) -> xr.Dataset:
     print("\tOpening NetCDF files...")
 
-    unglobbed_paths = []
-    for path in paths:
-        if type(path) == list:
-            for subpath in path:
-                unglobbed_paths.append(sorted(glob.glob(subpath)))
-        else:
-            unglobbed_paths.append(sorted(glob.glob(path)))
-
     vectors = xr.merge(
         (
             xr.open_mfdataset(
@@ -113,7 +105,7 @@ def open_vectorfield(
                 data_vars="minimal",
                 parallel=True,
             )
-            for path in unglobbed_paths
+            for path in paths
         ),
         combine_attrs="override",  # use first file's attributes
     )

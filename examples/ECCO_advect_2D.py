@@ -66,6 +66,7 @@ if __name__ == "__main__":
         timestep=timedelta(hours=1),
         num_timesteps=24 * (ADVECTION_END - ADVECTION_START).days,
         save_period=4,
+        overwrite_existing_files=True,
     )
 
     for path in out_paths:
