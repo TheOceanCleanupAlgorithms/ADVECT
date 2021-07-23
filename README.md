@@ -1,5 +1,5 @@
 # ADVECTOR V1.0
-The ADVECTOR is a whole-ocean marine debris transport model which is built to handle high throughput and massive datasets.  It models the transport of debris based on its size, shape, and density, and simulates basic physical processes including 3D ocean current-driven advection, wind-driven drift, wind-driven near-surface vertical mixing, buoyancy-driven vertical transport, and eddy-driven diffusion.  It automatically processes forcing datasets arbitrarily larger than memory capacity, and supports fully parallelized computation on CPUs and GPUs via OpenCL.
+The ADVECTOR is a whole-ocean marine debris transport model which is built to handle millions of particles and terabytes of data.  It models the transport of debris based on its size, shape, and density, and simulates basic physical processes including 3D ocean current-driven advection, wind-driven drift, wind-driven near-surface vertical mixing, buoyancy-driven vertical transport, and eddy-driven diffusion.  It automatically processes forcing datasets arbitrarily larger than memory capacity, and supports fully parallelized computation on CPUs and GPUs via OpenCL.
 
 ## Model Description
 The ADVECTOR contains solvers (kernels) for two domains: ocean surface, and whole-ocean.
@@ -7,7 +7,7 @@ The ADVECTOR contains solvers (kernels) for two domains: ocean surface, and whol
 * 3D kernel: model domain is the whole oceans, from surface to bathymetry, and physical processes depend on the size/shape/density of debris.
 
 ### 2D Kernel
-Simulations using the 2D kernel can be run via `src/run_advector_2D.py`.  Particles are released at some location in space and time, and are transported according to the following physical processes:
+Each particle is released at some location in space and time.  Upon release, each particle is transported according to the following physical processes:
 #### Surface ocean current-driven advection
 Particles are transported in a time-evolving 2D velocity field of surface ocean currents, which the user must provide.  The particles are advected according to one of two schemes: forward-Euler, or a second-order Taylor-expansion scheme which corrects for the outward-drift error the Euler method experiences in a curved field.
 #### Wind-driven drift
@@ -18,7 +18,7 @@ Finally, the user may specify a constant eddy diffusivity, which will add random
 The model domain only includes the surface waters of the ocean (as defined by the non-null region in the ocean current vectorfield); particles cannot leave this domain, and thus the model does not include beaching.  Instead, when particles are pushed against a coastline, their onshore displacement component is cropped to keep them in the model domain, generally resulting in a lateral displacement, as if the boundary was frictionless.
 
 ### 3D Kernel
-Simulations using the 3D kernel can be run via `src/run_advector_3D.py`.  Each particle is initialized with a size, shape, density, release date, and release location.  Upon release, particles are transported according to the following physical processes:
+Each particle is initialized with a size, shape, density, release date, and release location.  Upon release, particles are transported according to the following physical processes:
 #### 3D ocean current-driven advection
 Particles are transported according to a time-evolving 3D velocity field of ocean currents, which the user provides.  The particles are advected according to one of two schemes: forward-Euler, or a 3D adaptation of the second-order Taylor-expansion scheme from the 2D kernel.
 #### Buoyancy-driven transport
@@ -34,26 +34,38 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
 
 ## Installation Instructions
 1. In a terminal, clone this repository and navigate to its root.
-1. Install ADVECTOR as a package
-    ```
-   pip install git+ssh://git@github.com/TheOceanCleanupAlgorithms/ADVECTOR.git@pip_install
+2. Install ADVECTOR as a package by running
+   ```
+   pip install .
    ```
 3. (Optional) Run tests
 
-    To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the project root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
+    To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the repository root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
 4. Acquire forcing data
 
-    Instructions for downloading sample forcing data and running example advections on the data can be found in `examples/README.md`.
-
+    Run ```ADVECTOR_download_sample_data``` and follow the prompts.
 5. Run example advection
 
-    The key entry-point scripts to the ADVECTOR are `src/run_advector_2D.py` and `src/run_advector_3D.py`.  They include documentation on all their respective arguments, along with supplementary documentation files `src/*_specifications.md`; you'll want to read all of these carefully.
+    Run ```ADVECTOR_examples_2D``` or ```ADVECTOR_examples_3D``` and follow the prompts to see it in action!
+    
+## Using ADVECTOR in your own programs
 
-    In practice, you can pretty much copy the structure of `examples/ECCO_advect_2D.py` or `examples/ECCO_advect_3D.py`, providing your own data and generating your own source/configfiles.
+The key entry-point scripts to the ADVECTOR are `ADVECTOR/run_advector_2D.py` and `ADVECTOR/run_advector_3D.py`.  Those files include documentation on all their respective arguments.  There are also supplementary documentation files `*_specifications.md`; you'll want to read all of these carefully to understand what you can/can't feed into the ADVECTOR, and what it'll give you back.
 
-7. Vertical Velocity Generation
+In short, your script will look something like:
+```
+from ADVECTOR import run_advector_2D  # or run_advector_3D
+outputfile_paths = run_advector_2D(<many arguments here>)
+```
+That's it!
 
-    Note for 3D advector: ocean model output generally only includes the zonal/meridional current velocity; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.
+If you need information on the arguments and don't want to refer directly to the source code, just open an interactive python prompt, import the runner as above, then run `help(run_advector_2D)`.
+
+As a general rule, you can pretty much copy the structure of `ADVECTOR/examples/ECCO_advect_2D.py` or `ADVECTOR/examples/ECCO_advect_3D.py`, providing your own data and generating your own source/configfiles.  The examples exist for your reference!
+
+## Extra: the INTEGRATOR
+
+3D ocean model output generally only includes the zonal/meridional current velocity; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.  Currently it doesn't install via pip, so you'll need to clone this repository and run the files directly.
 
 ### Hardware compatability
 At this time, ADVECTOR only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  Running tests is one way to check if your hardware is compatible.  If they fail, you can run this in a python prompt to directly check your driver version:

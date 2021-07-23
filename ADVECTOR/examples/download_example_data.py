@@ -9,7 +9,7 @@ from data_downloaders.download_10m_wind import download_and_interpolate_ncep_nca
 from data_downloaders.get_ECCO_credentials import get_ECCO_credentials
 from data_downloaders.download_and_process_density import download_and_process_density
 
-if __name__ == "__main__":
+def main():
     data_root = Path(input("Input directory to download data into: "))
     data_root.mkdir(exist_ok=True)
     print("")
@@ -33,3 +33,7 @@ if __name__ == "__main__":
 
     print("")
     print("All done!")
+
+
+if __name__ == "__main__":
+    main()
