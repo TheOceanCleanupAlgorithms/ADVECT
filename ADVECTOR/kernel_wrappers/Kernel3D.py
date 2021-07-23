@@ -20,6 +20,9 @@ from ..kernel_wrappers.Field3D import (
 from ..kernel_wrappers.Kernel import Kernel, KernelConfig
 
 
+KERNEL3D_SOURCE = open(Path(__file__).parent.parent / "kernels/kernel_3d.cl").read()
+
+
 @dataclass
 class Kernel3DConfig(KernelConfig):
     """Configuration for 3D Kernel.
@@ -288,5 +291,5 @@ class Kernel3D(Kernel):
             )
 
     @property
-    def _kernel_source_path(self):
-        return Path(__file__).parent.parent / "kernels/kernel_3d.cl"
+    def _kernel_source_code(self) -> str:
+        return KERNEL3D_SOURCE

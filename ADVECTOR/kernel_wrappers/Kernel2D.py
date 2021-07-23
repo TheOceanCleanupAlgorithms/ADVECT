@@ -14,6 +14,9 @@ from ..kernel_wrappers.Field3D import Field3D, create_empty_2d_field, buffer_fro
 from ..kernel_wrappers.Kernel import Kernel, KernelConfig
 
 
+KERNEL2D_SOURCE = open(Path(__file__).parent.parent / "kernels/kernel_2d.cl").read()
+
+
 @dataclass
 class Kernel2DConfig(KernelConfig):
     """Configuration for 2D Kernel.
@@ -196,5 +199,5 @@ class Kernel2D(Kernel):
         assert self.config.advection_scheme.value in (0, 1)
 
     @property
-    def _kernel_source_path(self):
-        return Path(__file__).parent.parent / "kernels/kernel_2d.cl"
+    def _kernel_source_code(self) -> str:
+        return KERNEL2D_SOURCE

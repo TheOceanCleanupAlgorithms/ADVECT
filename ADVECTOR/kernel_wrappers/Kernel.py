@@ -48,9 +48,9 @@ class Kernel(ABC):
         # create opencl objects
         self.context = context
         self.queue = cl.CommandQueue(context)
-        self.cl_kernel = cl.Program(
-            context, open(self._kernel_source_path).read()
-        ).build(options=["-I", str(self._model_core_path)])
+        self.cl_kernel = cl.Program(context, self._kernel_source_code).build(
+            options=["-I", str(self._model_core_path)]
+        )
 
         # some handy timers
         self.data_load_time = 0
@@ -63,7 +63,7 @@ class Kernel(ABC):
 
     @property
     @abstractmethod
-    def _kernel_source_path(self):
+    def _kernel_source_code(self) -> str:
         pass
 
     @abstractmethod
