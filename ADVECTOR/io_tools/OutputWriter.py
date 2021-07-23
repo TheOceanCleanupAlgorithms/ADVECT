@@ -6,7 +6,7 @@ import netCDF4
 import numpy as np
 import xarray as xr
 
-from .. import _version
+import ADVECTOR
 from ..enums.forcings import Forcing
 from ..kernel_wrappers.kernel_constants import EXIT_CODES
 
@@ -102,7 +102,7 @@ class OutputWriter(ABC):
                 f"{self._group_names}."
             )
             ds.institution = "The Ocean Cleanup"
-            ds.source = f"ADVECTOR Version {_version.__version__}"
+            ds.source = f"ADVECTOR Version {ADVECTOR.__version__}"
             ds.arguments = (
                 f"The arguments of the call to {self.api_entry} which produced this "
                 f"file are: {str(self.api_arguments)}"

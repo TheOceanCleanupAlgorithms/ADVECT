@@ -13,12 +13,8 @@ from ADVECTOR.run_advector_3D import run_advector_3D
 
 
 def main():
-    data_root = Path(
-        "/Users/dklink/data_science/metocean_data/ADVECTOR_sample_data"
-    )  # input("Input path to example data directory: "))
-    output_root = Path(
-        "/Users/dklink/Desktop/outputfiles"
-    )  # input("Input path to directory for outputfiles: "))
+    data_root = Path(input("Input path to example data directory: "))
+    output_root = Path(input("Input path to directory for outputfiles: "))
     output_root.mkdir(exist_ok=True)
 
     ADVECTION_START = datetime(2015, 1, 1)
