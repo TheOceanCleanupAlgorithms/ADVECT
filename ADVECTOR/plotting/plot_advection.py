@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import matplotlib.animation as manimation
@@ -10,11 +11,14 @@ import xarray as xr
 from tqdm import tqdm
 
 
-def plot_ocean_trajectories(
-    outputfile_path: str, current_path: str, current_varname_map: dict = None
-):
+def plot_ocean_trajectories(outputfile_path: str):
+    """
+    :param outputfile_path: must be a 2D outputfile
+    """
+    land_mask = xr.open_dataarray(outputfile_path, group="model_domain")
     fig, ax = plt.subplots(figsize=[14, 8])
-    plot_grid(ax=ax, current_path=current_path, current_varname_map=current_varname_map)
+
+    plot_grid(land_mask=land_mask, ax=ax)
 
     # plot trajectories
     P = xr.open_dataset(outputfile_path)
@@ -24,15 +28,18 @@ def plot_ocean_trajectories(
 
 def animate_ocean_advection(
     outputfile_path: str,
-    current_path: str,
-    current_varname_map: dict = None,
     save: bool = False,
     colorbar_depth=None,
 ):
     P = xr.open_dataset(outputfile_path)
-    # plot le advection
     fig, ax = plt.subplots(figsize=[14, 8])
-    plot_grid(ax=ax, current_path=current_path, current_varname_map=current_varname_map)
+
+    # plot the land mask
+    if "depth" in P.variables:
+        land_mask = xr.open_dataarray(outputfile_path, group="model_domain") == 0
+    else:
+        land_mask = xr.open_dataarray(outputfile_path, group="model_domain")
+    plot_grid(land_mask=land_mask, ax=ax)
 
     # initialize the scatter plot with dummy data.
     trunc_winter = mcol.ListedColormap(cm.winter(np.linspace(0, 0.8, 100)))
@@ -92,22 +99,19 @@ def animate_ocean_advection_to_disk(
             writer.grab_frame()
 
     plt.close()
-    print("Opening Movie...")
-    subprocess.call(["open", outfile])  # this won't work except on mac.
+    print(f"Movie saved at {outfile}.")
+    if sys.platform == "darwin":
+        print("Opening Movie...")
+        subprocess.call(["open", outfile])  # this won't work except on mac
 
 
-def plot_grid(ax, current_path: str, current_varname_map: dict = None):
-    # show current data grid
-    grid = (
-        xr.open_dataset(current_path).rename(current_varname_map).U.squeeze().isnull()
+def plot_grid(land_mask: xr.Dataset, ax: plt.Axes):
+    xspacing = np.diff(land_mask.lon).mean()
+    yspacing = np.diff(land_mask.lat).mean()
+    lon_edges = np.append(
+        (land_mask.lon - xspacing / 2), land_mask.lon[-1] + xspacing / 2
     )
-    if "depth" in grid.dims:
-        grid = grid.sel(depth=0, method="nearest")
-    if grid.lon.max() > 180:
-        grid["lon"] = ((grid.lon + 180) % 360) - 180
-        grid = grid.sortby("lon")
-    xspacing = np.diff(grid.lon).mean()
-    yspacing = np.diff(grid.lat).mean()
-    lon_edges = np.append((grid.lon - xspacing / 2), grid.lon[-1] + xspacing / 2)
-    lat_edges = np.append((grid.lat - yspacing / 2), grid.lat[-1] + yspacing / 2)
-    return ax.pcolormesh(lon_edges, lat_edges, ~grid, cmap="gray")
+    lat_edges = np.append(
+        (land_mask.lat - yspacing / 2), land_mask.lat[-1] + yspacing / 2
+    )
+    ax.pcolormesh(lon_edges, lat_edges, ~land_mask, cmap="gray")

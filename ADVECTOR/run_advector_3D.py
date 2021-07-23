@@ -15,8 +15,9 @@ See src/outputfile_specifications.md for detailed description of the outputfile 
 
 import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional, Union, Callable, List
 
+import xarray as xr
 from dask.diagnostics import ProgressBar
 
 from .drivers.chunked_kernel_driver import execute_chunked_kernel_computation
@@ -33,26 +34,27 @@ def run_advector_3D(
     sourcefile_path: str,
     configfile_path: str,
     output_directory: str,
-    u_water_path: str,
-    v_water_path: str,
-    w_water_path: str,
-    seawater_density_path: str,
+    u_water_path: Union[List[str], str],
+    v_water_path: Union[List[str], str],
+    w_water_path: Union[List[str], str],
+    seawater_density_path: Union[List[str], str],
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
     advection_scheme: str = "taylor2",
     save_period: int = 1,
-    sourcefile_varname_map: dict = None,
-    water_varname_map: dict = None,
-    seawater_density_varname_map: dict = None,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
-    u_wind_path: str = None,
-    v_wind_path: str = None,
-    wind_varname_map: dict = None,
+    u_wind_path: Optional[Union[List[str], str]] = None,
+    v_wind_path: Optional[Union[List[str], str]] = None,
     windage_multiplier: float = 1,
     wind_mixing_enabled: bool = True,
     show_progress_bar: bool = True,
+    water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    seawater_density_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    overwrite_existing_files: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -79,10 +81,6 @@ def run_advector_3D(
         "eulerian" is the forward Euler method.
     :param save_period: controls how often to write output: particle state will be saved every {save_period} timesteps.
         For example, with timestep=one hour, and save_period=24, the particle state will be saved once per day.
-    :param sourcefile_varname_map: mapping from names in sourcefile to standard names, as defined in
-        forcing_data_specifications.md.  E.g. {"longitude": "lon", "particle_release_time": "release_date", ...}
-    :param water_varname_map: mapping from names in current files to standard names.  See 'sourcefile_varname_map'.
-    :param seawater_density_varname_map: mapping from names in seawater_density files to standard names.  See 'sourcefile_varname_map'.
     :param opencl_device: specifies hardware for computation.  If None (default), the user will receive a series of
         prompts which guides them through selecting a compute device.  To bypass this prompt, you can encode your
         answers to each of the prompts in a tuple, e.g. (0, 2).
@@ -96,10 +94,16 @@ def run_advector_3D(
     :param u_wind_path: wildcard path to zonal 10-meter wind files; see 'u_water_path'.
         Wind is optional.  Simply omit this argument in order to disable drift due to wind.
     :param v_wind_path: wildcard path to meridional 10-meter wind files; see 'u_wind_path'.
-    :param wind_varname_map mapping from names in wind file to standard names.  See 'sourcefile_varname_map'.
     :param windage_multiplier: multiplies the default windage, which is based on emerged area.
     :param wind_mixing_enabled: enable/disable near-surface turbulent wind mixing.
     :param show_progress_bar: whether to show progress bars for dask operations
+    :param water_preprocessor: function to manipulate the water data just after loading.
+        After preprocessor is applied, data must be compliant with forcing_data_specifications.md
+    :param wind_preprocessor: see water_preprocessor
+    :param seawater_density_preprocessor: see water_preprocessor
+    :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
+    :param overwrite_existing_files: flag to skip warning prompts and clobber existing files,
+        useful for running model with no possibility of user input
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
@@ -117,7 +121,7 @@ def run_advector_3D(
     print("Opening Sourcefiles...")
     p0 = open_3d_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=sourcefile_varname_map,
+        preprocessor=sourcefile_preprocessor,
     )
 
     print("Opening Configfile...")
@@ -131,19 +135,19 @@ def run_advector_3D(
         u_path=u_water_path,
         v_path=v_water_path,
         w_path=w_water_path,
-        variable_mapping=water_varname_map,
+        preprocessor=water_preprocessor,
     )
 
     print("Initializing Seawater Density...")
     forcing_data[Forcing.seawater_density] = open_seawater_density(
         path=seawater_density_path,
-        variable_mapping=seawater_density_varname_map,
+        preprocessor=seawater_density_preprocessor,
     )
 
     if u_wind_path is not None and v_wind_path is not None:
         print("Initializing Wind...")
         forcing_data[Forcing.wind] = open_wind(
-            u_path=u_wind_path, v_path=v_wind_path, variable_mapping=wind_varname_map
+            u_path=u_wind_path, v_path=v_wind_path, preprocessor=wind_preprocessor
         )
 
     output_writer = OutputWriter3D(
@@ -154,6 +158,7 @@ def run_advector_3D(
         forcing_data=forcing_data,
         api_entry="src/run_advector_3D.py::run_advector_3D",
         api_arguments=arguments,
+        overwrite_existing_files=overwrite_existing_files,
     )
 
     print("---COMMENCING ADVECTION---")

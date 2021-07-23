@@ -1,16 +1,15 @@
 import glob
-from typing import Optional, Set
-
+from typing import Optional, Set, Callable, Optional
 import xarray as xr
 
 
 def open_3d_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: Optional[dict],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=variable_mapping,
+        preprocessor=preprocessor,
         expected_vars={
             "p_id",
             "lon",
@@ -26,44 +25,32 @@ def open_3d_sourcefiles(
 
 def open_2d_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: Optional[dict],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     return open_sourcefiles(
         sourcefile_path=sourcefile_path,
-        variable_mapping=variable_mapping,
+        preprocessor=preprocessor,
         expected_vars={"p_id", "lon", "lat", "release_date"},
     )
 
 
 def open_sourcefiles(
     sourcefile_path: str,
-    variable_mapping: Optional[dict],
+    preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
     expected_vars: Set[str],
 ) -> xr.Dataset:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.  Absolute path safest, use relative paths with caution.
-    :param variable_mapping: mapping from names in sourcefile to advector standard variable names
-            advector standard names: ('p_id', 'lat', 'lon', 'depth', 'release_date')
     :param expected_vars: variable names which are expected to be in sourcefile
+    :param preprocessor: func to call on the xarray dataset to perform operation before loading in advector, such as renaming variables.
     """
-    if variable_mapping is None:
-        variable_mapping = {}
-
-    # Need to make sure we concat along the right dim. If there's a mapping, use it to get the name of the axis.
-    # If the "p_id" coordinate is properly defined (i.e both a variable and a dimension), this shouldn't be necessary.
-    if "p_id" not in variable_mapping.values():
-        concat_dim = "p_id"
-    else:
-        concat_dim = next(k for k, v in variable_mapping.items() if v == "p_id")
 
     sourcefile = xr.open_mfdataset(
         sorted(glob.glob(sourcefile_path)),
         parallel=True,
+        preprocess=preprocessor,
         combine="nested",
-        concat_dim=concat_dim,
-    )
-    sourcefile = sourcefile.rename(
-        {key: value for key, value in variable_mapping.items() if key in sourcefile}
+        concat_dim="p_id",
     )
 
     # make sure there's only one dimension
