@@ -50,7 +50,7 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
     
 ## Using ADVECTOR in your own programs
 
-The key entry-point scripts to the ADVECTOR are `ADVECTOR/run_advector_2D.py` and `ADVECTOR/run_advector_3D.py`.  Those files include documentation on all their respective arguments.  There are also supplementary documentation files `*_specifications.md`; you'll want to read all of these carefully to understand what you can/can't feed into the ADVECTOR, and what it'll give you back.
+The key entry-point scripts to the ADVECTOR are `ADVECTOR/run_advector_2D.py` and `ADVECTOR/run_advector_3D.py`.  Those files include documentation on all their respective arguments.  There are also supplementary documentation files in the `documentation` folder; you'll want to read all of these carefully to understand what you can/can't feed into the ADVECTOR, and what it'll give you back.
 
 In short, your script will look something like:
 ```
