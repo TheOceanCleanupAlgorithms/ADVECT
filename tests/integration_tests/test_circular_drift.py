@@ -14,10 +14,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pyopencl as cl
 from datetime import timedelta
-from enums.advection_scheme import AdvectionScheme
-from enums.forcings import Forcing
-from kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
-from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
+from ADVECTOR.enums.advection_scheme import AdvectionScheme
+from ADVECTOR.enums.forcings import Forcing
+from ADVECTOR.kernel_wrappers.Kernel3D import Kernel3D, Kernel3DConfig
+from ADVECTOR.kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
 
 nx = 20
 lon = np.linspace(-0.02, 0.02, nx * 2)  # .01 degrees at equator ~= 1 km
