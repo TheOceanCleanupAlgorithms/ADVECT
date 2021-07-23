@@ -1,4 +1,3 @@
-import glob
 from typing import Optional, Set, List, Union, Callable
 
 import dask
@@ -97,7 +96,6 @@ def open_vectorfield(
     preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]],
 ) -> xr.Dataset:
     print("\tOpening NetCDF files...")
-
     vectors = xr.merge(
         (
             xr.open_mfdataset(
