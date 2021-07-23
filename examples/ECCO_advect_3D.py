@@ -79,6 +79,7 @@ if __name__ == "__main__":
         num_timesteps=24 * (ADVECTION_END - ADVECTION_START).days,
         save_period=4,
         memory_utilization=0.4,
+        overwrite_existing_files=True,
     )
 
     for out_path in out_paths:

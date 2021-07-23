@@ -14,7 +14,7 @@ See src/outputfile_specifications.md for detailed description of the outputfile 
 
 import datetime
 from pathlib import Path
-from typing import Callable, Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List, Union
 
 import xarray as xr
 from dask.diagnostics import ProgressBar
@@ -31,8 +31,8 @@ from kernel_wrappers.Kernel2D import Kernel2D, Kernel2DConfig
 def run_advector_2D(
     sourcefile_path: str,
     output_directory: str,
-    u_water_path: str,
-    v_water_path: str,
+    u_water_path: Union[List[str], str],
+    v_water_path: Union[List[str], str],
     advection_start_date: datetime.datetime,
     timestep: datetime.timedelta,
     num_timesteps: int,
@@ -41,13 +41,14 @@ def run_advector_2D(
     save_period: int = 1,
     opencl_device: Tuple[int, ...] = None,
     memory_utilization: float = 0.4,
-    u_wind_path: Optional[str] = None,
-    v_wind_path: Optional[str] = None,
+    u_wind_path: Optional[Union[List[str], str]] = None,
+    v_wind_path: Optional[Union[List[str], str]] = None,
     windage_coeff: Optional[float] = None,
     show_progress_bar: bool = True,
     water_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     wind_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
     sourcefile_preprocessor: Optional[Callable[[xr.Dataset], xr.Dataset]] = None,
+    overwrite_existing_files: bool = False,
 ) -> List[str]:
     """
     :param sourcefile_path: path to the particle sourcefile netcdf file.
@@ -95,6 +96,8 @@ def run_advector_2D(
         After preprocessor is applied, data must be compliant with forcing_data_specifications.md
     :param wind_preprocessor: see water_preprocessor
     :param sourcefile_preprocessor: see water_preprocessor, compliance info in sourcefile_specifications.md
+    :param overwrite_existing_files: flag to skip warning prompts and clobber existing files,
+        useful for running model with no possibility of user input
     :return: list of paths to the outputfiles
     """
     if show_progress_bar:
@@ -133,6 +136,7 @@ def run_advector_2D(
         forcing_data=forcing_data,
         api_entry="src/run_advector_2D.py::run_advector_2D",
         api_arguments=arguments,
+        overwrite_existing_files=overwrite_existing_files,
     )
 
     print("---COMMENCING ADVECTION---")
