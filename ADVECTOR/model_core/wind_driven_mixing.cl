@@ -57,5 +57,5 @@ double calculate_wind_stress(double wind_speed_10m) {
     } else {
         C_D = .49e-3 + .065e-3 * wind_speed_10m;
     }
-    return SURFACE_AIR_DENSITY * C_D * pow(wind_speed_10m, 2);  // Smith 1998 eq. 1
+    return SURFACE_AIR_DENSITY * C_D * pow(wind_speed_10m, 2);  // SD Smith 1988 eq. 1
 }
