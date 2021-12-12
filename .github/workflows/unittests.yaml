@@ -1,0 +1,31 @@
+name: Unit Tests
+on:
+    push:
+        branches:
+        - main
+    pull_request:
+
+jobs:
+    pytest:
+        name: Pytest Ubuntu20
+        runs-on: ubuntu-20.04
+        steps:
+        - uses: actions/checkout@v2
+        - name: "Build and Test"
+          run: |
+              # grab a recent Miniconda install script (Python 3.9 or newer)
+              curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+              # build Miniconda locally into a directory named "miniforge3"
+              bash ./Miniforge3-*.sh -b -p miniforge3
+              # activate the Miniconda env
+              source miniforge3/bin/activate root
+              # install a bunch of stuff pyopencl needs
+              conda install pytest -y
+              conda install matplotlib -y
+              conda install pyopencl -y
+              conda install pocl -y
+              conda install ocl-icd-system -y
+              conda install oclgrind -y
+              # run the unit tests
+              python -m pytest tests/src/
+
