@@ -1,8 +1,8 @@
-# ADVECTOR V1.0
-The ADVECTOR is a whole-ocean marine debris transport model which is built to handle millions of particles and terabytes of data.  It models the transport of debris based on its size, shape, and density, and simulates basic physical processes including 3D ocean current-driven advection, wind-driven drift, wind-driven near-surface vertical mixing, buoyancy-driven vertical transport, and eddy-driven diffusion.  It automatically processes forcing datasets arbitrarily larger than memory capacity, and supports fully parallelized computation on CPUs and GPUs via OpenCL.
+# ADVECT V1.0
+ADVECT is a whole-ocean marine debris transport model which is built to handle millions of particles and terabytes of data.  It models the transport of debris based on its size, shape, and density, and simulates basic physical processes including 3D ocean current-driven advection, wind-driven drift, wind-driven near-surface vertical mixing, buoyancy-driven vertical transport, and eddy-driven diffusion.  It automatically processes forcing datasets arbitrarily larger than memory capacity, and supports fully parallelized computation on CPUs and GPUs via OpenCL.
 
 ## Model Description
-The ADVECTOR contains solvers (kernels) for two domains: ocean surface, and whole-ocean.
+ADVECT contains solvers (kernels) for two domains: ocean surface, and whole-ocean.
 * 2D kernel: model domain is constrained to the surface of the ocean (assumption: floating debris), and debris particles are idealized, with no consideration of their size/shape/density.
 * 3D kernel: model domain is the whole oceans, from surface to bathymetry, and physical processes depend on the size/shape/density of debris.
 
@@ -34,7 +34,7 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
 
 ## Installation Instructions
 1. In a terminal, clone this repository and navigate to its root.
-2. Install ADVECTOR as a package by running
+2. Install ADVECT as a package by running
    ```
    pip install .
    ```
@@ -48,9 +48,9 @@ The model domain only includes the waters of the ocean above bathymetry (as defi
 
     Run ```ADVECTOR_examples_2D``` or ```ADVECTOR_examples_3D``` and follow the prompts to see it in action!
     
-## Using ADVECTOR in your own programs
+## Using ADVECT in your own programs
 
-The key entry-point scripts to the ADVECTOR are `ADVECTOR/run_advector_2D.py` and `ADVECTOR/run_advector_3D.py`.  Those files include documentation on all their respective arguments.  There are also supplementary documentation files in the `documentation` folder; you'll want to read all of these carefully to understand what you can/can't feed into the ADVECTOR, and what it'll give you back.
+The key entry-point scripts to ADVECT are `ADVECTOR/run_advector_2D.py` and `ADVECTOR/run_advector_3D.py`.  Those files include documentation on all their respective arguments.  There are also supplementary documentation files in the `documentation` folder; you'll want to read all of these carefully to understand what you can/can't feed into ADVECT, and what it'll give you back.
 
 In short, your script will look something like:
 ```
@@ -65,10 +65,10 @@ As a general rule, you can pretty much copy the structure of `ADVECTOR/examples/
 
 ## Extra: the INTEGRATOR
 
-3D ocean model output generally only includes the zonal/meridional current velocity; ADVECTOR comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.  Currently it doesn't install via pip, so you'll need to clone this repository and run the files directly.
+3D ocean model output generally only includes the zonal/meridional current velocity; ADVECT comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.  Currently it doesn't install via pip, so you'll need to clone this repository and run the files directly.
 
 ### Hardware compatability
-At this time, ADVECTOR only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  Running tests is one way to check if your hardware is compatible.  If they fail, you can run this in a python prompt to directly check your driver version:
+At this time, ADVECT only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  Running tests is one way to check if your hardware is compatible.  If they fail, you can run this in a python prompt to directly check your driver version:
    ```
    import pyopencl
    print(pyopencl.create_some_context(interactive=True).devices[0].driver_version)
