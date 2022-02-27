@@ -149,7 +149,7 @@ def test_calculate_significant_wave_height():
     # we can get wind stress from this, and calculate wave height, to at least do a sanity check
     water_density = 1025  # kg m^-3
     wind_stress = (
-        0.75e-2 ** 2 * water_density
+        0.75e-2**2 * water_density
     )  # m/s  inverting kukulka's given frictional water velocity
     wave_height = calculate_significant_wave_height(wind_stress)
     assert 0 < wave_height < 1  # sanity range check

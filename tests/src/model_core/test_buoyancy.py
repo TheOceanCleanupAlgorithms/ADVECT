@@ -81,7 +81,7 @@ def test_kooi_2016(plot=False):
     size_small = np.linspace(0.5e-3, 1.5e-3, nsamples)
     volume_small = (
         0.5 * size_small
-    ) * size_small ** 2  # we assume short dimension is .5 of long dimension
+    ) * size_small**2  # we assume short dimension is .5 of long dimension
     r_small = np.cbrt(3 / (4 * np.pi) * volume_small)
     v_small_mean = 0.009  # m/s
     v_small_std = 0.004  # m/s
@@ -91,7 +91,7 @@ def test_kooi_2016(plot=False):
     )  # again, size means the long dimension
     volume_big = (
         0.25 * size_big
-    ) * size_big ** 2  # now we assume short dimension is .25 of long dimension
+    ) * size_big**2  # now we assume short dimension is .25 of long dimension
     r_big = np.cbrt(3 / (4 * np.pi) * volume_big)
     v_big_mean = 0.019  # m/s
     v_big_std = 0.006  # m/s
