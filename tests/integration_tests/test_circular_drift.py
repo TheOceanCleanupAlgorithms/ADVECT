@@ -24,7 +24,7 @@ lon = np.linspace(-0.02, 0.02, nx * 2)  # .01 degrees at equator ~= 1 km
 lat = np.linspace(-0.01, 0.01, nx)
 
 LON, LAT = np.meshgrid(lon, lat)
-mag = np.sqrt(LON ** 2 + LAT ** 2)
+mag = np.sqrt(LON**2 + LAT**2)
 U = np.divide(-LAT, mag, out=np.zeros_like(LON), where=mag != 0)
 V = np.divide(LON, mag, out=np.zeros_like(LON), where=mag != 0)
 
@@ -188,11 +188,11 @@ def test_circular_drift_2d():
 
     # taylor stays within 5% of radius on average
     np.testing.assert_allclose(
-        np.sqrt(taylor.lon ** 2 + taylor.lat ** 2).mean(), initial_radius, rtol=0.05
+        np.sqrt(taylor.lon**2 + taylor.lat**2).mean(), initial_radius, rtol=0.05
     )
 
     # euler spirals out wildly
-    assert np.sqrt(euler.lon ** 2 + euler.lat ** 2)[-1] > initial_radius * 1.5
+    assert np.sqrt(euler.lon**2 + euler.lat**2)[-1] > initial_radius * 1.5
 
 
 def test_circular_drift_3d():
@@ -201,11 +201,11 @@ def test_circular_drift_3d():
 
     # taylor stays within 5% of radius on average
     np.testing.assert_allclose(
-        np.sqrt(taylor.lon ** 2 + taylor.lat ** 2).mean(), initial_radius, rtol=0.05
+        np.sqrt(taylor.lon**2 + taylor.lat**2).mean(), initial_radius, rtol=0.05
     )
 
     # euler spirals out wildly
-    assert np.sqrt(euler.lon ** 2 + euler.lat ** 2)[-1] > initial_radius * 1.5
+    assert np.sqrt(euler.lon**2 + euler.lat**2)[-1] > initial_radius * 1.5
 
 
 if __name__ == "__main__":

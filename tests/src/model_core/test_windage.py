@@ -61,7 +61,7 @@ def test_calculate_windage_coeff():
     np.testing.assert_allclose(
         calculate_windage_coeff(r=r, z=z),
         np.sqrt(
-            density_ratio * drag_ratio * emerged_area / (np.pi * r ** 2 - emerged_area)
+            density_ratio * drag_ratio * emerged_area / (np.pi * r**2 - emerged_area)
         ),
     )
 
@@ -103,7 +103,7 @@ def circular_segment_area(R, r) -> np.ndarray:
 
 def test_circular_segment_area():
     # split in half
-    np.testing.assert_allclose(circular_segment_area(R=1, r=0), np.pi * 1 ** 2 / 2)
+    np.testing.assert_allclose(circular_segment_area(R=1, r=0), np.pi * 1**2 / 2)
 
     # tangent line (no segment)
     np.testing.assert_allclose(circular_segment_area(R=1, r=1), 0)
@@ -112,12 +112,12 @@ def test_circular_segment_area():
     R, r = 10, 8
     theta = 2 * np.arccos(r / R)
     np.testing.assert_allclose(
-        circular_segment_area(R=R, r=r), 0.5 * R ** 2 * (theta - np.sin(theta))
+        circular_segment_area(R=R, r=r), 0.5 * R**2 * (theta - np.sin(theta))
     )
 
     # major segment
     R, r = 5, -1
     theta = 2 * np.arccos(r / R)
     np.testing.assert_allclose(
-        circular_segment_area(R=R, r=r), 0.5 * R ** 2 * (theta - np.sin(theta))
+        circular_segment_area(R=R, r=r), 0.5 * R**2 * (theta - np.sin(theta))
     )

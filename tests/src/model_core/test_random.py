@@ -163,7 +163,7 @@ def test_standard_normal():
     # validate distribution shape
     measured_PDF, bin_edges = np.histogram(result, bins=20, range=(-3, 3), density=True)
     bin_centers = bin_edges[:-1] + np.diff(bin_edges)[0] / 2
-    true_PDF = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * bin_centers ** 2)
+    true_PDF = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * bin_centers**2)
     np.testing.assert_allclose(true_PDF, measured_PDF, atol=0.01)
 
 
