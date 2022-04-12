@@ -33,15 +33,15 @@ Finally, the user may specify a vertical profile of vertical and horizontal eddy
 The model domain only includes the waters of the ocean above bathymetry (as defined by the non-null region in the ocean current vectorfield); particles cannot leave this domain, and thus the model does not include beaching or sedimentation.  Instead, when particles are pushed against coastline/bathymetry, their out-of-domain displacement components are cropped to keep them in the model domain.  This is the 3D analog of the frictionless coastlines used in the 2D kernel, and similarly allows particles to travel parallel to domain boundaries.
 
 ## Installation Instructions
-1. In a terminal, clone this repository and navigate to its root.
-2. Install ADVECT as a package by running
+1. Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) (if you don't already have it), to manage dependencies.  If you are not already familiar with conda, what it is, and what it's for, you should read up [here](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html).
+2. Install ADVECT as a package by opening a terminal and running
    ```
-   pip install .
+   conda create -n advect  # create a fresh conda environment
+   conda activate advect   # enter the environment
+   conda install pip         # install pip (python package manager) into this environment
+   pip install ADVECTOR      # install ADVECTOR from a repository in ~the cloud~
    ```
-3. (Optional) Run tests
-
-    To ensure everything is working before you go through the effort of downloading forcing data, run `python -m pytest` from the repository root.  If any tests do not pass, a first step is to check out the "hardware compatability" section below.
-4. Acquire forcing data
+3. Acquire forcing data
 
     Run ```ADVECTOR_download_sample_data``` and follow the prompts.
 5. Run example advection
@@ -54,21 +54,21 @@ The key entry-point scripts to ADVECT are `ADVECTOR/run_advector_2D.py` and `ADV
 
 In short, your script will look something like:
 ```
-from ADVECTOR import run_advector_2D  # or run_advector_3D
+from ADVECTOR.run_advector_2D import run_advector_2D  # sim for run_advector_3D
 outputfile_paths = run_advector_2D(<many arguments here>)
 ```
 That's it!
 
 If you need information on the arguments and don't want to refer directly to the source code, just open an interactive python prompt, import the runner as above, then run `help(run_advector_2D)`.
 
-As a general rule, you can pretty much copy the structure of `ADVECTOR/examples/ECCO_advect_2D.py` or `ADVECTOR/examples/ECCO_advect_3D.py`, providing your own data and generating your own source/configfiles.  The examples exist for your reference!
+As a general strategy, you can pretty much copy the structure of `ADVECTOR/examples/ECCO_advect_2D.py` or `ADVECTOR/examples/ECCO_advect_3D.py`, providing your own data and generating your own source/configfiles.  The examples exist for your reference!
 
 ## Extra: the INTEGRATOR
 
 3D ocean model output generally only includes the zonal/meridional current velocity; ADVECT comes bundled with a tool called the INTEGRATOR which can generate vertical velocity fields from zonal/meridional velocity fields, using the continuity equation.  Check out `INTEGRATOR/README.md` for more information.  Currently it doesn't install via pip, so you'll need to clone this repository and run the files directly.
 
 ### Hardware compatability
-At this time, ADVECT only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  Running tests is one way to check if your hardware is compatible.  If they fail, you can run this in a python prompt to directly check your driver version:
+At this time, ADVECT only has known support for CPUs/GPUs with opencl driver versions 1.1, 1.2, and 2.1.  If you are getting OpenCL/GPU related errors, you can run this in a python prompt to directly check your driver version, as that could be the problem:
    ```
    import pyopencl
    print(pyopencl.create_some_context(interactive=True).devices[0].driver_version)
